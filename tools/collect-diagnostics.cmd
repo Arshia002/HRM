@@ -2,20 +2,20 @@
 setlocal EnableExtensions
 title HRM Diagnostics
 
-set "OUT=%TEMP%\HRM-Kermanshah-Diagnostics-%RANDOM%-%RANDOM%"
+set "OUT=%TEMP%\HRM-Diagnostics-%RANDOM%-%RANDOM%"
 set "ZIP=%OUT%.zip"
 mkdir "%OUT%" >nul 2>&1
 if errorlevel 1 goto :denied
 
 echo Collecting non-sensitive diagnostics...
 systeminfo >"%OUT%\computer.txt" 2>&1
-sc.exe query HRMCentralService >"%OUT%\service.txt" 2>&1
-sc.exe qc HRMCentralService >>"%OUT%\service.txt" 2>&1
+sc.exe query HRMCentral >"%OUT%\service.txt" 2>&1
+sc.exe qc HRMCentral >>"%OUT%\service.txt" 2>&1
 netstat.exe -ano | findstr.exe ":8765" >"%OUT%\port-8765.txt" 2>&1
 
-if exist "%ProgramData%\HRM-Kermanshah\server.json" copy /Y "%ProgramData%\HRM-Kermanshah\server.json" "%OUT%\server.json" >nul 2>&1
-if exist "%ProgramData%\HRM-Kermanshah\logs\server.jsonl*" copy /Y "%ProgramData%\HRM-Kermanshah\logs\server.jsonl*" "%OUT%\" >nul 2>&1
-if exist "%ProgramData%\HRM-Kermanshah\logs\setup-server.log" copy /Y "%ProgramData%\HRM-Kermanshah\logs\setup-server.log" "%OUT%\" >nul 2>&1
+if exist "%ProgramData%\HRM\server.json" copy /Y "%ProgramData%\HRM\server.json" "%OUT%\server.json" >nul 2>&1
+if exist "%ProgramData%\HRM\logs\server.jsonl*" copy /Y "%ProgramData%\HRM\logs\server.jsonl*" "%OUT%\" >nul 2>&1
+if exist "%ProgramData%\HRM\logs\setup-server.log" copy /Y "%ProgramData%\HRM\logs\setup-server.log" "%OUT%\" >nul 2>&1
 
 set "HASHES=%OUT%\installed-hashes.txt"
 for %%F in (

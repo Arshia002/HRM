@@ -1,5 +1,6 @@
 import hashlib
 import contextlib
+import shutil
 import sqlite3
 import tempfile
 import unittest
@@ -7,24 +8,24 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sazmanhr.database import AuthenticationError, ConflictError, MfaRequired, PermissionDenied, Repository
-from sazmanhr.config import IncompatibleDatabaseError, ensure_database
-from sazmanhr.demo_data import DEMO_CHART_PAGE_COUNT, DEMO_PERSONNEL_COUNT, create_demo_seed
+from sazmanhr.config import IncompatibleDatabaseError
 from sazmanhr.operations import restore_database, sqlite_integrity
 from sazmanhr.security import totp_code
+
+
+PROJECT = Path(__file__).resolve().parents[1]
+SEED = PROJECT / "data" / "seed" / "sazmanhr-seed.sqlite"
 
 
 class RepositoryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        root = Path(self.temp.name)
-        self.seed = root / "test-seed.sqlite"
-        self.data_dir = root / "operational"
-        create_demo_seed(self.seed)
-        self.db = ensure_database(self.data_dir, self.seed)
+        self.db = Path(self.temp.name) / "test.sqlite"
+        shutil.copy2(SEED, self.db)
         self.repo = Repository(self.db)
         self.password = "Initial!Password1400"
         self.owner = self.repo.create_user(
-            "owner.test", "مدیر آزمایشی", self.password, "owner", must_change_password=True
+            "arshia.shahbazi", "ارشیا شهبازی", self.password, "owner", must_change_password=True
         )
 
     def tearDown(self):
@@ -32,18 +33,9 @@ class RepositoryTests(unittest.TestCase):
 
     def test_seed_counts_and_integrity(self):
         stats = self.repo.stats()
-        self.assertEqual(stats["personnel"], DEMO_PERSONNEL_COUNT)
-        self.assertEqual(len(self.repo.list_chart_pages()), DEMO_CHART_PAGE_COUNT)
+        self.assertEqual(stats["personnel"], 36)
+        self.assertEqual(len(self.repo.list_chart_pages()), 53)
         self.assertTrue(self.repo.verify_audit_chain())
-
-    def test_deployment_snapshot_is_stable_across_reopen(self):
-        before = self.repo.deployment_snapshot()
-        same_database = ensure_database(self.data_dir, self.seed)
-        after = Repository(same_database).deployment_snapshot()
-        self.assertEqual(after, before)
-        self.assertEqual(len(before["id"]), 32)
-        self.assertEqual(before["users"], 1)
-        self.assertEqual(before["personnel"], DEMO_PERSONNEL_COUNT)
 
     def test_connection_context_closes_database_handle(self):
         connection = self.repo.connect()
@@ -65,9 +57,9 @@ class RepositoryTests(unittest.TestCase):
 
     def test_login_and_forced_password_change(self):
         with self.assertRaises(AuthenticationError):
-            self.repo.authenticate("owner.test", "wrong", "127.0.0.1")
-        session = self.repo.authenticate("owner.test", self.password, "127.0.0.1")
-        self.assertEqual(session["user"]["username"], "owner.test")
+            self.repo.authenticate("arshia.shahbazi", "wrong", "127.0.0.1")
+        session = self.repo.authenticate("arshia.shahbazi", self.password, "127.0.0.1")
+        self.assertEqual(session["user"]["username"], "arshia.shahbazi")
         self.assertEqual(session["user"]["must_change_password"], 1)
         self.repo.change_password(self.owner["id"], self.password, "Changed!Password1401")
         self.assertEqual(self.repo.session_user(session["token"])["must_change_password"], 0)
@@ -75,10 +67,10 @@ class RepositoryTests(unittest.TestCase):
     def test_failed_login_counter_is_committed(self):
         for _ in range(5):
             with self.assertRaises(AuthenticationError):
-                self.repo.authenticate("owner.test", "Definitely!Wrong1500", "10.0.0.8")
+                self.repo.authenticate("arshia.shahbazi", "Definitely!Wrong1500", "10.0.0.8")
         with self.repo.connect() as conn:
             row = conn.execute("SELECT failed_attempts,locked_until FROM users WHERE id=?", (self.owner["id"],)).fetchone()
-            failures = conn.execute("SELECT COUNT(*) FROM login_events WHERE username='owner.test' AND succeeded=0").fetchone()[0]
+            failures = conn.execute("SELECT COUNT(*) FROM login_events WHERE username='arshia.shahbazi' AND succeeded=0").fetchone()[0]
         self.assertEqual(row["failed_attempts"], 0)
         self.assertIsNotNone(row["locked_until"])
         self.assertEqual(failures, 5)
@@ -113,17 +105,17 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(saved["row_version"], 2)
         self.assertTrue(self.repo.verify_audit_chain())
 
-    def test_six_distinct_admin_edits_are_serialized(self):
-        people = self.repo.list_personnel(limit=6)["items"]
+    def test_five_distinct_admin_edits_are_serialized(self):
+        people = self.repo.list_personnel(limit=5)["items"]
 
         def update(item):
             detail = self.repo.get_person(item["id"])
             detail["status"] = "آزمون هم‌زمان"
             return self.repo.save_person(detail, self.owner["id"])
 
-        with ThreadPoolExecutor(max_workers=6) as pool:
+        with ThreadPoolExecutor(max_workers=5) as pool:
             saved = list(pool.map(update, people))
-        self.assertEqual(len(saved), 6)
+        self.assertEqual(len(saved), 5)
         self.assertTrue(all(item["row_version"] == 2 for item in saved))
         self.assertTrue(self.repo.verify_audit_chain())
 

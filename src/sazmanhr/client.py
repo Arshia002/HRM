@@ -22,18 +22,18 @@ from .config import ClientConfig, default_client_config
 APP_STYLE = """
 QWidget { font-family: Tahoma, Segoe UI; font-size: 10pt; color: #172B4D; }
 QMainWindow, QDialog { background: #F4F7FB; }
-QFrame#sidebar { background: #17324D; border: none; }
+QFrame#sidebar { background: #12395B; border: none; }
 QListWidget#nav { background: transparent; border: none; color: #EAF2F8; outline: none; }
 QListWidget#nav::item { padding: 13px 16px; margin: 3px 6px; border-radius: 8px; }
-QListWidget#nav::item:selected { background: #1C8C81; color: white; }
-QPushButton { background: #1C8C81; color: white; border: none; border-radius: 7px; padding: 8px 14px; }
-QPushButton:hover { background: #15766D; }
-QPushButton[secondary="true"] { background: #E7EDF4; color: #17324D; }
+QListWidget#nav::item:selected { background: #0F8B8D; color: white; }
+QPushButton { background: #0F8B8D; color: white; border: none; border-radius: 7px; padding: 8px 14px; }
+QPushButton:hover { background: #0B7476; }
+QPushButton[secondary="true"] { background: #E7EDF4; color: #12395B; }
 QLineEdit, QComboBox, QTextEdit { background: white; border: 1px solid #C7D2E0; border-radius: 6px; padding: 7px; }
 QTableWidget { background: white; border: 1px solid #D7E0EA; border-radius: 8px; gridline-color: #E7EDF4; }
-QHeaderView::section { background: #EAF2F8; color: #17324D; border: none; padding: 8px; font-weight: bold; }
-QLabel#title { font-size: 19pt; font-weight: 700; color: #17324D; }
-QLabel#cardValue { font-size: 24pt; font-weight: 700; color: #087F73; }
+QHeaderView::section { background: #EAF2F8; color: #12395B; border: none; padding: 8px; font-weight: bold; }
+QLabel#title { font-size: 19pt; font-weight: 700; color: #12395B; }
+QLabel#cardValue { font-size: 24pt; font-weight: 700; color: #0F8B8D; }
 QFrame#card { background: white; border: 1px solid #DDE5EE; border-radius: 12px; }
 """
 
@@ -57,10 +57,10 @@ class LoginDialog(QDialog):
         self.config = config
         self.client: ApiClient | None = None
         self.user: dict[str, Any] | None = None
-        self.setWindowTitle("ورود امن به HRM")
+        self.setWindowTitle("ورود به HRM")
         self.setMinimumWidth(470)
         layout = QVBoxLayout(self)
-        title = QLabel("سامانه مدیریت منابع انسانی")
+        title = QLabel("HRM | سامانه مدیریت منابع انسانی")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
@@ -69,8 +69,7 @@ class LoginDialog(QDialog):
         layout.addWidget(subtitle)
         form = QFormLayout()
         self.server = QLineEdit(config.server_url)
-        self.username = QLineEdit()
-        self.username.setPlaceholderText("نام کاربری")
+        self.username = QLineEdit("arshia.shahbazi")
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
         self.otp = QLineEdit()
@@ -598,7 +597,7 @@ class MainWindow(QMainWindow):
         shell = QWidget(); root = QHBoxLayout(shell); root.setContentsMargins(0, 0, 0, 0)
         sidebar = QFrame(); sidebar.setObjectName("sidebar"); sidebar.setFixedWidth(220)
         side = QVBoxLayout(sidebar)
-        logo = QLabel("HRM\nمدیریت معاونت منابع انسانی"); logo.setStyleSheet("color:white;font-size:16pt;font-weight:bold;padding:16px")
+        logo = QLabel("HRM\nمدیریت منابع انسانی"); logo.setStyleSheet("color:white;font-size:16pt;font-weight:bold;padding:16px")
         logo.setAlignment(Qt.AlignCenter); side.addWidget(logo)
         self.nav = QListWidget(); self.nav.setObjectName("nav"); side.addWidget(self.nav)
         logout = QPushButton("خروج امن"); logout.clicked.connect(self.close); side.addWidget(logout)
@@ -650,10 +649,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--server")
     parser.add_argument("--tls-fingerprint", default="")
     parser.add_argument("--config")
-    parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
-    if args.smoke_test:
-        return 0
     app = QApplication(sys.argv[:1])
     app.setApplicationName("HRM")
     app.setApplicationVersion(__version__)

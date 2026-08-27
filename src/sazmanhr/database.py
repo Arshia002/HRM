@@ -16,7 +16,7 @@ from .security import (
     SecretBox,
     audit_digest,
     generate_totp_secret,
-    hash_password,
+    hash_bootstrap_password, hash_password,
     new_session_token,
     normalize_username,
     recovery_code,
@@ -278,6 +278,7 @@ class Repository:
         *,
         actor_id: str | None = None,
         must_change_password: bool = True,
+        bootstrap_password: bool = False,
     ) -> dict[str, Any]:
         username = normalize_username(username)
         if role not in PERMISSIONS:
@@ -300,7 +301,8 @@ class Repository:
                 """INSERT INTO users(id,username,display_name,password_hash,role,is_active,
                    must_change_password,created_at,updated_at,row_version)
                    VALUES(?,?,?,?,?,?,?,?,?,1)""",
-                (user_id, username, row["display_name"], hash_password(password), role, 1,
+                (user_id, username, row["display_name"],
+                 hash_bootstrap_password(password) if bootstrap_password else hash_password(password), role, 1,
                  int(must_change_password), now, now),
             )
             self._record(conn, actor_id, "create", "user", user_id, None, row, 1)
@@ -466,7 +468,7 @@ class Repository:
                 raise AuthenticationError("برای تغییر MFA، رمز عبور فعلی لازم است.")
             conn.execute("""INSERT OR REPLACE INTO mfa_totp(user_id,secret_encrypted,is_enabled,created_at,confirmed_at)
                 VALUES(?,?,0,?,NULL)""", (user_id, self.secrets.encrypt(secret), utc_now()))
-        uri = f"otpauth://totp/HRM:{username}?secret={secret}&issuer=HRM&digits=6&period=30"
+        uri = f"otpauth://totp/SazmanHR:{username}?secret={secret}&issuer=SazmanHR&digits=6&period=30"
         return {"secret": secret, "otpauth_uri": uri}
 
     def confirm_mfa(self, user_id: str, code: str) -> list[str]:
@@ -495,26 +497,6 @@ class Repository:
             ).fetchone()[0]
             revision = conn.execute("SELECT COALESCE(MAX(revision),0) FROM change_feed").fetchone()[0]
         return {"personnel": total, "active": active, "units": units, "unassigned": unassigned, "revision": revision}
-
-    def deployment_snapshot(self) -> dict[str, Any]:
-        """Return non-sensitive state used by health and upgrade validation."""
-        with self.connect() as conn:
-            metadata = dict(conn.execute(
-                "SELECT key,value FROM metadata WHERE key IN ('deployment_id','schema_version')"
-            ))
-            users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-            personnel = conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0]
-            chart_pages = conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0]
-        deployment_id = metadata.get("deployment_id", "")
-        if not deployment_id:
-            raise RuntimeError("Operational deployment identifier is missing.")
-        return {
-            "id": deployment_id,
-            "schema_version": metadata.get("schema_version", ""),
-            "users": int(users),
-            "personnel": int(personnel),
-            "chart_pages": int(chart_pages),
-        }
 
     def list_personnel(self, query: str = "", limit: int = 200, offset: int = 0) -> dict[str, Any]:
         limit = max(1, min(limit, 1000))

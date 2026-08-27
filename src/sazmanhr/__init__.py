@@ -1,3 +1,3 @@
-"""HRM native desktop and central LAN service."""
+"""HRM native enterprise edition."""
 
-__version__ = "0.1.0-alpha.4"
+__version__ = "0.2.0-alpha.1"

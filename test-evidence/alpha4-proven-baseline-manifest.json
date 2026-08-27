@@ -1,0 +1,40 @@
+{
+  "manifest_schema": 1,
+  "product": "HRM",
+  "version": "0.1.0-alpha.4",
+  "build_utc": "2026-08-27T14:31:22+00:00",
+  "source_revision": "6dcb2e83d7cac1e8728bd90639c08f33f4793577",
+  "builder": {
+    "os": "Windows-10-10.0.20348-SP0",
+    "python": "3.11.9",
+    "architecture": "AMD64"
+  },
+  "seed": {
+    "mode": "synthetic-demo",
+    "sha256": "91c9d8e86c208f89ff4e3322e28e62789aaab271d99e0da9b5c10cea29f89bed"
+  },
+  "signed": false,
+  "dependency_snapshot_sha256": "73bd34f2e2700dec52d3db9a9ddd3e576e473714628ef9d15d98e8f19451bcd1",
+  "artifacts": [
+    {
+      "name": "HRM.exe",
+      "bytes": 53830555,
+      "sha256": "37a8782dbe8844e5c7722a97fc5a93aa5b67c3d36af4837265e6c7682bb08600"
+    },
+    {
+      "name": "HRMServer.exe",
+      "bytes": 14005902,
+      "sha256": "dd1818478e0cd42d8070aff4a61962d4cb8821f16d5de97d6980483133dc2502"
+    },
+    {
+      "name": "HRMService.exe",
+      "bytes": 14359384,
+      "sha256": "f4f700385210ac7d8cd9eedd84b3f46b685c54a875e37a608fb13baff2893f6f"
+    },
+    {
+      "name": "HRM-Setup-x64.exe",
+      "bytes": 57306660,
+      "sha256": "bf2b63c13b3141910b020e88e6f5096c42757f29dfa36ec144b9cf5a82550fe6"
+    }
+  ]
+}

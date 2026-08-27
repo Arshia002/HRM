@@ -37,11 +37,22 @@ def validate_password(password: str) -> None:
         raise ValueError("رمز عبور باید دست‌کم سه گروه از حروف کوچک، بزرگ، عدد و نماد را داشته باشد.")
 
 
-def hash_password(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
-    validate_password(password)
+def _hash_password_unchecked(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
     salt = secrets.token_bytes(24)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return f"pbkdf2_sha256${iterations}${salt.hex()}${digest.hex()}"
+
+
+def hash_password(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
+    validate_password(password)
+    return _hash_password_unchecked(password, iterations=iterations)
+
+
+def hash_bootstrap_password(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
+    """Hash the installer-only first-login secret without weakening normal password policy."""
+    if password != "13811381":
+        raise ValueError("رمز Bootstrap مجاز نیست.")
+    return _hash_password_unchecked(password, iterations=iterations)
 
 
 def verify_password(password: str, encoded: str) -> bool:

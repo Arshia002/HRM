@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native Windows builder for HRM.
+"""Native Windows builder for SazmanHR.
 
 This replaces the one-click PowerShell bootstrap so enterprise execution
 policies cannot prevent the build before diagnostics are written.
@@ -8,15 +8,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import os
 import platform
-import re
 import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -27,10 +24,8 @@ DIST_DIR = BUILD_ROOT / "dist"
 WORK_DIR = BUILD_ROOT / "work"
 VENV_DIR = BUILD_ROOT / "venv"
 INSTALLER = BUILD_ROOT / "installer" / "HRM-Setup-x64.exe"
-BUILD_MANIFEST = BUILD_ROOT / "installer" / "build-manifest.json"
-DEPENDENCY_SNAPSHOT = BUILD_ROOT / "installer" / "dependencies.txt"
 REQUIREMENTS = PROJECT_ROOT / "build" / "windows" / "requirements-build.txt"
-INNO_SCRIPT = PROJECT_ROOT / "build" / "windows" / "HRM.iss"
+INNO_SCRIPT = PROJECT_ROOT / "build" / "windows" / "SazmanHR.iss"
 LOG_PATH = BUILD_ROOT / "build.log"
 
 
@@ -95,92 +90,12 @@ def run(log: BuildLog, command: list[object], *, env: dict[str, str] | None = No
         raise BuildFailure(f"Command failed with exit code {return_code}: {rendered}")
 
 
-def capture(log: BuildLog, command: list[object], *, env: dict[str, str] | None = None) -> str:
-    """Run a command, log its output and return the captured text."""
-    rendered = command_text(command)
-    log.write(f"\n> {rendered}")
-    process = subprocess.run(
-        [str(item) for item in command],
-        cwd=PROJECT_ROOT,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    output = process.stdout.rstrip("\r\n")
-    if output:
-        for line in output.splitlines():
-            log.handle.write(line + "\n")
-            print_console(line)
-        log.handle.flush()
-    if process.returncode:
-        raise BuildFailure(f"Command failed with exit code {process.returncode}: {rendered}")
-    return process.stdout
-
-
 def sha256(path: Path) -> str:
     result = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             result.update(chunk)
     return result.hexdigest()
-
-
-def read_product_version() -> str:
-    """Read and cross-check the human and Python package versions."""
-    version = (PROJECT_ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?", version):
-        raise BuildFailure(f"VERSION has an unsupported format: {version!r}")
-    package_init = (PROJECT_ROOT / "src" / "sazmanhr" / "__init__.py").read_text(encoding="utf-8")
-    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', package_init, re.MULTILINE)
-    if not match or match.group(1) != version:
-        raise BuildFailure("VERSION and sazmanhr.__version__ do not match.")
-    return version
-
-
-def source_revision() -> str:
-    github_sha = os.environ.get("GITHUB_SHA", "").strip()
-    if re.fullmatch(r"[0-9a-fA-F]{40}", github_sha):
-        return github_sha.lower()
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True, stderr=subprocess.DEVNULL
-        ).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "uncommitted-source"
-
-
-def write_build_manifest(
-    *,
-    version: str,
-    seed_path: Path,
-    seed_mode: str,
-    executables: list[Path],
-    signed: bool,
-) -> None:
-    artifacts = []
-    for path in [*executables, INSTALLER]:
-        artifacts.append({"name": path.name, "bytes": path.stat().st_size, "sha256": sha256(path)})
-    manifest = {
-        "manifest_schema": 1,
-        "product": "HRM",
-        "version": version,
-        "build_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "source_revision": source_revision(),
-        "builder": {
-            "os": platform.platform(),
-            "python": platform.python_version(),
-            "architecture": platform.machine(),
-        },
-        "seed": {"mode": seed_mode, "sha256": sha256(seed_path)},
-        "signed": signed,
-        "dependency_snapshot_sha256": sha256(DEPENDENCY_SNAPSHOT),
-        "artifacts": artifacts,
-    }
-    BUILD_MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def find_iscc() -> Path | None:
@@ -274,15 +189,14 @@ def prepare_output() -> BuildLog:
     return BuildLog(LOG_PATH)
 
 
-def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = None) -> str:
+def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     if platform.system() != "Windows":
         raise BuildFailure("The Setup builder must run on 64-bit Windows.")
     if sys.version_info[:2] != (3, 11) or sys.maxsize <= 2**32:
         raise BuildFailure("Python 3.11 x64 is required.")
 
-    version = read_product_version()
     started = time.monotonic()
-    log.write(f"HRM {version} Setup candidate build started.")
+    log.write("HRM 0.2.0-alpha.1 direct Setup candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")
@@ -293,10 +207,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
         raise BuildFailure(f"Virtual environment Python was not created: {venv_python}")
 
     run(log, [venv_python, "-m", "pip", "install", "--upgrade", "pip"])
-    run(log, [venv_python, "-m", "pip", "install", "--only-binary=:all:", "-r", REQUIREMENTS])
-    DEPENDENCY_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
-    installed = capture(log, [venv_python, "-m", "pip", "freeze", "--all"])
-    DEPENDENCY_SNAPSHOT.write_text(installed, encoding="utf-8", newline="\n")
+    run(log, [venv_python, "-m", "pip", "install", "-r", REQUIREMENTS])
 
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(PROJECT_ROOT / "src")
@@ -305,28 +216,6 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
         [venv_python, "-m", "unittest", "discover", "-s", PROJECT_ROOT / "tests", "-v"],
         env=environment,
     )
-
-    if seed_path is None:
-        seed_mode = "synthetic-demo"
-        seed_path = BUILD_ROOT / "seed" / "hrm-seed.sqlite"
-        run(
-            log,
-            [
-                venv_python,
-                PROJECT_ROOT / "tools" / "create_demo_seed.py",
-                "--output",
-                seed_path,
-                "--force",
-            ],
-            env=environment,
-        )
-        log.write("Seed mode: synthetic demo data (safe for public CI artifacts).")
-    else:
-        seed_mode = "private-external"
-        seed_path = seed_path.expanduser().resolve()
-        log.write(f"Seed mode: externally supplied private seed ({seed_path.name}).")
-    if not seed_path.is_file():
-        raise BuildFailure(f"Seed database was not found: {seed_path}")
 
     for spec_name in ("client.spec", "server.spec", "service.spec"):
         run(
@@ -355,10 +244,6 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
     if missing:
         raise BuildFailure("PyInstaller output is incomplete: " + ", ".join(missing))
 
-    # Import Qt and initialize the frozen GUI entry point without opening a window.
-    # This catches missing Qt plugins/DLLs before the installer is compiled.
-    run(log, [DIST_DIR / "HRM.exe", "--smoke-test"])
-
     # Execute the frozen server before creating Setup. This catches a missing
     # Python/cryptography/SQLite runtime inside the EXE on the actual build OS.
     smoke_data = BUILD_ROOT / "frozen-server-smoke-data"
@@ -370,7 +255,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
             "--data-dir",
             smoke_data,
             "--seed",
-            seed_path,
+            PROJECT_ROOT / "data" / "seed" / "sazmanhr-seed.sqlite",
             "--init-only",
             "--diagnostic-log",
             smoke_log,
@@ -396,8 +281,6 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
             iscc,
             f"/DProjectRoot={PROJECT_ROOT}",
             f"/DDistDir={DIST_DIR}",
-            f"/DSeedPath={seed_path}",
-            f"/DAppVersion={version}",
             INNO_SCRIPT,
         ],
     )
@@ -410,13 +293,6 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
     checksum = sha256(INSTALLER)
     checksum_file = INSTALLER.with_suffix(INSTALLER.suffix + ".sha256")
     checksum_file.write_text(f"{checksum}  {INSTALLER.name}\n", encoding="ascii")
-    write_build_manifest(
-        version=version,
-        seed_path=seed_path,
-        seed_mode=seed_mode,
-        executables=executables,
-        signed=bool(sign_thumbprint),
-    )
     elapsed = time.monotonic() - started
     log.write(f"\nSetup ready: {INSTALLER}")
     log.write(f"SHA-256: {checksum}")
@@ -425,14 +301,9 @@ def build(log: BuildLog, *, sign_thumbprint: str = "", seed_path: Path | None = 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the HRM Windows Setup.")
+    parser = argparse.ArgumentParser(description="Build the SazmanHR Windows Setup.")
     parser.add_argument("--launch", action="store_true", help="Open Setup after a successful build.")
     parser.add_argument("--sign-thumbprint", default="", help="Optional Windows code-signing certificate thumbprint.")
-    parser.add_argument(
-        "--seed",
-        type=Path,
-        help="Private production seed outside Git. Omit to build with synthetic demo data.",
-    )
     return parser.parse_args()
 
 
@@ -444,7 +315,7 @@ def main() -> int:
         print(f"BUILD ERROR: {exc}", file=sys.stderr, flush=True)
         return 1
     try:
-        build(log, sign_thumbprint=args.sign_thumbprint.strip(), seed_path=args.seed)
+        build(log, sign_thumbprint=args.sign_thumbprint.strip())
         if args.launch:
             log.write("Opening Setup. Approve the Windows UAC prompt to install.")
             subprocess.Popen([str(INSTALLER), f'/LOG={INSTALLER.parent / "install-test.log"}'])

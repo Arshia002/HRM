@@ -18,10 +18,10 @@ from .server import ApiServer, ensure_initial_owner, write_startup_failure
 from .tls import ensure_self_signed_certificate
 
 
-class HRMService(win32serviceutil.ServiceFramework):
-    _svc_name_ = "HRMCentralService"
+class SazmanHRService(win32serviceutil.ServiceFramework):
+    _svc_name_ = "HRMCentral"
     _svc_display_name_ = "HRM Central Service"
-    _svc_description_ = "Central data and synchronization service for HRM desktop clients"
+    _svc_description_ = "Central data and synchronization service for HRM clients"
 
     def __init__(self, args):
         super().__init__(args)
@@ -53,8 +53,8 @@ class HRMService(win32serviceutil.ServiceFramework):
                 cert, key = __import__("pathlib").Path(config.tls_cert), __import__("pathlib").Path(config.tls_key)
                 from .tls import pem_fingerprint
                 fingerprint = pem_fingerprint(cert)
-            ensure_initial_owner(repository, "owner", "مدیر سامانه",
-                                 os.environ.get("HRM_INITIAL_PASSWORD"), fingerprint)
+            ensure_initial_owner(repository, "arshia.shahbazi", "ارشیا شهبازی",
+                                 os.environ.get("SAZMANHR_INITIAL_PASSWORD"), fingerprint)
             self.httpd = ApiServer((config.host, config.port), repository, logger, tls_enabled=bool(cert))
             if cert and key:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -85,10 +85,10 @@ class HRMService(win32serviceutil.ServiceFramework):
 def main() -> None:
     if len(__import__("sys").argv) == 1:
         servicemanager.Initialize()
-        servicemanager.PrepareToHostSingle(HRMService)
+        servicemanager.PrepareToHostSingle(SazmanHRService)
         servicemanager.StartServiceCtrlDispatcher()
     else:
-        win32serviceutil.HandleCommandLine(HRMService)
+        win32serviceutil.HandleCommandLine(SazmanHRService)
 
 
 if __name__ == "__main__":

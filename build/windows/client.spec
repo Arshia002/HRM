@@ -17,7 +17,7 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, a.binaries, a.datas, [],
-    name="HRM",
+    name="SazmanHR",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -11,7 +11,7 @@ class SecurityTests(unittest.TestCase):
         self.assertNotIn("A-strong-password-1400", encoded)
 
     def test_username_normalization(self):
-        self.assertEqual(normalize_username(" Owner.Test "), "owner.test")
+        self.assertEqual(normalize_username(" Arshia.Shahbazi "), "arshia.shahbazi")
         with self.assertRaises(ValueError):
             normalize_username("ab")
 

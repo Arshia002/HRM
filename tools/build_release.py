@@ -9,14 +9,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_DIR = ROOT.parent / "release"
-VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-ARCHIVE = RELEASE_DIR / f"HRM-Kermanshah-{VERSION}-CI-Source.zip"
-EXCLUDED_PARTS = {"__pycache__", "build-output", "private-data", "private", "export", ".git"}
-EXCLUDED_SUFFIXES = {
-    ".pyc", ".pyo", ".tmp", ".sqlite", ".db", ".xls", ".xlsx", ".xlsm",
-    ".ppt", ".pptx", ".zip", ".7z", ".rar", ".key", ".pem", ".pfx", ".p12",
-}
-EXCLUDED_NAMES = {".env", "FIRST_LOGIN.txt", "manifest.json"}
+ARCHIVE = RELEASE_DIR / "SazmanHR-Enterprise-16.0.7-CI-Source.zip"
+EXCLUDED_PARTS = {"__pycache__", "build-output", ".git"}
+EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".tmp"}
 
 
 def digest(path: Path) -> str:
@@ -32,12 +27,7 @@ def source_files():
         relative = path.relative_to(ROOT)
         if not path.is_file() or any(part in EXCLUDED_PARTS for part in relative.parts):
             continue
-        if (
-            path.suffix.lower() in EXCLUDED_SUFFIXES
-            or path.name in EXCLUDED_NAMES
-            or path.name.lower().startswith("secrets")
-            or relative.as_posix() == "SHA256SUMS.txt"
-        ):
+        if path.suffix.lower() in EXCLUDED_SUFFIXES or relative.as_posix() == "SHA256SUMS.txt":
             continue
         yield path, relative
 
@@ -51,7 +41,7 @@ def main() -> int:
     ARCHIVE.unlink(missing_ok=True)
     with zipfile.ZipFile(ARCHIVE, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path, relative in files:
-            info = zipfile.ZipInfo(f"HRM-Kermanshah-{VERSION}/{relative.as_posix()}")
+            info = zipfile.ZipInfo(f"SazmanHR-Enterprise-16.0.7/{relative.as_posix()}")
             info.date_time = (2026, 8, 24, 0, 0, 0)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (0o644 & 0xFFFF) << 16

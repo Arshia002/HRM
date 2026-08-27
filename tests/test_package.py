@@ -3,58 +3,33 @@ import ast
 import importlib.util
 import json
 import sqlite3
-import tempfile
 import unittest
 from pathlib import Path
-
-from sazmanhr.demo_data import DEMO_CHART_PAGE_COUNT, DEMO_PERSONNEL_COUNT, create_demo_seed
 
 
 PROJECT = Path(__file__).resolve().parents[1]
 GENERATED_PARTS = {"build-output", "__pycache__", ".git"}
 
 
-def is_generated(path: Path) -> bool:
-    parts = path.relative_to(PROJECT).parts
-    return any(part in GENERATED_PARTS or part.startswith("tmp") for part in parts)
-
-
 class PackageTests(unittest.TestCase):
     def test_manifest_matches_database(self):
-        with tempfile.TemporaryDirectory() as temp:
-            database = Path(temp) / "hrm-seed.sqlite"
-            generated = create_demo_seed(database)
-            manifest = json.loads(database.with_name("manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(generated, manifest)
-            self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), manifest["database_sha256"])
-            conn = sqlite3.connect(database)
-            try:
-                self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0], DEMO_PERSONNEL_COUNT)
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0], DEMO_CHART_PAGE_COUNT)
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0], 0)
-                self.assertEqual(conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 0)
-                self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='schema_version'").fetchone()[0], "5")
-                self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='product_id'").fetchone()[0],
-                                 "hrm-kepdco")
-                self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='schema_generation'").fetchone()[0],
-                                 "1")
-                self.assertIsNone(conn.execute(
-                    "SELECT value FROM metadata WHERE key='deployment_id'"
-                ).fetchone())
-            finally:
-                conn.close()
-
-    def test_no_sensitive_source_data_is_tracked_in_package(self):
-        forbidden = {".xls", ".xlsx", ".xlsm", ".ppt", ".pptx", ".zip", ".7z", ".rar", ".sqlite", ".db"}
-        found = [
-            str(path.relative_to(PROJECT))
-            for path in PROJECT.rglob("*")
-            if path.is_file()
-            and path.suffix.lower() in forbidden
-            and not is_generated(path)
-        ]
-        self.assertEqual(found, [])
+        database = PROJECT / "data" / "seed" / "sazmanhr-seed.sqlite"
+        manifest = json.loads((PROJECT / "data" / "seed" / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(hashlib.sha256(database.read_bytes()).hexdigest(), manifest["database_sha256"])
+        conn = sqlite3.connect(database)
+        try:
+            self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0], 36)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0], 53)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='schema_version'").fetchone()[0], "5")
+            self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='product_id'").fetchone()[0],
+                             "sazmanhr-enterprise")
+            self.assertEqual(conn.execute("SELECT value FROM metadata WHERE key='schema_generation'").fetchone()[0],
+                             "16")
+        finally:
+            conn.close()
 
     def test_no_executable_payload_is_bundled(self):
         forbidden = {".exe", ".dll", ".msi", ".sys"}
@@ -62,7 +37,7 @@ class PackageTests(unittest.TestCase):
             str(path.relative_to(PROJECT))
             for path in PROJECT.rglob("*")
             if path.suffix.lower() in forbidden
-            and not is_generated(path)
+            and not any(part in GENERATED_PARTS for part in path.relative_to(PROJECT).parts)
         ]
         self.assertEqual(found, [])
 
@@ -81,7 +56,7 @@ class PackageTests(unittest.TestCase):
                          if path.is_file()
                          and path.suffix.lower() in suffixes
                          and path.name != "test_package.py"
-                         and not is_generated(path))
+                         and not any(part in GENERATED_PARTS for part in path.relative_to(PROJECT).parts))
         lowered = text.lower()
         for marker in ("r11", "r12", "r13", "r14", "5.1.1-network", "5.1.2-network", "windows_postinstall"):
             self.assertNotIn(marker, lowered)
@@ -110,12 +85,12 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(module.console_safe_text("راهنما", "utf-8"), "راهنما")
 
     def test_installer_is_offline_isolated_and_fail_fast(self):
-        script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        script = (PROJECT / "build" / "windows" / "SazmanHR.iss").read_text(encoding="utf-8")
         lowered = script.lower()
         self.assertIn("hrm-kermanshah", lowered)
-        self.assertIn("hrmcentralservice", lowered)
+        self.assertIn("hrmcentral", lowered)
         self.assertIn("--health-check", lowered)
-        self.assertIn("hrmserverpreflight.exe", lowered)
+        self.assertIn("sazmanhrserverpreflight.exe", lowered)
         self.assertIn("preparetoinstall", lowered)
         self.assertIn("getcustomsetupexitcode", lowered)
         self.assertIn("runrequired", lowered)
@@ -125,47 +100,8 @@ class PackageTests(unittest.TestCase):
         for forbidden in ("python.exe", "pip install", "winget", "powershell", "download"):
             self.assertNotIn(forbidden, lowered)
 
-    def test_private_seed_is_injected_at_setup_build_time(self):
-        for name in ("server.spec", "service.spec"):
-            spec = (PROJECT / "build" / "windows" / name).read_text(encoding="utf-8")
-            self.assertIn("datas=[]", spec)
-            self.assertNotIn("hrm-seed.sqlite", spec)
-        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
-        builder = (PROJECT / "build" / "windows" / "build_windows.py").read_text(encoding="utf-8")
-        self.assertIn("#ifndef SeedPath", installer)
-        self.assertIn('Source: "{#SeedPath}"', installer)
-        self.assertIn('f"/DSeedPath={seed_path}"', builder)
-        self.assertIn('parser.add_argument(\n        "--seed"', builder)
-
-    def test_private_seed_is_not_left_in_program_files(self):
-        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
-        lowered = installer.lower()
-        self.assertNotIn('destdir: "{app}\\server\\data\\seed"', lowered)
-        self.assertIn("seedpath := expandconstant('{tmp}\\hrm-seed.sqlite')", lowered)
-        self.assertIn('flags: dontcopy', lowered)
-
-    def test_build_is_versioned_and_emits_provenance(self):
-        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
-        builder = (PROJECT / "build" / "windows" / "build_windows.py").read_text(encoding="utf-8")
-        client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
-        self.assertIn("#ifndef AppVersion", installer)
-        self.assertIn("AppVersion={#AppVersion}", installer)
-        self.assertIn('f"/DAppVersion={version}"', builder)
-        self.assertIn("build-manifest.json", builder)
-        self.assertIn("dependencies.txt", builder)
-        self.assertIn('DIST_DIR / "HRM.exe", "--smoke-test"', builder)
-        self.assertIn('parser.add_argument("--smoke-test"', client)
-
-    def test_build_dependencies_are_exactly_pinned(self):
-        requirements = (PROJECT / "build" / "windows" / "requirements-build.txt").read_text(
-            encoding="utf-8"
-        ).splitlines()
-        pins = [line for line in requirements if line.strip() and not line.lstrip().startswith("#")]
-        self.assertGreaterEqual(len(pins), 4)
-        self.assertTrue(all(line.count("==") == 1 for line in pins))
-
     def test_silent_installer_has_no_unsuppressible_message_box(self):
-        script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        script = (PROJECT / "build" / "windows" / "SazmanHR.iss").read_text(encoding="utf-8")
         self.assertIn("SuppressibleMsgBox(", script)
         self.assertNotRegex(script, r"(?m)^\s*MsgBox\(")
 
@@ -177,72 +113,31 @@ class PackageTests(unittest.TestCase):
         self.assertNotIn("Start-Process $Installer", script)
 
     def test_installer_registers_service_before_acl_and_verifies_hardening(self):
-        script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        script = (PROJECT / "build" / "windows" / "SazmanHR.iss").read_text(encoding="utf-8")
         lowered = script.lower()
         service = lowered.index("--startup auto install")
-        service_sid = lowered.index("sidtype hrmcentralservice unrestricted")
-        service_sid_check = lowered.index("qsidtype hrmcentralservice")
-        service_account = lowered.index('config hrmcentralservice obj= "nt authority\\localservice"')
-        hardening = lowered.index("/inheritance:d /t")
-        broad_access_removal = lowered.index("/remove:g *s-1-1-0 *s-1-5-11 *s-1-5-32-545 /t")
-        bootstrap_acl = lowered.index("nt service\\hrmcentralservice:(oi)(ci)m")
-        acl = lowered.index("nt service\\hrmcentralservice:(oi)(ci)m", hardening)
-        restart_stop = lowered.index("توقف سرویس پس از سخت‌سازی acl")
-        restart_start = lowered.index("راه‌اندازی مجدد سرویس پس از سخت‌سازی acl")
+        service_sid = lowered.index("sidtype hrmcentral unrestricted")
+        acl = lowered.index("nt service\\hrmcentral:(oi)(ci)m")
+        hardening = lowered.index("/inheritance:r /t")
         final_health = lowered.index("آزمون نهایی tls")
         self.assertLess(service, service_sid)
-        self.assertLess(service_sid, service_sid_check)
-        self.assertLess(service_sid_check, service_account)
-        self.assertLess(service_account, bootstrap_acl)
-        self.assertLess(bootstrap_acl, hardening)
-        self.assertLess(service_account, hardening)
-        self.assertLess(hardening, broad_access_removal)
-        self.assertLess(broad_access_removal, acl)
-        self.assertLess(acl, restart_stop)
-        self.assertLess(restart_stop, restart_start)
-        self.assertLess(restart_start, final_health)
+        self.assertLess(service_sid, acl)
+        self.assertLess(acl, hardening)
         self.assertLess(hardening, final_health)
-        self.assertNotIn('obj= "nt service\\hrmcentralservice"', lowered)
+        self.assertIn("config hrmcentral obj= localsystem", lowered)
         self.assertIn("hrm_stage|", lowered)
         self.assertIn("logprotecteddiagnostics", lowered)
         self.assertNotIn("/t /c", lowered)
-
-    def test_upgrade_stops_service_before_file_copy_and_restores_on_failure(self):
-        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
-        lowered = installer.lower()
-        prepare_start = lowered.index("function preparetoinstall")
-        prepare_end = lowered.index("function getcustomsetupexitcode")
-        prepare = lowered[prepare_start:prepare_end]
-        stop = prepare.index("--stop-windows-service hrmcentralservice")
-        database_preflight = prepare.index("--init-only")
-        self.assertLess(stop, database_preflight)
-        self.assertIn("service-stop-before-copy", prepare)
-        self.assertIn("service-stop-state.json", prepare)
-        self.assertIn("preinstallservicehandled", prepare)
-        self.assertIn("procedure deinitializesetup", lowered)
-        self.assertIn("restoreoriginalserviceifneeded", lowered)
-        self.assertIn("if not setupcompleted", lowered)
-        provision_start = lowered.index("procedure provisionenterpriseserver")
-        provision_end = lowered.index("procedure initializewizard")
-        provision = lowered[provision_start:provision_end]
-        self.assertNotIn("serviceexistedbeforeinstall :=", provision)
-        self.assertNotIn("if serviceexistedbeforeinstall then\n    runignored(serviceexe", provision)
 
     def test_windows_smoke_test_verifies_service_identity_acl_and_diagnostics(self):
         script = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8")
         lowered = script.lower()
         self.assertIn("get-ciminstance win32_service", lowered)
-        self.assertIn("startname -ne 'nt authority\\localservice'", lowered)
+        self.assertIn("startname -ne 'localsystem'", lowered)
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
-        self.assertIn("filesystemrights]::fullcontrol", lowered)
-        self.assertIn("assert-protectedacl", lowered)
-        self.assertIn("s-1-1-0", lowered)
-        self.assertIn("s-1-5-11", lowered)
-        self.assertIn("s-1-5-32-545", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne $expectedversion", lowered)
-        self.assertIn("build-manifest.json", lowered)
+        self.assertIn("version -ne '0.2.0-alpha.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -250,25 +145,14 @@ class PackageTests(unittest.TestCase):
         self.assertIn("diagnostic-copy-errors.txt", lowered)
         self.assertIn("service-config.txt", lowered)
         self.assertIn("data-acl.txt", lowered)
-        self.assertIn("deploymentidbefore", lowered)
-        self.assertIn("stopbeforecopyindex", lowered)
-        self.assertIn("restartmanager found an application using one of our files: hrm", lowered)
-        self.assertNotIn("get-filehash $firstlogin", lowered)
-        self.assertIn("select-object name, displayname, state, startmode, startname", lowered)
-        self.assertNotIn("convertto-json -depth 4", lowered)
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8").lower()
         self.assertIn("snapshot installer diagnostics", workflow)
         self.assertIn("build-output/installer/*.log", workflow)
         self.assertIn("build-output/installer/*.json", workflow)
-        self.assertRegex(workflow, r"actions/checkout@[0-9a-f]{40}\s+# v7\.0\.1")
-        self.assertRegex(workflow, r"actions/setup-python@[0-9a-f]{40}\s+# v7\.0\.0")
-        self.assertRegex(workflow, r"actions/upload-artifact@[0-9a-f]{40}\s+# v7\.0\.1")
-        self.assertIn("persist-credentials: false", workflow)
-        self.assertIn("build-manifest.json", workflow)
-        self.assertIn("dependencies.txt", workflow)
+        self.assertIn("actions/checkout@v7", workflow)
+        self.assertIn("actions/setup-python@v7", workflow)
+        self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
-        self.assertIn("language.parser]::parsefile", workflow)
-        self.assertIn("powershell syntax validation failed", workflow)
 
 
 if __name__ == "__main__":

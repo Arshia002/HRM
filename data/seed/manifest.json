@@ -1,0 +1,23 @@
+{
+  "format": "HRM 0.2.0-alpha.1 synthetic demo seed",
+  "product_id": "sazmanhr-enterprise",
+  "schema_generation": 16,
+  "schema_version": 5,
+  "dataset_version": "demo-36",
+  "generated_at": "2026-08-27T16:22:21.882271+00:00",
+  "counts": {
+    "personnel": 36,
+    "chart_pages": 53,
+    "chart_nodes": 0,
+    "chart_lines": 0,
+    "users": 0
+  },
+  "database_sha256": "a729f17f1278543d0ee320f4a46f178199c79555f22742033eb92034b5ad0714",
+  "contains_accounts": false,
+  "contains_sessions": false,
+  "contains_real_personnel": false,
+  "contains_real_organization_chart": false,
+  "migration_policy": "synthetic-demo-only",
+  "personnel_count": 36,
+  "seed_mode": "synthetic-demo"
+}

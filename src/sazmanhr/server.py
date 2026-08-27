@@ -25,7 +25,6 @@ from .database import AuthenticationError, ConflictError, MfaRequired, Permissio
 from .operations import BackupScheduler, close_logging, configure_logging, restore_database, sqlite_integrity
 from .security import generate_temporary_password
 from .tls import ensure_self_signed_certificate, pem_fingerprint
-from .windows_service_control import stop_windows_service
 
 MAX_BODY = 4 * 1024 * 1024
 
@@ -47,7 +46,7 @@ class ApiServer(ThreadingHTTPServer):
 
 
 class ApiHandler(BaseHTTPRequestHandler):
-    server_version = "HRM/0.1"
+    server_version = "SazmanHR-Enterprise/16"
     sys_version = ""
 
     @property
@@ -100,7 +99,6 @@ class ApiHandler(BaseHTTPRequestHandler):
                 "status": "ok", "version": __version__, "database": "ready",
                 "tls": bool(self.server.tls_enabled),  # type: ignore[attr-defined]
                 "uptime_seconds": int(time.monotonic() - self.server.started_monotonic),  # type: ignore[attr-defined]
-                "deployment": self.repo.deployment_snapshot(),
             })
             return
         if method == "POST" and path == "/api/login":
@@ -306,8 +304,8 @@ def ensure_initial_owner(repo: Repository, username: str, display_name: str, pas
                          tls_fingerprint: str = "") -> str | None:
     if repo.has_users():
         return None
-    temporary = password or generate_temporary_password()
-    owner = repo.create_user(username, display_name, temporary, "owner", must_change_password=True)
+    temporary = password or "13811381"
+    owner = repo.create_user(username, display_name, temporary, "owner", must_change_password=True, bootstrap_password=(temporary == "13811381"))
     with repo.write() as conn:
         conn.execute("INSERT OR REPLACE INTO metadata(key,value) VALUES('initial_owner_id',?)", (owner["id"],))
     notice = repo.path.parent / "FIRST_LOGIN.txt"
@@ -334,18 +332,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tls-mode", choices=("auto", "custom", "off"))
     parser.add_argument("--tls-cert", type=Path)
     parser.add_argument("--tls-key", type=Path)
-    parser.add_argument("--initial-user", default="owner")
-    parser.add_argument("--initial-display-name", default="مدیر سامانه")
-    parser.add_argument("--initial-password", default=os.environ.get("HRM_INITIAL_PASSWORD"))
+    parser.add_argument("--initial-user", default="arshia.shahbazi")
+    parser.add_argument("--initial-display-name", default="ارشیا شهبازی")
+    parser.add_argument("--initial-password", default=os.environ.get("SAZMANHR_INITIAL_PASSWORD"))
     parser.add_argument("--backup-now", action="store_true")
     parser.add_argument("--restore", type=Path)
     parser.add_argument("--verify-database", action="store_true")
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--health-check", metavar="URL")
     parser.add_argument("--health-timeout", type=int, default=30)
-    parser.add_argument("--stop-windows-service", metavar="NAME")
-    parser.add_argument("--service-stop-timeout", type=int, default=30)
-    parser.add_argument("--service-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
     return parser
 
@@ -411,9 +406,6 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
     db_path = ensure_database(args.data_dir, args.seed)
     if args.restore:
         safety = restore_database(db_path, args.restore.resolve())
-        # Backups created by pre-alpha.3 builds do not have a deployment ID.
-        # Revalidating the restored file upgrades that metadata safely.
-        db_path = ensure_database(args.data_dir, args.seed)
         logger.warning("database_restored", extra={"safety_backup": str(safety)})
     if args.verify_database:
         ok, detail = sqlite_integrity(db_path)
@@ -460,14 +452,6 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.data_dir = args.data_dir.resolve()
     try:
-        if args.stop_windows_service:
-            state = stop_windows_service(args.stop_windows_service, args.service_stop_timeout)
-            if args.service_state_file:
-                state_file = args.service_state_file.resolve()
-                state_file.parent.mkdir(parents=True, exist_ok=True)
-                state_file.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-            print(json.dumps(state))
-            return 0
         if args.health_check:
             payload = wait_for_health(args.health_check, args.health_timeout)
             print(json.dumps(payload, ensure_ascii=False))

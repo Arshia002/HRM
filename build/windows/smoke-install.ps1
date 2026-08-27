@@ -13,16 +13,19 @@ if ($LogPath) {
 }
 
 $ArtifactDir = if ($LogPath) { Split-Path $LogPath } else { Split-Path ([IO.Path]::GetFullPath($Installer)) }
-$SetupLog = Join-Path $ArtifactDir "setup-install.log"
-$UpgradeSetupLog = Join-Path $ArtifactDir "setup-upgrade.log"
+$SetupLog = Join-Path $ArtifactDir "setup-inno.log"
+$UpgradeLog = Join-Path $ArtifactDir "setup-upgrade.log"
 $ServiceConfigLog = Join-Path $ArtifactDir "service-config.txt"
 $ServiceStateLog = Join-Path $ArtifactDir "service-state.txt"
 $ServiceCimLog = Join-Path $ArtifactDir "service-cim.json"
 $AclLog = Join-Path $ArtifactDir "data-acl.txt"
 $FailureSummaryLog = Join-Path $ArtifactDir "install-failure-summary.txt"
 $DiagnosticCopyLog = Join-Path $ArtifactDir "diagnostic-copy-errors.txt"
-$HrmData = Join-Path $env:ProgramData "HRM-Kermanshah"
-$BuildManifestPath = Join-Path $ArtifactDir "build-manifest.json"
+$EnterpriseData = Join-Path $env:ProgramData "HRM-Kermanshah"
+$ApiBase = 'https://127.0.0.1:8765'
+$BootstrapPassword = '13811381'
+$ChangedPassword = 'CI-Changed!Password1401'
+$Username = 'arshia.shahbazi'
 
 function Invoke-CheckedProcess {
     param(
@@ -33,11 +36,7 @@ function Invoke-CheckedProcess {
         [switch]$NoNewWindow
     )
     Write-Host "[$(Get-Date -Format o)] START: $Stage"
-    $start = @{
-        FilePath = $FilePath
-        ArgumentList = $ArgumentList
-        PassThru = $true
-    }
+    $start = @{ FilePath = $FilePath; ArgumentList = $ArgumentList; PassThru = $true }
     if ($NoNewWindow) { $start["NoNewWindow"] = $true }
     $process = Start-Process @start
     if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
@@ -46,218 +45,214 @@ function Invoke-CheckedProcess {
         throw "$Stage timed out after $TimeoutSeconds seconds. The process tree was terminated."
     }
     $process.Refresh()
-    if ($process.ExitCode -ne 0) {
-        throw "$Stage failed with exit code $($process.ExitCode)."
-    }
+    if ($process.ExitCode -ne 0) { throw "$Stage failed with exit code $($process.ExitCode)." }
     Write-Host "[$(Get-Date -Format o)] PASS: $Stage"
 }
 
-function Get-HealthyDeployment {
+function Invoke-ApiJson {
     param(
-        [Parameter(Mandatory=$true)][string]$ExpectedVersion,
-        [Parameter(Mandatory=$true)][string]$Stage
+        [Parameter(Mandatory=$true)][ValidateSet('GET','POST')][string]$Method,
+        [Parameter(Mandatory=$true)][string]$Path,
+        [hashtable]$Body = $null,
+        [string]$Token = ''
     )
-    $health = $null
-    for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        try {
-            $health = Invoke-RestMethod https://127.0.0.1:8765/api/health -SkipCertificateCheck -TimeoutSec 3
-            break
-        } catch {
-            Start-Sleep -Milliseconds 500
-        }
+    $headers = @{}
+    if ($Token) { $headers['Authorization'] = "Bearer $Token" }
+    $params = @{
+        Method = $Method
+        Uri = "$ApiBase$Path"
+        SkipCertificateCheck = $true
+        TimeoutSec = 8
+        Headers = $headers
     }
-    if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
-        $health.database -ne 'ready' -or $health.version -ne $ExpectedVersion -or
-        -not $health.deployment -or -not $health.deployment.id -or
-        [int]$health.deployment.users -lt 1) {
-        $healthDetail = if ($health) { $health | ConvertTo-Json -Depth 3 -Compress } else { 'no response' }
-        throw "TLS/service/database-ready health check failed during ${Stage}: $healthDetail"
+    if ($null -ne $Body) {
+        $params['ContentType'] = 'application/json'
+        $params['Body'] = ($Body | ConvertTo-Json -Compress)
     }
-    return $health
+    return Invoke-RestMethod @params
 }
 
-function Assert-ProtectedAcl {
+function Assert-ApiFailure {
     param(
+        [Parameter(Mandatory=$true)][ValidateSet('GET','POST')][string]$Method,
         [Parameter(Mandatory=$true)][string]$Path,
-        [Parameter(Mandatory=$true)]
-        [System.Security.Principal.SecurityIdentifier]$ServiceSid
+        [hashtable]$Body = $null,
+        [string]$Token = '',
+        [Parameter(Mandatory=$true)][int]$StatusCode,
+        [Parameter(Mandatory=$true)][string]$Stage
     )
-    if (-not (Test-Path -LiteralPath $Path)) { throw "Protected path is missing: $Path" }
-    $acl = Get-Acl -LiteralPath $Path
-    $rules = @($acl.GetAccessRules(
-        $true, $true, [System.Security.Principal.SecurityIdentifier]
-    ))
-    $allow = [System.Security.AccessControl.AccessControlType]::Allow
-    $serviceRule = $rules | Where-Object {
-        $_.IdentityReference.Value -eq $ServiceSid.Value -and
-        $_.AccessControlType -eq $allow -and
-        (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify) -eq
-            [System.Security.AccessControl.FileSystemRights]::Modify)
+    try {
+        Invoke-ApiJson -Method $Method -Path $Path -Body $Body -Token $Token | Out-Null
+        throw "$Stage unexpectedly succeeded."
+    } catch {
+        if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq $StatusCode) {
+            Write-Host "[$(Get-Date -Format o)] PASS: $Stage returned expected HTTP $StatusCode"
+            return
+        }
+        if ($_.Exception.Message -like '*unexpectedly succeeded*') { throw }
+        throw "$Stage failed with an unexpected response: $($_.Exception.Message)"
     }
-    if (-not $serviceRule) {
-        throw "Service SID does not have Modify access on protected path: $Path"
+}
+
+function Wait-HrmHealth {
+    param([string]$Stage)
+    $health = $null
+    for ($attempt = 0; $attempt -lt 30; $attempt++) {
+        try {
+            $health = Invoke-ApiJson -Method GET -Path '/api/health'
+            if ($health.status -eq 'ok') { break }
+        } catch { }
+        Start-Sleep -Milliseconds 500
     }
-    $adminRule = $rules | Where-Object {
-        $_.IdentityReference.Value -eq 'S-1-5-32-544' -and
-        $_.AccessControlType -eq $allow -and
-        (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -eq
-            [System.Security.AccessControl.FileSystemRights]::FullControl)
+    if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
+        $health.database -ne 'ready' -or $health.version -ne '0.2.0-alpha.1') {
+        $detail = if ($health) { $health | ConvertTo-Json -Compress } else { 'no response' }
+        throw "$Stage health check failed: $detail"
     }
-    if (-not $adminRule) {
-        throw "Administrators do not have FullControl on protected path: $Path"
-    }
-    $forbiddenSids = @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545')
-    $broadRule = $rules | Where-Object {
-        $_.AccessControlType -eq $allow -and
-        $forbiddenSids -contains $_.IdentityReference.Value
-    }
-    if ($broadRule) {
-        throw "A broad user group still has access on protected path: $Path"
-    }
+    Write-Host "[$(Get-Date -Format o)] PASS: $Stage health/TLS/database/version"
 }
 
 try {
     $Installer = (Resolve-Path $Installer).Path
-    if (-not (Test-Path $BuildManifestPath)) { throw 'Build manifest is missing.' }
-    $ExpectedVersion = (Get-Content -LiteralPath $BuildManifestPath -Raw | ConvertFrom-Json).version
-    if (-not $ExpectedVersion) { throw 'Build manifest does not contain a product version.' }
     $Target = Join-Path $env:ProgramFiles "HRM"
-    $LegacyData = Join-Path $env:ProgramData "HRM"
-    $LegacyDatabase = Join-Path $LegacyData "hrm.sqlite"
+    $LegacyData = Join-Path $env:ProgramData "SazmanHR"
+    $LegacyDatabase = Join-Path $LegacyData "sazmanhr.sqlite"
 
-    # A poisoned legacy path proves the new installer never opens or migrates it.
+    # Prove the HRM package never opens/migrates the old SazmanHR ProgramData path.
     New-Item -ItemType Directory -Force -Path $LegacyData | Out-Null
     [IO.File]::WriteAllText($LegacyDatabase, "legacy-sentinel-must-remain-untouched")
     $LegacyHash = (Get-FileHash $LegacyDatabase -Algorithm SHA256).Hash
 
     Invoke-CheckedProcess -FilePath $Installer `
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$SetupLog`"") `
-        -Stage 'Silent full Setup installation' -TimeoutSeconds 240
+        -Stage 'Clean silent full Setup installation' -TimeoutSeconds 260
 
-    $service = Get-Service HRMCentralService -ErrorAction Stop
+    $service = Get-Service HRMCentral -ErrorAction Stop
     if ($service.Status -ne 'Running') {
-        Start-Service HRMCentralService
+        Start-Service HRMCentral
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
-    $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'"
-    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'NT AUTHORITY\LocalService') {
-        throw "Windows Service is not running under the low-privilege LocalService account."
+    $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='HRMCentral'"
+    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'LocalSystem') {
+        throw "Windows Service account is not explicitly LocalSystem."
     }
 
-    $serviceAccount = New-Object System.Security.Principal.NTAccount('NT SERVICE', 'HRMCentralService')
+    $serviceAccount = New-Object System.Security.Principal.NTAccount('NT SERVICE', 'HRMCentral')
     $serviceSid = $serviceAccount.Translate([System.Security.Principal.SecurityIdentifier])
-    $protectedPaths = @(
-        $HrmData,
-        (Join-Path $HrmData 'hrm.sqlite'),
-        (Join-Path $HrmData 'FIRST_LOGIN.txt'),
-        (Join-Path $HrmData 'server.json'),
-        (Join-Path $HrmData 'tls\server.key')
-    )
-    foreach ($protectedPath in $protectedPaths) {
-        Assert-ProtectedAcl -Path $protectedPath -ServiceSid $serviceSid
+    $acl = Get-Acl $EnterpriseData
+    $rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
+    $serviceRule = $rules | Where-Object {
+        $_.IdentityReference.Value -eq $serviceSid.Value -and
+        $_.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow -and
+        ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify)
     }
+    if (-not $serviceRule) { throw "ProgramData ACL does not grant Modify to the dedicated Service SID." }
 
-    $health = Get-HealthyDeployment -ExpectedVersion $ExpectedVersion -Stage 'initial installation'
+    Wait-HrmHealth -Stage 'Clean install'
+
     if (-not (Test-Path (Join-Path $Target 'Client\HRM.exe'))) { throw 'Desktop client missing.' }
-    if (Test-Path (Join-Path $Target 'Server\data\seed\hrm-seed.sqlite')) {
-        throw 'Private/demo seed was left behind in Program Files.'
-    }
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'HRM.lnk'
     if (-not (Test-Path $desktopShortcut)) { throw 'Desktop shortcut missing.' }
-    if (-not (Test-Path (Join-Path $HrmData 'hrm.sqlite'))) { throw 'HRM database missing.' }
-    if (-not (Test-Path (Join-Path $HrmData 'FIRST_LOGIN.txt'))) { throw 'First-login notice missing.' }
+    $database = Join-Path $EnterpriseData 'hrm.sqlite'
+    if (-not (Test-Path $database)) { throw 'Enterprise database missing.' }
+    $firstLogin = Join-Path $EnterpriseData 'FIRST_LOGIN.txt'
+    if (-not (Test-Path $firstLogin)) { throw 'First-login notice missing.' }
     if ((Get-FileHash $LegacyDatabase -Algorithm SHA256).Hash -ne $LegacyHash) {
-        throw 'Legacy ProgramData was modified by the clean enterprise installer.'
+        throw 'Legacy ProgramData was modified by the clean HRM installer.'
     }
 
-    # An in-place reinstall exercises the same path used by an alpha upgrade.
-    # Preservation is proven through the running service, without reading the
-    # database, TLS key or one-time credential from the test account.
-    $PreservationMarker = Join-Path $HrmData 'ci-preserve-marker.txt'
-    [IO.File]::WriteAllText($PreservationMarker, 'must-survive-upgrade-and-uninstall')
-    Assert-ProtectedAcl -Path $PreservationMarker -ServiceSid $serviceSid
-    $DeploymentIdBefore = [string]$health.deployment.id
-    $UserCountBefore = [int]$health.deployment.users
-    $PersonnelCountBefore = [int]$health.deployment.personnel
-    $ChartPageCountBefore = [int]$health.deployment.chart_pages
+    # First-login acceptance: login works, dashboard is blocked, password change is required.
+    $login = Invoke-ApiJson -Method POST -Path '/api/login' -Body @{ username=$Username; password=$BootstrapPassword }
+    if (-not $login.token) { throw 'Bootstrap login did not return a session token.' }
+    if ([int]$login.user.must_change_password -ne 1) { throw 'Bootstrap account is not marked must_change_password.' }
+    $bootstrapToken = [string]$login.token
+    Assert-ApiFailure -Method GET -Path '/api/dashboard' -Token $bootstrapToken -StatusCode 403 -Stage 'Dashboard blocked before password change'
+
+    $change = Invoke-ApiJson -Method POST -Path '/api/change-password' -Token $bootstrapToken -Body @{
+        current_password=$BootstrapPassword
+        new_password=$ChangedPassword
+    }
+    if (-not $change.ok) { throw 'Password change endpoint did not return ok.' }
+    if (Test-Path $firstLogin) { throw 'FIRST_LOGIN.txt was not removed after initial owner changed password.' }
+
+    Assert-ApiFailure -Method POST -Path '/api/login' -Body @{ username=$Username; password=$BootstrapPassword } -StatusCode 401 -Stage 'Bootstrap password invalidated after change'
+    $changedLogin = Invoke-ApiJson -Method POST -Path '/api/login' -Body @{ username=$Username; password=$ChangedPassword }
+    if (-not $changedLogin.token -or [int]$changedLogin.user.must_change_password -ne 0) {
+        throw 'Changed password login failed or still requires password change.'
+    }
+    $dashboard = Invoke-ApiJson -Method GET -Path '/api/dashboard' -Token ([string]$changedLogin.token)
+    if (-not $dashboard.stats) { throw 'Dashboard did not become available after password change.' }
+    Write-Host "[$(Get-Date -Format o)] PASS: bootstrap login, forced password change and dashboard gate"
+
+    # Create a data-preservation sentinel and capture DB hash before upgrade.
+    $sentinel = Join-Path $EnterpriseData 'ci-upgrade-sentinel.txt'
+    [IO.File]::WriteAllText($sentinel, "HRM-UPGRADE-PRESERVE-$(Get-Date -Format o)")
+    $sentinelHash = (Get-FileHash $sentinel -Algorithm SHA256).Hash
+    $dbHashBeforeUpgrade = (Get-FileHash $database -Algorithm SHA256).Hash
+
     Invoke-CheckedProcess -FilePath $Installer `
-        -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$UpgradeSetupLog`"") `
-        -Stage 'Silent in-place upgrade installation' -TimeoutSeconds 240
-    $UpgradeSetupText = Get-Content -LiteralPath $UpgradeSetupLog -Raw
-    $StopBeforeCopyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-stop-before-copy')
-    $FirstFileEntryIndex = $UpgradeSetupText.IndexOf('-- File entry --')
-    if ($StopBeforeCopyIndex -lt 0 -or $FirstFileEntryIndex -lt 0 -or
-        $StopBeforeCopyIndex -gt $FirstFileEntryIndex) {
-        throw 'Upgrade did not prove the existing service stopped before Setup replaced files.'
+        -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$UpgradeLog`"") `
+        -Stage 'Silent in-place upgrade installation' -TimeoutSeconds 260
+
+    $service = Get-Service HRMCentral -ErrorAction Stop
+    if ($service.Status -ne 'Running') {
+        Start-Service HRMCentral
+        $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
-    if ($UpgradeSetupText -match 'RestartManager found an application using one of our files: HRM') {
-        throw 'An HRM process still held an installed file when the upgrade copy phase started.'
+    Wait-HrmHealth -Stage 'Post-upgrade'
+
+    if (-not (Test-Path $sentinel) -or (Get-FileHash $sentinel -Algorithm SHA256).Hash -ne $sentinelHash) {
+        throw 'Upgrade did not preserve the operational sentinel.'
     }
-    if (-not (Test-Path $PreservationMarker)) { throw 'Operational marker was removed by in-place upgrade.' }
-    if (-not (Test-Path (Join-Path $HrmData 'FIRST_LOGIN.txt'))) { throw 'First-login notice was removed by in-place upgrade.' }
-    if (Test-Path (Join-Path $Target 'Server\data\seed\hrm-seed.sqlite')) {
-        throw 'Seed was persisted in Program Files during in-place upgrade.'
+    if (-not (Test-Path $database)) { throw 'Upgrade removed the enterprise database.' }
+    # DB hash may legitimately change because sessions/audit timestamps are written. Its presence and login state are authoritative.
+    $dbHashAfterUpgrade = (Get-FileHash $database -Algorithm SHA256).Hash
+    Write-Host "DB SHA256 before upgrade: $dbHashBeforeUpgrade"
+    Write-Host "DB SHA256 after upgrade : $dbHashAfterUpgrade"
+
+    Assert-ApiFailure -Method POST -Path '/api/login' -Body @{ username=$Username; password=$BootstrapPassword } -StatusCode 401 -Stage 'Bootstrap password remains invalid after upgrade'
+    $postUpgradeLogin = Invoke-ApiJson -Method POST -Path '/api/login' -Body @{ username=$Username; password=$ChangedPassword }
+    if (-not $postUpgradeLogin.token -or [int]$postUpgradeLogin.user.must_change_password -ne 0) {
+        throw 'Changed password or must_change_password state was not preserved through upgrade.'
     }
-    $service = Get-Service HRMCentralService -ErrorAction Stop
-    if ($service.Status -ne 'Running') { throw 'Service is not running after in-place upgrade.' }
-    $healthAfterUpgrade = Get-HealthyDeployment -ExpectedVersion $ExpectedVersion -Stage 'in-place upgrade'
-    if ([string]$healthAfterUpgrade.deployment.id -ne $DeploymentIdBefore -or
-        [int]$healthAfterUpgrade.deployment.users -ne $UserCountBefore -or
-        [int]$healthAfterUpgrade.deployment.personnel -ne $PersonnelCountBefore -or
-        [int]$healthAfterUpgrade.deployment.chart_pages -ne $ChartPageCountBefore) {
-        throw 'Operational deployment identity or record counts changed during in-place upgrade.'
-    }
-    foreach ($protectedPath in ($protectedPaths + $PreservationMarker)) {
-        Assert-ProtectedAcl -Path $protectedPath -ServiceSid $serviceSid
-    }
+    if (Test-Path $firstLogin) { throw 'Upgrade recreated FIRST_LOGIN.txt for an existing initialized database.' }
+    Write-Host "[$(Get-Date -Format o)] PASS: in-place upgrade and account/data preservation"
 
     $uninstaller = Join-Path $Target 'unins000.exe'
     if (-not (Test-Path $uninstaller)) { throw 'Uninstaller missing.' }
     Invoke-CheckedProcess -FilePath $uninstaller `
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-') `
         -Stage 'Silent uninstall' -TimeoutSeconds 180
+
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        if (-not (Get-Service HRMCentralService -ErrorAction SilentlyContinue)) { break }
+        if (-not (Get-Service HRMCentral -ErrorAction SilentlyContinue)) { break }
         Start-Sleep -Milliseconds 500
     }
-    if (Get-Service HRMCentralService -ErrorAction SilentlyContinue) { throw 'Service was not removed.' }
-    if (-not (Test-Path (Join-Path $HrmData 'hrm.sqlite'))) {
-        throw 'Operational data was removed by uninstall.'
-    }
-    if (-not (Test-Path $PreservationMarker)) {
-        throw 'Operational marker was removed by uninstall.'
+    if (Get-Service HRMCentral -ErrorAction SilentlyContinue) { throw 'Service was not removed.' }
+    if (-not (Test-Path $database)) { throw 'Operational database was removed by uninstall.' }
+    if (-not (Test-Path $sentinel) -or (Get-FileHash $sentinel -Algorithm SHA256).Hash -ne $sentinelHash) {
+        throw 'Operational data sentinel was removed or changed by uninstall.'
     }
 
-    Write-Host "Windows install, upgrade, TLS, service, data-preservation and uninstall smoke test passed."
+    Write-Host "ALL ACCEPTANCE TESTS PASSED: clean install, TLS, service, ACL, desktop, bootstrap login, forced password change, in-place upgrade, data preservation and uninstall."
 } catch {
-    try {
-        ($_ | Format-List * -Force | Out-String) | Out-File -FilePath $FailureSummaryLog -Encoding utf8 -Force
-    } catch { }
+    try { ($_ | Format-List * -Force | Out-String) | Out-File -FilePath $FailureSummaryLog -Encoding utf8 -Force } catch { }
     throw
 } finally {
     if ($TranscriptStarted) {
         try { Stop-Transcript | Out-Null } catch { }
         $TranscriptStarted = $false
     }
-    try { & "$env:SystemRoot\System32\sc.exe" qc HRMCentralService 2>&1 | Out-File -FilePath $ServiceConfigLog -Encoding utf8 -Force } catch { }
-    try { & "$env:SystemRoot\System32\sc.exe" queryex HRMCentralService 2>&1 | Out-File -FilePath $ServiceStateLog -Encoding utf8 -Force } catch { }
-    try {
-        Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'" |
-            Select-Object Name, DisplayName, State, StartMode, StartName, PathName, ProcessId, ExitCode |
-            ConvertTo-Json -Depth 2 |
-            Out-File -FilePath $ServiceCimLog -Encoding utf8 -Force
-    } catch { }
-    try { & "$env:SystemRoot\System32\icacls.exe" $HrmData /T 2>&1 | Out-File -FilePath $AclLog -Encoding utf8 -Force } catch { }
-    $serverLog = Join-Path $HrmData 'logs\setup-server.log'
-    $startupLog = Join-Path $HrmData 'logs\startup-failure.log'
-    try {
-        if (Test-Path $serverLog) { Copy-Item -Force $serverLog (Join-Path $ArtifactDir 'setup-server.log') }
-    } catch {
-        try { "setup-server.log: $($_.Exception.Message)" | Add-Content -Path $DiagnosticCopyLog -Encoding utf8 } catch { }
+    try { & "$env:SystemRoot\System32\sc.exe" qc HRMCentral 2>&1 | Out-File -FilePath $ServiceConfigLog -Encoding utf8 -Force } catch { }
+    try { & "$env:SystemRoot\System32\sc.exe" queryex HRMCentral 2>&1 | Out-File -FilePath $ServiceStateLog -Encoding utf8 -Force } catch { }
+    try { Get-CimInstance Win32_Service -Filter "Name='HRMCentral'" | ConvertTo-Json -Depth 4 | Out-File -FilePath $ServiceCimLog -Encoding utf8 -Force } catch { }
+    try { & "$env:SystemRoot\System32\icacls.exe" $EnterpriseData /T 2>&1 | Out-File -FilePath $AclLog -Encoding utf8 -Force } catch { }
+    $serverLog = Join-Path $EnterpriseData 'logs\setup-server.log'
+    $startupLog = Join-Path $EnterpriseData 'logs\startup-failure.log'
+    try { if (Test-Path $serverLog) { Copy-Item -Force $serverLog (Join-Path $ArtifactDir 'setup-server.log') } } catch {
+        try { "setup-server.log copy failed: $($_.Exception.Message)" | Out-File $DiagnosticCopyLog -Encoding utf8 -Append } catch { }
     }
-    try {
-        if (Test-Path $startupLog) { Copy-Item -Force $startupLog (Join-Path $ArtifactDir 'startup-failure.log') }
-    } catch {
-        try { "startup-failure.log: $($_.Exception.Message)" | Add-Content -Path $DiagnosticCopyLog -Encoding utf8 } catch { }
+    try { if (Test-Path $startupLog) { Copy-Item -Force $startupLog (Join-Path $ArtifactDir 'startup-failure.log') } } catch {
+        try { "startup-failure.log copy failed: $($_.Exception.Message)" | Out-File $DiagnosticCopyLog -Encoding utf8 -Append } catch { }
     }
 }

@@ -7,7 +7,7 @@ a = Analysis(
     [str(root / "build" / "windows" / "entry_server.py")],
     pathex=[str(src)],
     binaries=[],
-    datas=[],
+    datas=[(str(root / "data" / "seed" / "sazmanhr-seed.sqlite"), "data/seed")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],

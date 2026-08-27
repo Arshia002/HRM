@@ -69,7 +69,7 @@ def migrate(source: Path, output_root: Path) -> dict:
     seed_dir = output_root / "seed"
     export_dir = output_root / "export"
     seed_dir.mkdir(parents=True, exist_ok=True)
-    target = seed_dir / "hrm-seed.sqlite"
+    target = seed_dir / "sazmanhr-seed.sqlite"
     target.unlink(missing_ok=True)
     with contextlib.closing(sqlite3.connect(target)) as bootstrap:
         bootstrap.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
@@ -161,7 +161,7 @@ def migrate(source: Path, output_root: Path) -> dict:
     write_gzip_json(export_dir / "personnel.json.gz", people)
     write_gzip_json(export_dir / "organization-chart.json.gz", slides)
     manifest = {
-        "format": "HRM generation 1 private seed",
+        "format": "SazmanHR 15 clean seed",
         "schema_version": 5,
         "dataset_version": 1500,
         "generated_at": now,

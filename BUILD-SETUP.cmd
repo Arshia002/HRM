@@ -1,20 +1,20 @@
 @echo off
 setlocal EnableExtensions
-title HRM 0.1.0-alpha.4 Setup Builder
+title HRM 0.2.0-alpha.1 Setup Builder
 
 :start
 cd /d "%~dp0"
 if errorlevel 1 goto :folder_denied
 
 set "BOOTSTRAP_LOG=%~dp0build-setup-bootstrap.log"
->"%BOOTSTRAP_LOG%" echo HRM 0.1.0-alpha.4 Setup Builder
+>"%BOOTSTRAP_LOG%" echo HRM 0.2.0-alpha.1 Setup Builder
 if errorlevel 1 goto :folder_denied
 >>"%BOOTSTRAP_LOG%" echo Started: %date% %time%
 >>"%BOOTSTRAP_LOG%" echo Folder: %~dp0
 
 echo.
 echo ============================================================
-echo   HRM 0.1.0-alpha.4 - Windows Setup Builder
+echo   HRM 0.2.0-alpha.1 - Windows Setup Builder
 echo ============================================================
 echo.
 echo The complete ZIP must be extracted before running this file.
@@ -87,7 +87,7 @@ exit /b 0
 :folder_denied
 echo.
 echo ERROR: This folder is not writable or cannot be entered.
-echo Extract the complete ZIP to Desktop or C:\HRM-Source and run again.
+echo Extract the complete ZIP to Desktop or C:\HRM-16 and run again.
 echo Do not run BUILD-SETUP.cmd from inside the ZIP or Program Files.
 echo.
 pause

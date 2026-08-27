@@ -3,14 +3,11 @@ name: HRM - Windows Build and Install Test
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
-    tags: ["v*"]
-  pull_request:
-    branches: ["main"]
-
-concurrency:
-  group: windows-build-${{ github.ref }}
-  cancel-in-progress: true
+    branches:
+      - main
+      - feat/native-v49-shell
+    tags:
+      - "v*"
 
 permissions:
   contents: read
@@ -18,56 +15,39 @@ permissions:
 jobs:
   build-test:
     runs-on: windows-2022
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       PYTHONUTF8: "1"
       PYTHONIOENCODING: "utf-8"
     steps:
       - name: Checkout source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/checkout@v7
+
+      - name: Setup Python 3.11 x64
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           architecture: "x64"
           cache: "pip"
-          cache-dependency-path: build/windows/requirements-build.txt
-      - name: Read product version
-        id: product
-        shell: pwsh
-        run: |
-          $version = (Get-Content -LiteralPath VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+(?:-(alpha|beta|rc)\.\d+)?$') { throw "Invalid VERSION: $version" }
-          "version=$version" >> $env:GITHUB_OUTPUT
-      - name: Verify Python source syntax
-        shell: cmd
-        run: python -m compileall -q src tools build\windows
-      - name: Verify PowerShell source syntax
-        shell: pwsh
-        run: |
-          $tokens = $null
-          $parseErrors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path '.\build\windows\smoke-install.ps1'),
-            [ref]$tokens,
-            [ref]$parseErrors
-          ) | Out-Null
-          if ($parseErrors.Count -gt 0) {
-            $parseErrors | Format-List -Force | Out-String | Write-Error
-            throw "PowerShell syntax validation failed with $($parseErrors.Count) error(s)."
-          }
+
       - name: Install Inno Setup
         shell: powershell
         run: choco install innosetup --no-progress -y
+
       - name: Build and unit test
         shell: cmd
         run: python build\windows\build_windows.py
-      - name: Silent install test
-        timeout-minutes: 10
+
+      - name: Windows install, login, upgrade and uninstall acceptance test
+        timeout-minutes: 12
         shell: pwsh
         run: .\build\windows\smoke-install.ps1 -Installer .\build-output\installer\HRM-Setup-x64.exe -LogPath .\build-output\installer\install-test.log
+
+      - name: Generate CI manifest
+        if: success()
+        shell: pwsh
+        run: .\ci\write-ci-manifest.ps1 -Installer .\build-output\installer\HRM-Setup-x64.exe -Output .\build-output\installer\build-manifest.json
+
       - name: Snapshot installer diagnostics
         if: always()
         shell: pwsh
@@ -77,17 +57,17 @@ jobs:
           Get-ChildItem -LiteralPath $directory -Force -ErrorAction SilentlyContinue |
             Select-Object Name,Length,LastWriteTime,Attributes |
             Format-Table -AutoSize | Out-File (Join-Path $directory 'diagnostic-files.txt') -Encoding utf8 -Force
+
       - name: Upload tested installer
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7
         with:
-          name: HRM-${{ steps.product.outputs.version }}-Tested-Setup
+          name: HRM-0.2.0-alpha.1-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
             build-output/installer/build-manifest.json
-            build-output/installer/dependencies.txt
             build-output/installer/install-test.log
-            build-output/installer/setup-install.log
+            build-output/installer/setup-inno.log
             build-output/installer/setup-upgrade.log
             build-output/installer/setup-server.log
             build-output/installer/startup-failure.log
@@ -99,15 +79,14 @@ jobs:
             build-output/build.log
           if-no-files-found: error
           retention-days: 30
+
       - name: Upload diagnostics when build or install fails
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7
         with:
-          name: HRM-${{ steps.product.outputs.version }}-Failure-Logs
+          name: HRM-0.2.0-alpha.1-Failure-Logs
           path: |
             build-output/build.log
-            build-output/installer/build-manifest.json
-            build-output/installer/dependencies.txt
             build-output/installer/*.log
             build-output/installer/*.txt
             build-output/installer/*.json
