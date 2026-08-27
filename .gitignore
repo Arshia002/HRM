@@ -1,0 +1,59 @@
+# Python and local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+tmp*/
+
+# Build outputs
+build-output/
+dist/
+release/
+SHA256SUMS.txt
+*.spec.bak
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Credentials and cryptographic private material
+.env
+.env.*
+!.env.example
+secrets*
+FIRST_LOGIN.txt
+*.key
+*.pem
+*.pfx
+*.p12
+*.cer
+
+# Runtime databases, backups and exports
+runtime/
+private-data/
+data/private/
+data/export/
+data/seed/*.sqlite
+data/seed/*.sqlite-*
+data/seed/*.db
+data/seed/manifest.json
+*.sqlite
+*.sqlite-*
+*.db
+*.bak
+
+# Source HR files and delivery archives must never enter Git
+*.xls
+*.xlsx
+*.xlsm
+*.ppt
+*.pptx
+*.zip
+*.7z
+*.rar
