@@ -192,11 +192,14 @@ begin
     RunRequired(ServiceExe, '--startup auto install', 'نصب Windows Service');
 
   RunRequired(ExpandConstant('{sys}\sc.exe'),
-    'config HRMCentralService obj= "NT SERVICE\HRMCentralService" password= ""',
-    'اعمال حساب مجازی کم‌اختیار برای سرویس');
-  RunRequired(ExpandConstant('{sys}\sc.exe'),
     'sidtype HRMCentralService unrestricted',
     'فعال‌سازی Service SID اختصاصی');
+  RunRequired(ExpandConstant('{sys}\sc.exe'),
+    'qsidtype HRMCentralService',
+    'اعتبارسنجی Service SID اختصاصی');
+  RunRequired(ExpandConstant('{sys}\sc.exe'),
+    'config HRMCentralService obj= "NT AUTHORITY\LocalService" password= ""',
+    'اعمال حساب داخلی کم‌اختیار برای سرویس');
   RunRequired(ExpandConstant('{sys}\icacls.exe'),
     '"' + DataDir + '" /grant:r *S-1-5-32-544:(OI)(CI)F ' +
     '"NT SERVICE\HRMCentralService:(OI)(CI)M" /T',

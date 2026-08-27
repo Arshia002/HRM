@@ -76,8 +76,8 @@ try {
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
     $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'"
-    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'NT SERVICE\HRMCentralService') {
-        throw "Windows Service is not running under its dedicated virtual account."
+    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'NT AUTHORITY\LocalService') {
+        throw "Windows Service is not running under the low-privilege LocalService account."
     }
 
     $serviceAccount = New-Object System.Security.Principal.NTAccount('NT SERVICE', 'HRMCentralService')

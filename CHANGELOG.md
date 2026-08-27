@@ -1,5 +1,11 @@
 # تغییرات
 
+## 0.1.0-alpha.2
+
+- اصلاح خطای Windows Service با استفاده از `LocalService` و Service SID اختصاصی
+- افزودن کنترل `qsidtype` و تست ترتیب ایجاد SID پیش از تنظیم حساب سرویس
+- حفظ مدل کم‌اختیار بدون وابستگی به Resolve شدن Virtual Service Account
+
 ## 0.1.0-alpha.1
 
 - ایجاد مخزن رسمی نسل جدید HRM
