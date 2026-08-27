@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hrm-kepdco"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "Native LAN HRM and organization chart platform"
 requires-python = ">=3.11"
 dependencies = [

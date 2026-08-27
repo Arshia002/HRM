@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import sqlite3
-import contextlib
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,7 @@ PRODUCT_ID = "hrm-kepdco"
 SCHEMA_GENERATION = "1"
 WINDOWS_DATA_DIRECTORY = "HRM-Kermanshah"
 DATABASE_FILENAME = "hrm.sqlite"
+DEPLOYMENT_ID_KEY = "deployment_id"
 
 
 class IncompatibleDatabaseError(RuntimeError):
@@ -79,6 +81,7 @@ def ensure_database(data_dir: Path, explicit_seed: Path | None = None) -> Path:
     db_path = data_dir / DATABASE_FILENAME
     if db_path.exists():
         validate_database_identity(db_path)
+        _ensure_deployment_id(db_path, replace=False)
         return db_path
     seed = explicit_seed or bundled_seed_path()
     if not seed or not seed.is_file():
@@ -87,10 +90,35 @@ def ensure_database(data_dir: Path, explicit_seed: Path | None = None) -> Path:
     shutil.copy2(seed, db_path)
     try:
         validate_database_identity(db_path)
+        # Always replace a value accidentally supplied by a seed. The ID must
+        # identify this operational copy so replacement during a later upgrade
+        # is detectable even when the seed contents are otherwise identical.
+        _ensure_deployment_id(db_path, replace=True)
     except Exception:
         db_path.unlink(missing_ok=True)
         raise
     return db_path
+
+
+def _ensure_deployment_id(path: Path, *, replace: bool) -> str:
+    deployment_id = uuid.uuid4().hex
+    statement = (
+        "INSERT OR REPLACE INTO metadata(key,value) VALUES(?,?)"
+        if replace else
+        "INSERT OR IGNORE INTO metadata(key,value) VALUES(?,?)"
+    )
+    with contextlib.closing(sqlite3.connect(path)) as conn:
+        conn.execute(statement, (DEPLOYMENT_ID_KEY, deployment_id))
+        row = conn.execute("SELECT value FROM metadata WHERE key=?", (DEPLOYMENT_ID_KEY,)).fetchone()
+        conn.commit()
+    value = str(row[0]) if row else ""
+    try:
+        parsed = uuid.UUID(hex=value)
+    except (ValueError, AttributeError):
+        parsed = None
+    if not parsed or parsed.hex != value.lower():
+        raise IncompatibleDatabaseError("Operational deployment identifier is invalid.")
+    return parsed.hex
 
 
 @dataclass(slots=True)

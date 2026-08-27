@@ -2,7 +2,7 @@
 
 ## ساخت و نصب
 
-1. سورس را کامل روی Desktop یا `C:\HRM-Kermanshah-0.1.0-alpha.2` Extract کنید؛ از داخل ZIP یا `Program Files` اجرا نکنید.
+1. سورس را کامل روی Desktop یا `C:\HRM-Kermanshah-0.1.0-alpha.3` Extract کنید؛ از داخل ZIP یا `Program Files` اجرا نکنید.
 2. `BUILD-SETUP.cmd` را عادی اجرا کنید و تا پیام موفقیت صبر کنید؛ این مسیر PowerShell را اجرا نمی‌کند.
 3. پس از build موفق، Setup خودکار باز می‌شود؛ درخواست UAC را تأیید کنید.
 4. حالت «سرور مرکزی و کلاینت مدیریت» را انتخاب کنید.

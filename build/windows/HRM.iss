@@ -200,11 +200,12 @@ begin
   RunRequired(ExpandConstant('{sys}\sc.exe'),
     'config HRMCentralService obj= "NT AUTHORITY\LocalService" password= ""',
     'اعمال حساب داخلی کم‌اختیار برای سرویس');
+  { LocalService needs access before its first start. This bootstrap grant is
+    repeated after ACL hardening so every existing object has an explicit ACE. }
   RunRequired(ExpandConstant('{sys}\icacls.exe'),
     '"' + DataDir + '" /grant:r *S-1-5-32-544:(OI)(CI)F ' +
     '"NT SERVICE\HRMCentralService:(OI)(CI)M" /T',
-    'اعمال دسترسی صریح Service SID');
-
+    'اعمال دسترسی اولیه Service SID');
   RunIgnored(ExpandConstant('{sys}\netsh.exe'),
     'advfirewall firewall delete rule name="HRM Central Service 8765"');
   RunRequired(ExpandConstant('{sys}\netsh.exe'),
@@ -216,11 +217,23 @@ begin
     ' --diagnostic-log "' + DiagnosticPath + '"',
     'آزمون دسترسی سرویس پیش از سخت‌سازی ACL');
   RunRequired(ExpandConstant('{sys}\icacls.exe'),
-    '"' + DataDir + '" /inheritance:r /T',
-    'حذف ارث‌بری ACL پس از اثبات دسترسی سرویس');
+    '"' + DataDir + '" /inheritance:d /T',
+    'تبدیل ارث‌بری ACL به مجوزهای صریح');
+  RunRequired(ExpandConstant('{sys}\icacls.exe'),
+    '"' + DataDir + '" /remove:g *S-1-1-0 *S-1-5-11 *S-1-5-32-545 /T',
+    'حذف دسترسی گروه‌های عمومی از داده‌های عملیاتی');
+  RunRequired(ExpandConstant('{sys}\icacls.exe'),
+    '"' + DataDir + '" /grant:r *S-1-5-32-544:(OI)(CI)F ' +
+    '"NT SERVICE\HRMCentralService:(OI)(CI)M" /T',
+    'اعمال دسترسی صریح مدیران و Service SID');
   RunRequired(ExpandConstant('{sys}\icacls.exe'),
     '"' + DataDir + '" /verify /T',
     'اعتبارسنجی نهایی ACL');
+  { A health check against an already-running process is insufficient: open
+    handles can hide a broken DACL. A real restart proves that the service can
+    reopen the database, TLS private key, configuration and log files. }
+  RunRequired(ServiceExe, '--wait 30 stop', 'توقف سرویس پس از سخت‌سازی ACL');
+  RunRequired(ServiceExe, '--wait 30 start', 'راه‌اندازی مجدد سرویس پس از سخت‌سازی ACL');
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --health-check https://127.0.0.1:8765 --health-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',

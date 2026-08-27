@@ -44,6 +44,20 @@ jobs:
       - name: Verify Python source syntax
         shell: cmd
         run: python -m compileall -q src tools build\windows
+      - name: Verify PowerShell source syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path '.\build\windows\smoke-install.ps1'),
+            [ref]$tokens,
+            [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | Format-List -Force | Out-String | Write-Error
+            throw "PowerShell syntax validation failed with $($parseErrors.Count) error(s)."
+          }
       - name: Install Inno Setup
         shell: powershell
         run: choco install innosetup --no-progress -y

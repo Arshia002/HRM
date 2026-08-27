@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sazmanhr.database import AuthenticationError, ConflictError, MfaRequired, PermissionDenied, Repository
-from sazmanhr.config import IncompatibleDatabaseError
+from sazmanhr.config import IncompatibleDatabaseError, ensure_database
 from sazmanhr.demo_data import DEMO_CHART_PAGE_COUNT, DEMO_PERSONNEL_COUNT, create_demo_seed
 from sazmanhr.operations import restore_database, sqlite_integrity
 from sazmanhr.security import totp_code
@@ -16,8 +16,11 @@ from sazmanhr.security import totp_code
 class RepositoryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.db = Path(self.temp.name) / "test.sqlite"
-        create_demo_seed(self.db)
+        root = Path(self.temp.name)
+        self.seed = root / "test-seed.sqlite"
+        self.data_dir = root / "operational"
+        create_demo_seed(self.seed)
+        self.db = ensure_database(self.data_dir, self.seed)
         self.repo = Repository(self.db)
         self.password = "Initial!Password1400"
         self.owner = self.repo.create_user(
@@ -32,6 +35,15 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(stats["personnel"], DEMO_PERSONNEL_COUNT)
         self.assertEqual(len(self.repo.list_chart_pages()), DEMO_CHART_PAGE_COUNT)
         self.assertTrue(self.repo.verify_audit_chain())
+
+    def test_deployment_snapshot_is_stable_across_reopen(self):
+        before = self.repo.deployment_snapshot()
+        same_database = ensure_database(self.data_dir, self.seed)
+        after = Repository(same_database).deployment_snapshot()
+        self.assertEqual(after, before)
+        self.assertEqual(len(before["id"]), 32)
+        self.assertEqual(before["users"], 1)
+        self.assertEqual(before["personnel"], DEMO_PERSONNEL_COUNT)
 
     def test_connection_context_closes_database_handle(self):
         connection = self.repo.connect()

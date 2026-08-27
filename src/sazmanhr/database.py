@@ -496,6 +496,26 @@ class Repository:
             revision = conn.execute("SELECT COALESCE(MAX(revision),0) FROM change_feed").fetchone()[0]
         return {"personnel": total, "active": active, "units": units, "unassigned": unassigned, "revision": revision}
 
+    def deployment_snapshot(self) -> dict[str, Any]:
+        """Return non-sensitive state used by health and upgrade validation."""
+        with self.connect() as conn:
+            metadata = dict(conn.execute(
+                "SELECT key,value FROM metadata WHERE key IN ('deployment_id','schema_version')"
+            ))
+            users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            personnel = conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0]
+            chart_pages = conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0]
+        deployment_id = metadata.get("deployment_id", "")
+        if not deployment_id:
+            raise RuntimeError("Operational deployment identifier is missing.")
+        return {
+            "id": deployment_id,
+            "schema_version": metadata.get("schema_version", ""),
+            "users": int(users),
+            "personnel": int(personnel),
+            "chart_pages": int(chart_pages),
+        }
+
     def list_personnel(self, query: str = "", limit: int = 200, offset: int = 0) -> dict[str, Any]:
         limit = max(1, min(limit, 1000))
         offset = max(0, offset)

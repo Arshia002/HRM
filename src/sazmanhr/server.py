@@ -99,6 +99,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 "status": "ok", "version": __version__, "database": "ready",
                 "tls": bool(self.server.tls_enabled),  # type: ignore[attr-defined]
                 "uptime_seconds": int(time.monotonic() - self.server.started_monotonic),  # type: ignore[attr-defined]
+                "deployment": self.repo.deployment_snapshot(),
             })
             return
         if method == "POST" and path == "/api/login":
@@ -406,6 +407,9 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
     db_path = ensure_database(args.data_dir, args.seed)
     if args.restore:
         safety = restore_database(db_path, args.restore.resolve())
+        # Backups created by pre-alpha.3 builds do not have a deployment ID.
+        # Revalidating the restored file upgrades that metadata safely.
+        db_path = ensure_database(args.data_dir, args.seed)
         logger.warning("database_restored", extra={"safety_backup": str(safety)})
     if args.verify_database:
         ok, detail = sqlite_integrity(db_path)

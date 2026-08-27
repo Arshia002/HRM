@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from sazmanhr.config import validate_database_identity
+from sazmanhr.config import ensure_database, validate_database_identity
 from sazmanhr.demo_data import create_demo_seed
 from sazmanhr.server import main
 
@@ -47,10 +47,36 @@ class ProvisioningTests(unittest.TestCase):
             self.assertEqual(verified, 0)
             self.assertTrue((root / "hrm.sqlite").is_file())
             self.assertTrue((root / "FIRST_LOGIN.txt").is_file())
+            with contextlib.closing(sqlite3.connect(self.seed)) as seed_conn:
+                self.assertIsNone(seed_conn.execute(
+                    "SELECT value FROM metadata WHERE key='deployment_id'"
+                ).fetchone())
+            with contextlib.closing(sqlite3.connect(root / "hrm.sqlite")) as operational_conn:
+                deployment_id = operational_conn.execute(
+                    "SELECT value FROM metadata WHERE key='deployment_id'"
+                ).fetchone()[0]
+            self.assertEqual(len(deployment_id), 32)
             server_log = root / "logs" / "server.jsonl"
             server_log.unlink()
             self.assertFalse(server_log.exists())
             self.assertEqual(logging.getLogger("sazmanhr").handlers, [])
+
+    def test_operational_deployment_ids_are_unique_and_stable(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            first = ensure_database(root / "first", self.seed)
+            second = ensure_database(root / "second", self.seed)
+
+            def deployment_id(path: Path) -> str:
+                with contextlib.closing(sqlite3.connect(path)) as conn:
+                    return conn.execute(
+                        "SELECT value FROM metadata WHERE key='deployment_id'"
+                    ).fetchone()[0]
+
+            first_id = deployment_id(first)
+            second_id = deployment_id(second)
+            self.assertNotEqual(first_id, second_id)
+            self.assertEqual(deployment_id(ensure_database(root / "first", self.seed)), first_id)
 
     def test_incompatible_database_fails_with_diagnostic_and_no_mutation(self):
         with tempfile.TemporaryDirectory() as temp:

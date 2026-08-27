@@ -6,6 +6,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from sazmanhr.config import ensure_database
 from sazmanhr.database import Repository
 from sazmanhr.demo_data import DEMO_PERSONNEL_COUNT, create_demo_seed
 from sazmanhr.server import ApiServer, ensure_initial_owner
@@ -15,9 +16,10 @@ class ApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
-        target = Path(cls.temp.name) / "api.sqlite"
-        create_demo_seed(target)
-        repo = Repository(target)
+        root = Path(cls.temp.name)
+        seed = root / "api-seed.sqlite"
+        create_demo_seed(seed)
+        repo = Repository(ensure_database(root / "operational", seed))
         ensure_initial_owner(repo, "owner.test", "مدیر آزمایشی", "Initial!Password1400")
         cls.server = ApiServer(("127.0.0.1", 0), repo)
         cls.port = cls.server.server_address[1]
@@ -45,6 +47,9 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(health["status"], "ok")
         self.assertEqual(health["database"], "ready")
+        self.assertEqual(len(health["deployment"]["id"]), 32)
+        self.assertEqual(health["deployment"]["users"], 1)
+        self.assertEqual(health["deployment"]["personnel"], DEMO_PERSONNEL_COUNT)
         status, login = self.request("POST", "/api/login", {
             "username": "owner.test", "password": "Initial!Password1400",
         })
