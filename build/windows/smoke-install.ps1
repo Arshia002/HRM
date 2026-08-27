@@ -183,6 +183,16 @@ try {
     Invoke-CheckedProcess -FilePath $Installer `
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$UpgradeSetupLog`"") `
         -Stage 'Silent in-place upgrade installation' -TimeoutSeconds 240
+    $UpgradeSetupText = Get-Content -LiteralPath $UpgradeSetupLog -Raw
+    $StopBeforeCopyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-stop-before-copy')
+    $FirstFileEntryIndex = $UpgradeSetupText.IndexOf('-- File entry --')
+    if ($StopBeforeCopyIndex -lt 0 -or $FirstFileEntryIndex -lt 0 -or
+        $StopBeforeCopyIndex -gt $FirstFileEntryIndex) {
+        throw 'Upgrade did not prove the existing service stopped before Setup replaced files.'
+    }
+    if ($UpgradeSetupText -match 'RestartManager found an application using one of our files: HRM') {
+        throw 'An HRM process still held an installed file when the upgrade copy phase started.'
+    }
     if (-not (Test-Path $PreservationMarker)) { throw 'Operational marker was removed by in-place upgrade.' }
     if (-not (Test-Path (Join-Path $HrmData 'FIRST_LOGIN.txt'))) { throw 'First-login notice was removed by in-place upgrade.' }
     if (Test-Path (Join-Path $Target 'Server\data\seed\hrm-seed.sqlite')) {

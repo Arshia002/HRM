@@ -1,6 +1,7 @@
 import contextlib
 import hashlib
 import io
+import json
 import logging
 import sqlite3
 import tempfile
@@ -77,6 +78,26 @@ class ProvisioningTests(unittest.TestCase):
             second_id = deployment_id(second)
             self.assertNotEqual(first_id, second_id)
             self.assertEqual(deployment_id(ensure_database(root / "first", self.seed)), first_id)
+
+    def test_service_stop_cli_persists_measured_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            state_file = Path(temp) / "service-state.json"
+            measured = {
+                "exists": True,
+                "was_running": True,
+                "initial_state": 4,
+                "final_state": 1,
+            }
+            with patch("sazmanhr.server.stop_windows_service", return_value=measured) as stop:
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    status = main([
+                        "--stop-windows-service", "HRMCentralService",
+                        "--service-stop-timeout", "30",
+                        "--service-state-file", str(state_file),
+                    ])
+            self.assertEqual(status, 0)
+            self.assertEqual(json.loads(state_file.read_text(encoding="utf-8")), measured)
+            stop.assert_called_once_with("HRMCentralService", 30)
 
     def test_incompatible_database_fails_with_diagnostic_and_no_mutation(self):
         with tempfile.TemporaryDirectory() as temp:

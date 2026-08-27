@@ -207,6 +207,27 @@ class PackageTests(unittest.TestCase):
         self.assertIn("logprotecteddiagnostics", lowered)
         self.assertNotIn("/t /c", lowered)
 
+    def test_upgrade_stops_service_before_file_copy_and_restores_on_failure(self):
+        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        lowered = installer.lower()
+        prepare_start = lowered.index("function preparetoinstall")
+        prepare_end = lowered.index("function getcustomsetupexitcode")
+        prepare = lowered[prepare_start:prepare_end]
+        stop = prepare.index("--stop-windows-service hrmcentralservice")
+        database_preflight = prepare.index("--init-only")
+        self.assertLess(stop, database_preflight)
+        self.assertIn("service-stop-before-copy", prepare)
+        self.assertIn("service-stop-state.json", prepare)
+        self.assertIn("preinstallservicehandled", prepare)
+        self.assertIn("procedure deinitializesetup", lowered)
+        self.assertIn("restoreoriginalserviceifneeded", lowered)
+        self.assertIn("if not setupcompleted", lowered)
+        provision_start = lowered.index("procedure provisionenterpriseserver")
+        provision_end = lowered.index("procedure initializewizard")
+        provision = lowered[provision_start:provision_end]
+        self.assertNotIn("serviceexistedbeforeinstall :=", provision)
+        self.assertNotIn("if serviceexistedbeforeinstall then\n    runignored(serviceexe", provision)
+
     def test_windows_smoke_test_verifies_service_identity_acl_and_diagnostics(self):
         script = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8")
         lowered = script.lower()
@@ -230,6 +251,8 @@ class PackageTests(unittest.TestCase):
         self.assertIn("service-config.txt", lowered)
         self.assertIn("data-acl.txt", lowered)
         self.assertIn("deploymentidbefore", lowered)
+        self.assertIn("stopbeforecopyindex", lowered)
+        self.assertIn("restartmanager found an application using one of our files: hrm", lowered)
         self.assertNotIn("get-filehash $firstlogin", lowered)
         self.assertIn("select-object name, displayname, state, startmode, startname", lowered)
         self.assertNotIn("convertto-json -depth 4", lowered)

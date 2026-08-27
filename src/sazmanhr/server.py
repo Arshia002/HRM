@@ -25,6 +25,7 @@ from .database import AuthenticationError, ConflictError, MfaRequired, Permissio
 from .operations import BackupScheduler, close_logging, configure_logging, restore_database, sqlite_integrity
 from .security import generate_temporary_password
 from .tls import ensure_self_signed_certificate, pem_fingerprint
+from .windows_service_control import stop_windows_service
 
 MAX_BODY = 4 * 1024 * 1024
 
@@ -342,6 +343,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--health-check", metavar="URL")
     parser.add_argument("--health-timeout", type=int, default=30)
+    parser.add_argument("--stop-windows-service", metavar="NAME")
+    parser.add_argument("--service-stop-timeout", type=int, default=30)
+    parser.add_argument("--service-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
     return parser
 
@@ -456,6 +460,14 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.data_dir = args.data_dir.resolve()
     try:
+        if args.stop_windows_service:
+            state = stop_windows_service(args.stop_windows_service, args.service_stop_timeout)
+            if args.service_state_file:
+                state_file = args.service_state_file.resolve()
+                state_file.parent.mkdir(parents=True, exist_ok=True)
+                state_file.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+            print(json.dumps(state))
+            return 0
         if args.health_check:
             payload = wait_for_health(args.health_check, args.health_timeout)
             print(json.dumps(payload, ensure_ascii=False))

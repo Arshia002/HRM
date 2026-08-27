@@ -76,6 +76,10 @@ var
   ServerPage: TInputQueryWizardPage;
   OwnerPage: TInputQueryWizardPage;
   ServiceExistedBeforeInstall: Boolean;
+  ServiceWasRunningBeforeInstall: Boolean;
+  ServiceStoppedForUpgrade: Boolean;
+  PreInstallServiceHandled: Boolean;
+  SetupCompleted: Boolean;
   ProvisionFailed: Boolean;
 
 function GetInitialUsername(Param: String): String; forward;
@@ -118,10 +122,33 @@ begin
   Exec(Filename, Parameters, '', SW_HIDE, ewWaitUntilTerminated, IgnoredCode);
 end;
 
+procedure RestoreOriginalServiceIfNeeded;
+var
+  ResultCode: Integer;
+  Started: Boolean;
+begin
+  if ServiceStoppedForUpgrade and ServiceExistedBeforeInstall then
+  begin
+    LogSetupStage('START', 'restore-original-service', -1);
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{app}\Server\HRMService.exe'),
+      '--wait 30 start', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+    begin
+      LogSetupStage('PASS', 'restore-original-service', ResultCode);
+      ServiceStoppedForUpgrade := False;
+    end
+    else
+      LogSetupStage('FAIL', 'restore-original-service', ResultCode);
+  end;
+end;
+
 procedure RecoverServerAfterFailure;
 begin
   if ServiceExistedBeforeInstall then
-    RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), '--wait 30 start')
+    { Keep the upgraded binary stopped while Inno rolls files back. The old
+      binary is restarted from DeinitializeSetup after rollback completes. }
+    RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), '--wait 30 stop')
   else
   begin
     RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), '--wait 30 stop');
@@ -171,11 +198,6 @@ begin
     It must never remain in Program Files after provisioning. }
   SeedPath := ExpandConstant('{tmp}\hrm-seed.sqlite');
   DiagnosticPath := DataDir + '\logs\setup-server.log';
-  ServiceExistedBeforeInstall := RegKeyExists(HKLM,
-    'SYSTEM\CurrentControlSet\Services\HRMCentralService');
-
-  if ServiceExistedBeforeInstall then
-    RunIgnored(ServiceExe, '--wait 30 stop');
 
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --seed "' + SeedPath +
@@ -238,11 +260,19 @@ begin
     '--data-dir "' + DataDir + '" --health-check https://127.0.0.1:8765 --health-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',
     'آزمون نهایی TLS و سرویس پس از سخت‌سازی ACL');
+  if ServiceExistedBeforeInstall and (not ServiceWasRunningBeforeInstall) then
+    RunRequired(ServiceExe, '--wait 30 stop', 'بازگردانی وضعیت توقف قبلی سرویس');
+  ServiceStoppedForUpgrade := False;
 end;
 
 procedure InitializeWizard;
 begin
   ProvisionFailed := False;
+  ServiceExistedBeforeInstall := False;
+  ServiceWasRunningBeforeInstall := False;
+  ServiceStoppedForUpgrade := False;
+  PreInstallServiceHandled := False;
+  SetupCompleted := False;
   ServerPage := CreateInputQueryPage(wpSelectComponents,
     'اتصال به سرور مرکزی',
     'آدرس سرویس مرکزی را مشخص کنید.',
@@ -284,6 +314,8 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   PreflightExe: String;
   DiagnosticPath: String;
+  ServiceStatePath: String;
+  ServiceStateContent: AnsiString;
   ResultCode: Integer;
   Started: Boolean;
 begin
@@ -299,35 +331,96 @@ begin
     Result := 'استفاده از علامت نقل‌قول در مشخصات مدیر مجاز نیست.';
   if (Result = '') and WizardIsComponentSelected('server') then
   begin
+    ProvisionFailed := False;
     try
-      LogSetupStage('START', 'server-preflight', -1);
       ExtractTemporaryFile('HRMServerPreflight.exe');
       ExtractTemporaryFile('hrm-seed.sqlite');
       PreflightExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
       DiagnosticPath := EnterpriseDataDir + '\logs\setup-server.log';
-      ResultCode := -1;
-      Started := Exec(PreflightExe,
-        '--data-dir "' + EnterpriseDataDir + '" --seed "' + ExpandConstant('{tmp}\hrm-seed.sqlite') +
-        '" --initial-user "' + GetInitialUsername('') +
-        '" --initial-display-name "' + GetInitialDisplayName('') +
-        '" --init-only --diagnostic-log "' + DiagnosticPath + '"',
-        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      if (not Started) or (ResultCode <> 0) then
+      ServiceExistedBeforeInstall := RegKeyExists(HKLM,
+        'SYSTEM\CurrentControlSet\Services\HRMCentralService');
+
+      { PrepareToInstall is intentionally used here: Inno calls it before
+        checking or replacing in-use files. The temporary preflight executable
+        stops and verifies SCM state without touching the installed binary. }
+      if ServiceExistedBeforeInstall and (not PreInstallServiceHandled) then
       begin
-        LogSetupStage('FAIL', 'server-preflight', ResultCode);
-        LogProtectedDiagnostics;
-        ProvisionFailed := True;
-        Result := 'پیش‌آزمون سرور مرکزی شکست خورد (کد ' + IntToStr(ResultCode) + ').' + #13#10 +
-          'گزارش: ' + DiagnosticPath + #13#10 +
-          'نصب متوقف شد و موفق اعلام نمی‌شود.';
+        ServiceStatePath := ExpandConstant('{tmp}\service-stop-state.json');
+        DeleteFile(ServiceStatePath);
+        { If the helper itself fails after sending STOP, availability is safer
+          than assuming the previous state was stopped. A successful helper
+          replaces this conservative value with its measured state. }
+        ServiceWasRunningBeforeInstall := True;
+        ServiceStoppedForUpgrade := True;
+        ResultCode := -1;
+        LogSetupStage('START', 'service-stop-before-copy', ResultCode);
+        Started := Exec(PreflightExe,
+          '--data-dir "' + EnterpriseDataDir +
+          '" --stop-windows-service HRMCentralService --service-stop-timeout 30' +
+          ' --service-state-file "' + ServiceStatePath +
+          '" --diagnostic-log "' + DiagnosticPath + '"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if (not Started) or (ResultCode <> 0) then
+        begin
+          LogSetupStage('FAIL', 'service-stop-before-copy', ResultCode);
+          LogProtectedDiagnostics;
+          ProvisionFailed := True;
+          Result := 'توقف ایمن سرویس پیش از جایگزینی فایل‌ها شکست خورد (کد ' +
+            IntToStr(ResultCode) + ').';
+        end
+        else if not LoadStringFromLockedFile(ServiceStatePath, ServiceStateContent) then
+        begin
+          LogSetupStage('FAIL', 'service-stop-state-validation', -1);
+          LogProtectedDiagnostics;
+          ProvisionFailed := True;
+          Result := 'وضعیت توقف سرویس قابل اعتبارسنجی نیست؛ نصب برای حفاظت از فایل‌ها متوقف شد.';
+        end
+        else
+        begin
+          if Pos('"exists": false', Lowercase(String(ServiceStateContent))) > 0 then
+            ServiceExistedBeforeInstall := False;
+          ServiceWasRunningBeforeInstall :=
+            Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
+          ServiceStoppedForUpgrade := ServiceWasRunningBeforeInstall;
+          PreInstallServiceHandled := True;
+          LogSetupStage('PASS', 'service-stop-before-copy', 0);
+        end;
       end
-      else
-        LogSetupStage('PASS', 'server-preflight', ResultCode);
+      else if not ServiceExistedBeforeInstall then
+        PreInstallServiceHandled := True;
+
+      if Result = '' then
+      begin
+        ResultCode := -1;
+        LogSetupStage('START', 'server-preflight', ResultCode);
+        Started := Exec(PreflightExe,
+          '--data-dir "' + EnterpriseDataDir + '" --seed "' + ExpandConstant('{tmp}\hrm-seed.sqlite') +
+          '" --initial-user "' + GetInitialUsername('') +
+          '" --initial-display-name "' + GetInitialDisplayName('') +
+          '" --init-only --diagnostic-log "' + DiagnosticPath + '"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if (not Started) or (ResultCode <> 0) then
+        begin
+          LogSetupStage('FAIL', 'server-preflight', ResultCode);
+          LogProtectedDiagnostics;
+          ProvisionFailed := True;
+          Result := 'پیش‌آزمون سرور مرکزی شکست خورد (کد ' + IntToStr(ResultCode) + ').' + #13#10 +
+            'گزارش: ' + DiagnosticPath + #13#10 +
+            'نصب متوقف شد و موفق اعلام نمی‌شود.';
+        end
+        else
+          LogSetupStage('PASS', 'server-preflight', ResultCode);
+      end;
     except
       LogSetupStage('EXCEPTION', 'server-preflight', -1);
       LogProtectedDiagnostics;
       ProvisionFailed := True;
       Result := 'اجرای پیش‌آزمون بسته مستقل ممکن نشد: ' + GetExceptionMessage;
+    end;
+    if Result <> '' then
+    begin
+      RestoreOriginalServiceIfNeeded;
+      PreInstallServiceHandled := False;
     end;
   end;
 end;
@@ -354,5 +447,13 @@ begin
       else
         SuppressibleMsgBox('سرور مرکزی با موفقیت نصب، به‌روزرسانی و آزمون شد.', mbInformation, MB_OK, IDOK);
     end;
-  end;
+  end
+  else if CurStep = ssDone then
+    SetupCompleted := True;
+end;
+
+procedure DeinitializeSetup;
+begin
+  if not SetupCompleted then
+    RestoreOriginalServiceIfNeeded;
 end;
