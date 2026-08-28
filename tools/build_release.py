@@ -25,10 +25,10 @@ EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".tmp", ".log"}
 ROOT_FILES = {
     ".gitattributes", ".gitignore", "BUILD-SETUP.cmd", "CHANGELOG.md",
     "CI-LOCAL-VALIDATION.md", "CI-PACKAGE-VERSION", "CI-README-FA.md",
-    "HRM-V030A1-NOTES.md", "LICENSE.txt", "PUSH-TO-GITHUB.cmd", "README.md",
+    "HRM-V030A2-NOTES.md", "LICENSE.txt", "PUSH-TO-GITHUB.cmd", "README.md",
     "ROOT-CAUSE-alpha1.md", "ROOT-CAUSE-alpha2-prepush.md", "ROOT-CAUSE-alpha2-ci.md",
-    "TEST-REPORT-HRM-v0.3.0-alpha.1.md", "TEST-REPORT.md", "VERSION", "pyproject.toml",
-    "APPLY-V030A1.cmd",
+    "TEST-REPORT-HRM-v0.3.0-alpha.2.md", "TEST-REPORT.md", "VERSION", "pyproject.toml",
+    "APPLY-V030A2.cmd",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 

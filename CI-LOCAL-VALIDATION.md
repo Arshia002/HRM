@@ -1,10 +1,10 @@
-# HRM v0.3.0-alpha.1 — Local Validation
+# HRM v0.3.0-alpha.2 — Local Validation
 
 Date: 2026-08-28
 
 Before delivery of this CI overlay:
 
-- Source Unit/Integration/UI contract tests: **58/58 PASS**
+- Source Unit/Integration/UI contract tests: **63/63 PASS**
 - Packaging + Branding contract: **PASS**
 - PyInstaller spec outputs: **PASS** (`HRM.exe`, `HRMServer.exe`, `HRMService.exe`)
 - Frozen native UI smoke command wired before Inno: **PASS**

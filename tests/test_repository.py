@@ -123,8 +123,8 @@ class RepositoryTests(unittest.TestCase):
         with self.repo.connect() as conn:
             versions = [row[0] for row in conn.execute("SELECT version FROM schema_migrations ORDER BY version")]
             schema_version = conn.execute("SELECT value FROM metadata WHERE key='schema_version'").fetchone()[0]
-        self.assertEqual(versions, [2, 3, 4, 5])
-        self.assertEqual(schema_version, "5")
+        self.assertEqual(versions, [2, 3, 4, 5, 6])
+        self.assertEqual(schema_version, "6")
         editor = self.repo.create_user("editor.one", "ویرایشگر", "Editor!Password1500", "editor",
                                        must_change_password=False)
         self.repo.require(editor, "edit_personnel")

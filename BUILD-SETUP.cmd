@@ -1,20 +1,20 @@
 @echo off
 setlocal EnableExtensions
-title HRM 0.3.0-alpha.1 Setup Builder
+title HRM 0.3.0-alpha.2 Setup Builder
 
 :start
 cd /d "%~dp0"
 if errorlevel 1 goto :folder_denied
 
 set "BOOTSTRAP_LOG=%~dp0build-setup-bootstrap.log"
->"%BOOTSTRAP_LOG%" echo HRM 0.3.0-alpha.1 Setup Builder
+>"%BOOTSTRAP_LOG%" echo HRM 0.3.0-alpha.2 Setup Builder
 if errorlevel 1 goto :folder_denied
 >>"%BOOTSTRAP_LOG%" echo Started: %date% %time%
 >>"%BOOTSTRAP_LOG%" echo Folder: %~dp0
 
 echo.
 echo ============================================================
-echo   HRM 0.3.0-alpha.1 - Windows Setup Builder
+echo   HRM 0.3.0-alpha.2 - Windows Setup Builder
 echo ============================================================
 echo.
 echo The complete ZIP must be extracted before running this file.

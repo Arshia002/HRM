@@ -155,7 +155,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/personnel":
             self.repo.require(user, "read")
             self._json(HTTPStatus.OK, self.repo.list_personnel(
-                query.get("q", [""])[0], int(query.get("limit", ["200"])[0]), int(query.get("offset", ["0"])[0])
+                query.get("q", [""])[0], int(query.get("limit", ["200"])[0]), int(query.get("offset", ["0"])[0]),
+                unit=query.get("unit", [""])[0], employment=query.get("employment", [""])[0],
+                status=query.get("status", [""])[0], location=query.get("location", [""])[0],
             ))
             return
         if method == "GET" and path.startswith("/api/personnel/"):
@@ -172,6 +174,33 @@ class ApiHandler(BaseHTTPRequestHandler):
             self.repo.require(user, "delete_personnel")
             self.repo.delete_person(path.rsplit("/", 1)[1], int(query.get("version", ["0"])[0]), user["id"])
             self._json(HTTPStatus.OK, {"ok": True})
+            return
+
+        if method == "GET" and path == "/api/organization/summary":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, self.repo.organization_summary())
+            return
+        if method == "GET" and path == "/api/units":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, {"items": self.repo.list_units(query.get("q", [""])[0])})
+            return
+        if method == "GET" and path.startswith("/api/units/"):
+            self.repo.require(user, "read")
+            unit = self.repo.get_unit(path.rsplit("/", 1)[1])
+            self._json(HTTPStatus.OK, unit) if unit else self._json(
+                HTTPStatus.NOT_FOUND, {"error": "واحد سازمانی پیدا نشد.", "code": "not_found"})
+            return
+        if method == "GET" and path == "/api/positions":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, self.repo.list_positions(
+                query.get("q", [""])[0], query.get("unit_id", [""])[0], query.get("occupancy", [""])[0]
+            ))
+            return
+        if method == "GET" and path.startswith("/api/positions/"):
+            self.repo.require(user, "read")
+            position = self.repo.get_position(path.rsplit("/", 1)[1])
+            self._json(HTTPStatus.OK, position) if position else self._json(
+                HTTPStatus.NOT_FOUND, {"error": "پست سازمانی پیدا نشد.", "code": "not_found"})
             return
 
         if method == "GET" and path == "/api/chart/pages":

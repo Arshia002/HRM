@@ -1,4 +1,4 @@
-# HRM v0.3.0-alpha.1 — Native v4.9 Shell CI Candidate
+# HRM v0.3.0-alpha.2 — Native v4.9 Shell CI Candidate
 
 این Candidate روی Baseline سبز `0.2.0-alpha.3` ساخته شده است. هدف این Milestone تغییر زیرساخت Windows نیست؛ تمرکز روی UI Native، Login، Dashboard shell و Branding نهایی HRM است.
 
@@ -18,7 +18,7 @@
 ZIP را در Root همان Repository استخراج کنید و اجرا کنید:
 
 ```cmd
-APPLY-V030A1.cmd
+APPLY-V030A2.cmd
 ```
 
 پس از PASS:
@@ -26,13 +26,13 @@ APPLY-V030A1.cmd
 ```cmd
 git add -A
 python ci\validate_package_contract.py --require-git-tracked
-git commit -m "feat: add HRM v0.3.0-alpha.1 native v4.9 shell"
+git commit -m "feat: add HRM v0.3.0-alpha.2 native v4.9 shell"
 git push origin feat/native-v49-shell
 ```
 
 ## Artifactها
 
-- موفق: `HRM-0.3.0-alpha.1-Tested-Setup`
-- ناموفق: `HRM-0.3.0-alpha.1-Failure-Logs`
+- موفق: `HRM-0.3.0-alpha.2-Tested-Setup`
+- ناموفق: `HRM-0.3.0-alpha.2-Failure-Logs`
 
 این Candidate زمانی Windows-Tested است که Build + Frozen UI Smoke + Inno Setup + Clean Install + Login + Password Change + Service/TLS/ACL + Upgrade + Data Preservation + Uninstall در GitHub Actions سبز شوند.

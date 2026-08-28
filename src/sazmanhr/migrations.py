@@ -115,6 +115,64 @@ CREATE TABLE IF NOT EXISTS mfa_recovery_codes (
   PRIMARY KEY(user_id, code_hash)
 );
 """),
+    Migration(6, "organization_personnel_core", r"""
+CREATE TABLE IF NOT EXISTS organizational_units (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  parent_id TEXT REFERENCES organizational_units(id) ON DELETE SET NULL,
+  unit_type TEXT NOT NULL DEFAULT '',
+  location TEXT NOT NULL DEFAULT '',
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  row_version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_org_units_parent ON organizational_units(parent_id, sort_order, title);
+CREATE INDEX IF NOT EXISTS idx_org_units_title ON organizational_units(title);
+CREATE TABLE IF NOT EXISTS positions (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  unit_id TEXT REFERENCES organizational_units(id) ON DELETE SET NULL,
+  post_type TEXT NOT NULL DEFAULT '',
+  location TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'active',
+  row_version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_positions_unit ON positions(unit_id, title, code);
+CREATE INDEX IF NOT EXISTS idx_positions_title ON positions(title);
+CREATE TABLE IF NOT EXISTS personnel_assignments (
+  id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL REFERENCES personnel(id) ON DELETE CASCADE,
+  position_id TEXT NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+  is_primary INTEGER NOT NULL DEFAULT 1 CHECK(is_primary IN (0,1)),
+  start_date TEXT NOT NULL DEFAULT '',
+  end_date TEXT NOT NULL DEFAULT '',
+  row_version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_assignments_primary_person
+  ON personnel_assignments(person_id) WHERE is_primary=1 AND end_date='';
+CREATE INDEX IF NOT EXISTS idx_assignments_position ON personnel_assignments(position_id, end_date);
+CREATE TABLE IF NOT EXISTS import_batches (
+  id TEXT PRIMARY KEY,
+  source_name TEXT NOT NULL,
+  source_kind TEXT NOT NULL,
+  mode TEXT NOT NULL DEFAULT 'dry-run',
+  row_count INTEGER NOT NULL DEFAULT 0,
+  accepted_count INTEGER NOT NULL DEFAULT 0,
+  warning_count INTEGER NOT NULL DEFAULT 0,
+  error_count INTEGER NOT NULL DEFAULT 0,
+  summary_json TEXT NOT NULL DEFAULT '{}',
+  created_by TEXT,
+  created_at TEXT NOT NULL
+);
+"""),
 )
 
 

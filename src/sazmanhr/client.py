@@ -11,7 +11,7 @@ from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QBoxLayout, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
     QFrame, QGraphicsScene, QGraphicsView, QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QMainWindow, QMessageBox, QPushButton, QStackedWidget, QTableWidget,
+    QListWidget, QMainWindow, QMessageBox, QPushButton, QStackedWidget, QTabWidget, QTableWidget,
     QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
 
@@ -402,6 +402,34 @@ class PersonDialog(QDialog):
         return value
 
 
+class PersonnelProfileDialog(QDialog):
+    def __init__(self, person: dict[str, Any], parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("پروفایل پرسنلی")
+        self.setMinimumSize(720, 560)
+        outer = QVBoxLayout(self)
+        heading = QLabel(str(person.get("full_name", "") or "پروفایل پرسنلی"))
+        heading.setObjectName("title")
+        meta = QLabel(f"شماره پرسنلی: {person.get('personnel_no', '-')}  •  وضعیت: {person.get('status', '-')}")
+        meta.setObjectName("muted")
+        outer.addWidget(heading); outer.addWidget(meta)
+        card = QFrame(); card.setObjectName("card")
+        form = QFormLayout(card)
+        for key, title in PERSON_FIELDS:
+            value = QLabel(str(person.get(key, "") or "—"))
+            value.setWordWrap(True); value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            form.addRow(title + ":", value)
+        assignment = person.get("assignment") or {}
+        if assignment:
+            form.addRow("واحد نرمال‌شده:", QLabel(str(assignment.get("unit_title", "") or "—")))
+            form.addRow("پست نرمال‌شده:", QLabel(str(assignment.get("normalized_position_title", "") or "—")))
+            form.addRow("کد پست نرمال‌شده:", QLabel(str(assignment.get("normalized_position_code", "") or "—")))
+        outer.addWidget(card)
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(self.reject); buttons.accepted.connect(self.accept)
+        outer.addWidget(buttons)
+
+
 class PersonnelPage(Page):
     columns = (("personnel_no", "شماره"), ("full_name", "نام کامل"),
                ("organizational_unit", "واحد"), ("position_title", "عنوان پست"),
@@ -409,62 +437,148 @@ class PersonnelPage(Page):
 
     def __init__(self, window: "MainWindow"):
         super().__init__(window, "مدیریت پرسنل")
-        bar = QHBoxLayout()
-        self.search = QLineEdit()
-        self.search.setPlaceholderText("نام، شماره پرسنلی، واحد یا عنوان پست")
+        filters = QGridLayout()
+        self.search = QLineEdit(); self.search.setPlaceholderText("نام، شماره پرسنلی، واحد یا عنوان پست")
         self.search.returnPressed.connect(self.refresh)
-        bar.addWidget(self.search)
-        for title, slot, secondary in (("جستجو", self.refresh, False), ("افزودن", self.add, False),
+        self.unit_filter, self.employment_filter = QComboBox(), QComboBox()
+        self.status_filter, self.location_filter = QComboBox(), QComboBox()
+        for combo, title in ((self.unit_filter, "همه واحدها"), (self.employment_filter, "همه گروه‌های استخدامی"),
+                             (self.status_filter, "همه وضعیت‌ها"), (self.location_filter, "همه محل‌های خدمت")):
+            combo.addItem(title, ""); combo.currentIndexChanged.connect(self.refresh)
+        filters.addWidget(self.search, 0, 0, 1, 2)
+        filters.addWidget(self.unit_filter, 0, 2); filters.addWidget(self.employment_filter, 0, 3)
+        filters.addWidget(self.status_filter, 1, 0); filters.addWidget(self.location_filter, 1, 1)
+        search_btn = QPushButton("جستجو"); search_btn.clicked.connect(self.refresh); filters.addWidget(search_btn, 1, 2)
+        reset_btn = QPushButton("پاک‌کردن فیلترها"); reset_btn.setProperty("secondary", True); reset_btn.clicked.connect(self.reset_filters); filters.addWidget(reset_btn, 1, 3)
+        self.layout.addLayout(filters)
+        bar = QHBoxLayout()
+        for title, slot, secondary in (("پروفایل", self.profile, True), ("افزودن", self.add, False),
                                         ("ویرایش", self.edit, True), ("حذف", self.delete, True)):
-            button = QPushButton(title)
-            button.setProperty("secondary", secondary)
-            button.clicked.connect(slot)
-            bar.addWidget(button)
+            button = QPushButton(title); button.setProperty("secondary", secondary); button.clicked.connect(slot); bar.addWidget(button)
+        bar.addStretch(); self.count_label = QLabel(""); self.count_label.setObjectName("muted"); bar.addWidget(self.count_label)
         self.layout.addLayout(bar)
         self.table = QTableWidget(0, len(self.columns))
         self.table.setHorizontalHeaderLabels([title for _, title in self.columns])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.doubleClicked.connect(self.edit)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows); self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers); self.table.doubleClicked.connect(self.profile)
         self.layout.addWidget(self.table)
         self.rows: list[dict[str, Any]] = []
+        self._facets_loaded = False
+
+    @staticmethod
+    def _combo_value(combo: QComboBox) -> str:
+        return str(combo.currentData() or "")
+
+    def _load_combo(self, combo: QComboBox, values: list[str], all_title: str) -> None:
+        current = self._combo_value(combo)
+        combo.blockSignals(True); combo.clear(); combo.addItem(all_title, "")
+        for value in values:
+            combo.addItem(value, value)
+        idx = combo.findData(current); combo.setCurrentIndex(max(0, idx)); combo.blockSignals(False)
+
+    def reset_filters(self) -> None:
+        self.search.clear()
+        for combo in (self.unit_filter, self.employment_filter, self.status_filter, self.location_filter):
+            combo.setCurrentIndex(0)
+        self.refresh()
 
     def refresh(self) -> None:
-        result = self.call("GET", "/api/personnel", query={"q": self.search.text(), "limit": 1000})
-        if not result:
-            return
-        self.rows = result["items"]
+        result = self.call("GET", "/api/personnel", query={"q": self.search.text(), "limit": 1000,
+            "unit": self._combo_value(self.unit_filter), "employment": self._combo_value(self.employment_filter),
+            "status": self._combo_value(self.status_filter), "location": self._combo_value(self.location_filter)})
+        if not result: return
+        facets = result.get("facets", {})
+        if not self._facets_loaded:
+            self._load_combo(self.unit_filter, facets.get("units", []), "همه واحدها")
+            self._load_combo(self.employment_filter, facets.get("employment", []), "همه گروه‌های استخدامی")
+            self._load_combo(self.status_filter, facets.get("statuses", []), "همه وضعیت‌ها")
+            self._load_combo(self.location_filter, facets.get("locations", []), "همه محل‌های خدمت")
+            self._facets_loaded = True
+        self.rows = result["items"]; self.count_label.setText(f"{result.get('total', len(self.rows))} رکورد")
         self.table.setRowCount(len(self.rows))
         for row_no, row in enumerate(self.rows):
             for column_no, (key, _) in enumerate(self.columns):
                 self.table.setItem(row_no, column_no, QTableWidgetItem(str(row.get(key, "") or "")))
 
     def selected(self) -> dict[str, Any] | None:
-        row = self.table.currentRow()
-        return self.rows[row] if 0 <= row < len(self.rows) else None
+        row = self.table.currentRow(); return self.rows[row] if 0 <= row < len(self.rows) else None
+
+    def profile(self) -> None:
+        selected = self.selected()
+        if not selected: return
+        detail = self.call("GET", f"/api/personnel/{selected['id']}")
+        if detail: PersonnelProfileDialog(detail, self).exec()
 
     def add(self) -> None:
         dialog = PersonDialog(parent=self)
-        if dialog.exec() == QDialog.Accepted and self.call("POST", "/api/personnel", dialog.payload()):
-            self.refresh()
+        if dialog.exec() == QDialog.Accepted and self.call("POST", "/api/personnel", dialog.payload()): self.refresh()
 
     def edit(self) -> None:
         selected = self.selected()
-        if not selected:
-            return
+        if not selected: return
         detail = self.call("GET", f"/api/personnel/{selected['id']}")
-        if not detail:
-            return
+        if not detail: return
         dialog = PersonDialog(detail, self)
-        if dialog.exec() == QDialog.Accepted and self.call("POST", "/api/personnel", dialog.payload()):
-            self.refresh()
+        if dialog.exec() == QDialog.Accepted and self.call("POST", "/api/personnel", dialog.payload()): self.refresh()
 
     def delete(self) -> None:
         selected = self.selected()
         if selected and QMessageBox.question(self, "تأیید حذف", f"{selected['full_name']} حذف شود؟") == QMessageBox.Yes:
-            if self.call("DELETE", f"/api/personnel/{selected['id']}", query={"version": selected["row_version"]}):
-                self.refresh()
+            if self.call("DELETE", f"/api/personnel/{selected['id']}", query={"version": selected["row_version"]}): self.refresh()
+
+
+class OrganizationPage(Page):
+    def __init__(self, window: "MainWindow"):
+        super().__init__(window, "ساختار سازمانی، واحدها و پست‌ها")
+        self.summary = QHBoxLayout(); self.layout.addLayout(self.summary)
+        self.tabs = QTabWidget(); self.layout.addWidget(self.tabs, 1)
+        units_tab = QWidget(); units_box = QVBoxLayout(units_tab)
+        units_bar = QHBoxLayout(); self.unit_search = QLineEdit(); self.unit_search.setPlaceholderText("جستجو در عنوان، کد یا محل واحد")
+        self.unit_search.returnPressed.connect(self.refresh_units); units_bar.addWidget(self.unit_search)
+        ub = QPushButton("جستجو"); ub.clicked.connect(self.refresh_units); units_bar.addWidget(ub); units_box.addLayout(units_bar)
+        self.units_table = QTableWidget(0, 6); self.units_table.setHorizontalHeaderLabels(["کد", "عنوان واحد", "نوع", "محل", "پست‌ها", "شاغلین"])
+        self.units_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch); self.units_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        units_box.addWidget(self.units_table); self.tabs.addTab(units_tab, "واحدها")
+        positions_tab = QWidget(); positions_box = QVBoxLayout(positions_tab)
+        pos_bar = QHBoxLayout(); self.position_search = QLineEdit(); self.position_search.setPlaceholderText("کد، عنوان پست، واحد یا محل")
+        self.position_search.returnPressed.connect(self.refresh_positions); self.occupancy_filter = QComboBox()
+        self.occupancy_filter.addItem("همه پست‌ها", ""); self.occupancy_filter.addItem("پست‌های اشغال‌شده", "occupied"); self.occupancy_filter.addItem("پست‌های خالی", "vacant")
+        self.occupancy_filter.currentIndexChanged.connect(self.refresh_positions)
+        pos_bar.addWidget(self.position_search); pos_bar.addWidget(self.occupancy_filter)
+        pb = QPushButton("جستجو"); pb.clicked.connect(self.refresh_positions); pos_bar.addWidget(pb); positions_box.addLayout(pos_bar)
+        self.positions_table = QTableWidget(0, 6); self.positions_table.setHorizontalHeaderLabels(["کد", "عنوان پست", "واحد", "محل", "وضعیت اشغال", "متصدی"])
+        self.positions_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch); self.positions_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        positions_box.addWidget(self.positions_table); self.tabs.addTab(positions_tab, "پست‌های سازمانی")
+
+    def refresh(self) -> None:
+        info = self.call("GET", "/api/organization/summary")
+        if info:
+            while self.summary.count():
+                item = self.summary.takeAt(0)
+                if item.widget(): item.widget().deleteLater()
+            for key, title in (("units", "واحدها"), ("positions", "پست‌ها"), ("occupied_positions", "اشغال‌شده"), ("vacant_positions", "خالی")):
+                card = QFrame(); card.setObjectName("softCard"); box = QVBoxLayout(card)
+                value = QLabel(str(info.get(key, 0))); value.setObjectName("cardValue"); label = QLabel(title); label.setObjectName("cardCaption")
+                box.addWidget(value); box.addWidget(label); self.summary.addWidget(card)
+        self.refresh_units(); self.refresh_positions()
+
+    def refresh_units(self) -> None:
+        result = self.call("GET", "/api/units", query={"q": self.unit_search.text()})
+        if not result: return
+        rows = result.get("items", []); self.units_table.setRowCount(len(rows))
+        for r, row in enumerate(rows):
+            vals = (row.get("code"), row.get("title"), row.get("unit_type"), row.get("location"), row.get("positions_count"), row.get("assigned_count"))
+            for c, value in enumerate(vals): self.units_table.setItem(r, c, QTableWidgetItem(str(value or "")))
+
+    def refresh_positions(self) -> None:
+        result = self.call("GET", "/api/positions", query={"q": self.position_search.text(), "occupancy": str(self.occupancy_filter.currentData() or "")})
+        if not result: return
+        rows = result.get("items", []); self.positions_table.setRowCount(len(rows))
+        for r, row in enumerate(rows):
+            occupied = "اشغال‌شده" if row.get("person_id") else "خالی"
+            vals = (row.get("code"), row.get("title"), row.get("unit_title"), row.get("location"), occupied, row.get("occupant_name"))
+            for c, value in enumerate(vals): self.positions_table.setItem(r, c, QTableWidgetItem(str(value or "")))
 
 
 class ChartPage(Page):
@@ -706,6 +820,7 @@ class MainWindow(QMainWindow):
     NAV_ITEMS = (
         "داشبورد",
         "پرسنل",
+        "واحدها و پست‌ها",
         "چارت سازمانی",
         "گردش کار",
         "اعلان‌ها",
@@ -813,7 +928,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(shell)
 
         definitions: list[tuple[str, Page]] = [
-            ("داشبورد", DashboardPage(self)), ("پرسنل", PersonnelPage(self)), ("چارت سازمانی", ChartPage(self)),
+            ("داشبورد", DashboardPage(self)), ("پرسنل", PersonnelPage(self)),
+            ("واحدها و پست‌ها", OrganizationPage(self)), ("چارت سازمانی", ChartPage(self)),
             ("گردش کار", WorkflowPage(self)), ("اعلان‌ها", NotificationsPage(self)),
         ]
         if user["role"] in {"owner", "admin"}:
@@ -875,6 +991,14 @@ class _UiSmokeClient:
                 "stats": {"personnel": 36, "active": 36, "units": 8, "unassigned": 2, "revision": 1},
                 "widgets": [],
             }
+        if path == "/api/organization/summary":
+            return {"units": 8, "root_units": 8, "positions": 34, "occupied_positions": 32, "vacant_positions": 2}
+        if path == "/api/units":
+            return {"items": [{"id": "u1", "code": "U-001", "title": "معاونت منابع انسانی", "unit_type": "معاونت", "location": "ستاد", "positions_count": 4, "assigned_count": 3}]}
+        if path == "/api/positions":
+            return {"items": [{"id": "p1", "code": "P-001", "title": "کارشناس منابع انسانی", "unit_title": "معاونت منابع انسانی", "location": "ستاد", "person_id": "demo-1", "occupant_name": "کاربر آزمایشی"}], "total": 1}
+        if path == "/api/personnel":
+            return {"items": [], "total": 0, "facets": {"units": [], "employment": [], "statuses": [], "locations": []}}
         if path == "/api/changes":
             return {"items": [], "current_revision": 1}
         return {"items": []}

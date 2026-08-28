@@ -252,6 +252,110 @@ class Repository:
             for role, permissions in PERMISSIONS.items():
                 for permission in permissions:
                     conn.execute("INSERT OR IGNORE INTO role_permissions(role,permission) VALUES(?,?)", (role, permission))
+            self._ensure_organization_projection(conn)
+
+    @staticmethod
+    def _projection_id(prefix: str, value: str) -> str:
+        digest = hashlib.sha256(value.strip().encode("utf-8")).hexdigest()[:20]
+        return f"{prefix}-{digest}"
+
+    def _ensure_organization_projection(self, conn: sqlite3.Connection) -> None:
+        """Backfill the normalized organization core from legacy personnel fields.
+
+        v0.3.0-alpha.1 stored unit/position labels directly on personnel.  The
+        alpha.2 core keeps those fields for backwards compatibility but adds a
+        normalized projection for organization browsing, positions and profile
+        assignment.  The projection is deterministic and idempotent, so an
+        in-place upgrade preserves every existing personnel row.
+        """
+        now = utc_now()
+        rows = conn.execute(
+            """SELECT id,organizational_unit,position_code,position_title,actual_location
+               FROM personnel ORDER BY personnel_no,id"""
+        ).fetchall()
+        for row in rows:
+            unit_title = str(row["organizational_unit"] or "").strip()
+            unit_id = None
+            if unit_title:
+                unit_id = self._projection_id("unit", unit_title)
+                unit_code = "U-" + hashlib.sha256(unit_title.encode("utf-8")).hexdigest()[:8].upper()
+                conn.execute(
+                    """INSERT OR IGNORE INTO organizational_units
+                       (id,code,title,parent_id,unit_type,location,is_active,sort_order,row_version,updated_at,updated_by)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                    (unit_id, unit_code, unit_title, None, "واحد سازمانی", str(row["actual_location"] or ""),
+                     1, 0, 1, now, None),
+                )
+            position_code = str(row["position_code"] or "").strip()
+            position_title = str(row["position_title"] or "").strip()
+            if not position_code and not position_title:
+                continue
+            stable_position = position_code or f"{unit_title}|{position_title}"
+            position_id = self._projection_id("position", stable_position)
+            stored_code = position_code or ("P-" + hashlib.sha256(stable_position.encode("utf-8")).hexdigest()[:8].upper())
+            conn.execute(
+                """INSERT OR IGNORE INTO positions
+                   (id,code,title,unit_id,post_type,location,status,row_version,updated_at,updated_by)
+                   VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                (position_id, stored_code, position_title or stored_code, unit_id, "",
+                 str(row["actual_location"] or ""), "active", 1, now, None),
+            )
+            assignment_id = self._projection_id("assignment", str(row["id"]))
+            conn.execute(
+                """INSERT OR IGNORE INTO personnel_assignments
+                   (id,person_id,position_id,is_primary,start_date,end_date,row_version,updated_at,updated_by)
+                   VALUES(?,?,?,?,?,?,?,?,?)""",
+                (assignment_id, row["id"], position_id, 1, "", "", 1, now, None),
+            )
+
+    def _sync_person_projection(self, conn: sqlite3.Connection, person_id: str, values: dict[str, str],
+                                actor_id: str | None, now: str) -> None:
+        unit_title = values.get("organizational_unit", "").strip()
+        position_code = values.get("position_code", "").strip()
+        position_title = values.get("position_title", "").strip()
+        location = values.get("actual_location", "").strip()
+        if not position_code and not position_title:
+            conn.execute("DELETE FROM personnel_assignments WHERE person_id=? AND is_primary=1 AND end_date=''", (person_id,))
+            return
+        unit_id = None
+        if unit_title:
+            unit_id = self._projection_id("unit", unit_title)
+            unit_code = "U-" + hashlib.sha256(unit_title.encode("utf-8")).hexdigest()[:8].upper()
+            conn.execute(
+                """INSERT INTO organizational_units
+                   (id,code,title,parent_id,unit_type,location,is_active,sort_order,row_version,updated_at,updated_by)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                   ON CONFLICT(id) DO UPDATE SET title=excluded.title,location=excluded.location,
+                     is_active=1,updated_at=excluded.updated_at,updated_by=excluded.updated_by""",
+                (unit_id, unit_code, unit_title, None, "واحد سازمانی", location, 1, 0, 1, now, actor_id),
+            )
+        stable_position = position_code or f"{unit_title}|{position_title}"
+        position_id = self._projection_id("position", stable_position)
+        stored_code = position_code or ("P-" + hashlib.sha256(stable_position.encode("utf-8")).hexdigest()[:8].upper())
+        conn.execute(
+            """INSERT INTO positions(id,code,title,unit_id,post_type,location,status,row_version,updated_at,updated_by)
+               VALUES(?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT(id) DO UPDATE SET code=excluded.code,title=excluded.title,unit_id=excluded.unit_id,
+                 location=excluded.location,status='active',updated_at=excluded.updated_at,updated_by=excluded.updated_by""",
+            (position_id, stored_code, position_title or stored_code, unit_id, "", location, "active", 1, now, actor_id),
+        )
+        current = conn.execute(
+            "SELECT id,position_id FROM personnel_assignments WHERE person_id=? AND is_primary=1 AND end_date=''",
+            (person_id,),
+        ).fetchone()
+        if current and current["position_id"] == position_id:
+            conn.execute("UPDATE personnel_assignments SET updated_at=?,updated_by=? WHERE id=?",
+                         (now, actor_id, current["id"]))
+            return
+        if current:
+            conn.execute("DELETE FROM personnel_assignments WHERE id=?", (current["id"],))
+        assignment_id = self._projection_id("assignment", person_id)
+        conn.execute(
+            """INSERT OR REPLACE INTO personnel_assignments
+               (id,person_id,position_id,is_primary,start_date,end_date,row_version,updated_at,updated_by)
+               VALUES(?,?,?,?,?,?,?,?,?)""",
+            (assignment_id, person_id, position_id, 1, "", "", 1, now, actor_id),
+        )
 
     @contextlib.contextmanager
     def write(self) -> Iterator[sqlite3.Connection]:
@@ -489,23 +593,109 @@ class Repository:
         with self.connect() as conn:
             total = conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0]
             active = conn.execute("SELECT COUNT(*) FROM personnel WHERE status NOT LIKE '%غیرفعال%'").fetchone()[0]
-            units = conn.execute(
-                "SELECT COUNT(DISTINCT organizational_unit) FROM personnel WHERE organizational_unit<>''"
-            ).fetchone()[0]
+            units = conn.execute("SELECT COUNT(*) FROM organizational_units WHERE is_active=1").fetchone()[0]
+            positions = conn.execute("SELECT COUNT(*) FROM positions WHERE status='active'").fetchone()[0]
             unassigned = conn.execute(
-                "SELECT COUNT(*) FROM personnel WHERE position_code='' OR position_title=''"
+                """SELECT COUNT(*) FROM personnel p WHERE NOT EXISTS (
+                    SELECT 1 FROM personnel_assignments a
+                    WHERE a.person_id=p.id AND a.is_primary=1 AND a.end_date=''
+                )"""
             ).fetchone()[0]
             revision = conn.execute("SELECT COALESCE(MAX(revision),0) FROM change_feed").fetchone()[0]
-        return {"personnel": total, "active": active, "units": units, "unassigned": unassigned, "revision": revision}
+        return {"personnel": total, "active": active, "units": units, "positions": positions,
+                "unassigned": unassigned, "revision": revision}
 
-    def list_personnel(self, query: str = "", limit: int = 200, offset: int = 0) -> dict[str, Any]:
+    def organization_summary(self) -> dict[str, int]:
+        with self.connect() as conn:
+            units = conn.execute("SELECT COUNT(*) FROM organizational_units WHERE is_active=1").fetchone()[0]
+            root_units = conn.execute(
+                "SELECT COUNT(*) FROM organizational_units WHERE is_active=1 AND parent_id IS NULL"
+            ).fetchone()[0]
+            positions = conn.execute("SELECT COUNT(*) FROM positions WHERE status='active'").fetchone()[0]
+            occupied = conn.execute(
+                """SELECT COUNT(DISTINCT position_id) FROM personnel_assignments
+                   WHERE is_primary=1 AND end_date=''"""
+            ).fetchone()[0]
+        return {"units": units, "root_units": root_units, "positions": positions,
+                "occupied_positions": occupied, "vacant_positions": max(0, positions - occupied)}
+
+    def list_units(self, query: str = "") -> list[dict[str, Any]]:
+        like = f"%{query.strip()}%"
+        where = "" if not query.strip() else "WHERE u.title LIKE ? OR u.code LIKE ? OR u.location LIKE ?"
+        params: tuple[Any, ...] = () if not where else (like, like, like)
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""SELECT u.id,u.code,u.title,u.parent_id,u.unit_type,u.location,u.is_active,u.sort_order,
+                    u.row_version,
+                    (SELECT COUNT(*) FROM positions p WHERE p.unit_id=u.id AND p.status='active') AS positions_count,
+                    (SELECT COUNT(*) FROM personnel_assignments a JOIN positions p2 ON p2.id=a.position_id
+                       WHERE p2.unit_id=u.id AND a.is_primary=1 AND a.end_date='') AS assigned_count
+                    FROM organizational_units u {where}
+                    ORDER BY COALESCE(u.parent_id,''),u.sort_order,u.title,u.code""", params
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_unit(self, unit_id: str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                """SELECT u.*, parent.title AS parent_title
+                   FROM organizational_units u LEFT JOIN organizational_units parent ON parent.id=u.parent_id
+                   WHERE u.id=?""", (unit_id,)
+            ).fetchone()
+        return dict(row) if row else None
+
+    def list_positions(self, query: str = "", unit_id: str = "", occupancy: str = "") -> dict[str, Any]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if query.strip():
+            like = f"%{query.strip()}%"
+            clauses.append("(p.code LIKE ? OR p.title LIKE ? OR u.title LIKE ? OR p.location LIKE ?)")
+            params.extend((like, like, like, like))
+        if unit_id.strip():
+            clauses.append("p.unit_id=?")
+            params.append(unit_id.strip())
+        if occupancy == "occupied":
+            clauses.append("a.person_id IS NOT NULL")
+        elif occupancy == "vacant":
+            clauses.append("a.person_id IS NULL")
+        where = "WHERE " + " AND ".join(clauses) if clauses else ""
+        with self.connect() as conn:
+            rows = conn.execute(
+                f"""SELECT p.id,p.code,p.title,p.unit_id,u.title AS unit_title,p.post_type,p.location,p.status,
+                    p.row_version,a.person_id,pe.personnel_no,pe.full_name AS occupant_name
+                    FROM positions p
+                    LEFT JOIN organizational_units u ON u.id=p.unit_id
+                    LEFT JOIN personnel_assignments a ON a.position_id=p.id AND a.is_primary=1 AND a.end_date=''
+                    LEFT JOIN personnel pe ON pe.id=a.person_id
+                    {where}
+                    ORDER BY u.title,p.title,p.code""", tuple(params)
+            ).fetchall()
+        items = [dict(row) for row in rows]
+        return {"items": items, "total": len(items)}
+
+    def get_position(self, position_id: str) -> dict[str, Any] | None:
+        result = self.list_positions()
+        return next((item for item in result["items"] if item["id"] == position_id), None)
+
+    def list_personnel(self, query: str = "", limit: int = 200, offset: int = 0,
+                       *, unit: str = "", employment: str = "", status: str = "",
+                       location: str = "") -> dict[str, Any]:
         limit = max(1, min(limit, 1000))
         offset = max(0, offset)
-        like = f"%{query.strip()}%"
-        where = "" if not query.strip() else "WHERE personnel_no LIKE ? OR full_name LIKE ? OR organizational_unit LIKE ? OR position_title LIKE ?"
-        params: tuple[Any, ...] = () if not where else (like, like, like, like)
+        clauses: list[str] = []
+        params: list[Any] = []
+        if query.strip():
+            like = f"%{query.strip()}%"
+            clauses.append("(personnel_no LIKE ? OR full_name LIKE ? OR organizational_unit LIKE ? OR position_title LIKE ?)")
+            params.extend((like, like, like, like))
+        for column, value in (("organizational_unit", unit), ("employment_group", employment),
+                              ("status", status), ("actual_location", location)):
+            if value.strip():
+                clauses.append(f"{column}=?")
+                params.append(value.strip())
+        where = "WHERE " + " AND ".join(clauses) if clauses else ""
         with self.connect() as conn:
-            total = conn.execute(f"SELECT COUNT(*) FROM personnel {where}", params).fetchone()[0]
+            total = conn.execute(f"SELECT COUNT(*) FROM personnel {where}", tuple(params)).fetchone()[0]
             rows = conn.execute(
                 f"""SELECT id,personnel_no,first_name,last_name,full_name,gender,organizational_unit,
                     position_code,position_title,employment_group,employment_subtype,status,
@@ -513,7 +703,14 @@ class Repository:
                     FROM personnel {where} ORDER BY full_name,personnel_no LIMIT ? OFFSET ?""",
                 (*params, limit, offset),
             ).fetchall()
-        return {"items": [dict(row) for row in rows], "total": total, "limit": limit, "offset": offset}
+            facets = {
+                "units": [r[0] for r in conn.execute("SELECT DISTINCT organizational_unit FROM personnel WHERE organizational_unit<>'' ORDER BY organizational_unit")],
+                "employment": [r[0] for r in conn.execute("SELECT DISTINCT employment_group FROM personnel WHERE employment_group<>'' ORDER BY employment_group")],
+                "statuses": [r[0] for r in conn.execute("SELECT DISTINCT status FROM personnel WHERE status<>'' ORDER BY status")],
+                "locations": [r[0] for r in conn.execute("SELECT DISTINCT actual_location FROM personnel WHERE actual_location<>'' ORDER BY actual_location")],
+            }
+        return {"items": [dict(row) for row in rows], "total": total, "limit": limit, "offset": offset,
+                "facets": facets}
 
     def get_person(self, person_id: str) -> dict[str, Any] | None:
         with self.connect() as conn:
@@ -522,6 +719,17 @@ class Repository:
             return None
         result = dict(row)
         result["extra"] = json.loads(result.pop("extra_json") or "{}")
+        with self.connect() as conn:
+            assignment = conn.execute(
+                """SELECT a.id AS assignment_id,a.start_date,a.end_date,p.id AS position_id,p.code AS normalized_position_code,
+                    p.title AS normalized_position_title,p.post_type,p.location AS position_location,
+                    u.id AS unit_id,u.code AS unit_code,u.title AS unit_title,u.unit_type,u.location AS unit_location
+                    FROM personnel_assignments a
+                    JOIN positions p ON p.id=a.position_id
+                    LEFT JOIN organizational_units u ON u.id=p.unit_id
+                    WHERE a.person_id=? AND a.is_primary=1 AND a.end_date='' LIMIT 1""", (person_id,)
+            ).fetchone()
+        result["assignment"] = dict(assignment) if assignment else None
         return result
 
     def save_person(self, payload: dict[str, Any], actor_id: str) -> dict[str, Any]:
@@ -533,7 +741,8 @@ class Repository:
             "activity_area", "actual_location", "company", "chart_node_id",
         )
         values = {field: str(payload.get(field, "")).strip() for field in fields}
-        chart_page_text = str(payload.get("chart_page_no", "")).strip()
+        raw_chart_page = payload.get("chart_page_no")
+        chart_page_text = "" if raw_chart_page is None else str(raw_chart_page).strip()
         chart_page_no = int(chart_page_text) if chart_page_text else None
         if not values["personnel_no"] or not values["full_name"]:
             raise ValueError("شماره پرسنلی و نام کامل الزامی است.")
@@ -566,6 +775,7 @@ class Repository:
                 before = None
             after = {"id": person_id, **values, "chart_page_no": chart_page_no,
                      "row_version": new_version, "updated_at": now}
+            self._sync_person_projection(conn, person_id, values, actor_id, now)
             self._record(conn, actor_id, action, "personnel", person_id, before, after, new_version)
         return self.get_person(person_id) or after
 
