@@ -114,8 +114,8 @@
     },
     {
       "path": "ci/validate_package_contract.py",
-      "bytes": 13943,
-      "sha256": "6056fb898fa3758075a43f3b583c8d1beafcb51ea06970796c774975c253a32b"
+      "bytes": 14434,
+      "sha256": "c361a38b0e2d840672e3b7ab13df60b151453300b09898d5fe541ec273e172b8"
     },
     {
       "path": "ci/validate_v040a1_migration.py",
@@ -144,13 +144,13 @@
     },
     {
       "path": "data/README.md",
-      "bytes": 707,
-      "sha256": "1de9d9071a9049dfa10d11909a2e92637e7393ea08f757e74054ec1ac3968c86"
+      "bytes": 698,
+      "sha256": "3d6867b3accf91e34153d9dcbf9e9b698a8a8da1eafb78948f12bc96e70aaa15"
     },
     {
       "path": "data/seed/.gitkeep",
-      "bytes": 2,
-      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
     },
     {
       "path": "data/seed/manifest.json",
@@ -304,8 +304,8 @@
     },
     {
       "path": "src/sazmanhr/demo_data.py",
-      "bytes": 6385,
-      "sha256": "a7b7feecc4c5b1b9afd6c27d08afa09c7624243ede97f35f59ed6486775d3876"
+      "bytes": 6233,
+      "sha256": "33078f91c6ab2a1c1e3fadcca6f952e6eeb8e1f343ebb658e5f9d6b5bf743533"
     },
     {
       "path": "src/sazmanhr/migrations.py",
@@ -344,8 +344,8 @@
     },
     {
       "path": "test-evidence/alpha4-proven-baseline-manifest.json",
-      "bytes": 1212,
-      "sha256": "e53045da9644929a4d3dec5f877f17899c5b3deebb93ba48a33dcdca3fe2ce5d"
+      "bytes": 1172,
+      "sha256": "ebc1b7b1f76f049e95da1797bc5a2dd3eee92a67ce7b794f0e407681c9472d83"
     },
     {
       "path": "TEST-REPORT-HRM-v0.3.0-alpha.2.md",
@@ -383,6 +383,11 @@
       "sha256": "bf3e033a008951f2ef95998215b304d656ee7be6df35dad4d9311b93ce00b780"
     },
     {
+      "path": "tests/test_manifest_eol_portability.py",
+      "bytes": 1923,
+      "sha256": "f6c179d854519a038abdd93fbfcfe15bfdf7bf991c77364cc0b4accae4cf1905"
+    },
+    {
       "path": "tests/test_org_personnel_core.py",
       "bytes": 4611,
       "sha256": "766b7865ed988dd12e9ec5120abae2ea844cfe2166d8794dbb66e5822f9eec3c"
@@ -409,8 +414,8 @@
     },
     {
       "path": "tests/test_six_clients.py",
-      "bytes": 2427,
-      "sha256": "fb7747da7c5b7c7add961fafae65530ccf97550bf3c6a87ef890059706b7fa3f"
+      "bytes": 2374,
+      "sha256": "3f26565f58fd46ba80d595c26ddf288dfb8d32fb8303112d94a3683b9824cdc4"
     },
     {
       "path": "tests/test_tls.py",
@@ -434,8 +439,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 5417,
-      "sha256": "1964db054b21071f63416d727738177cdd6ef5be2e914ba4d270050c56662c86"
+      "bytes": 5912,
+      "sha256": "753d69aea6361646ce66e2cee2343c5203ce7d36727c52487c7ba8840b17e263"
     },
     {
       "path": "tools/collect-diagnostics.cmd",
@@ -444,8 +449,8 @@
     },
     {
       "path": "tools/create_demo_seed.py",
-      "bytes": 912,
-      "sha256": "674f652f3fd4146eedd077e094d2727eae9a8bb8e645c7ef1d9e0c91757d921c"
+      "bytes": 880,
+      "sha256": "8e77d82ef8d27faf29e0080eecb61143bd8daeb4464dde80962dca9f976e204b"
     },
     {
       "path": "tools/create_icon.py",
