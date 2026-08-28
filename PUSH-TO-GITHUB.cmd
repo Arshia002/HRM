@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================================
-echo   HRM v0.3.0-alpha.2 - guarded GitHub CI push
+echo   HRM v0.4.0-alpha.1 - guarded GitHub CI push
 echo ============================================================
 echo.
 
@@ -26,12 +26,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "feat: add HRM v0.3.0-alpha.2 native v4.9 shell"
+git commit -m "fix: align HRM v0.4.0-alpha.1 CI release contract"
 if errorlevel 1 exit /b 1
 
-git push origin feat/native-v49-shell
+git push origin feat/real-data-import-v040a1
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: v0.3.0-alpha.2 was pushed. Watch GitHub Actions for Windows validation.
+echo PASS: v0.4.0-alpha.1 was pushed. Watch GitHub Actions for Windows validation.
 exit /b 0

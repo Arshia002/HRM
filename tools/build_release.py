@@ -28,7 +28,8 @@ ROOT_FILES = {
     "HRM-V030A2-NOTES.md", "LICENSE.txt", "PUSH-TO-GITHUB.cmd", "README.md",
     "ROOT-CAUSE-alpha1.md", "ROOT-CAUSE-alpha2-prepush.md", "ROOT-CAUSE-alpha2-ci.md",
     "TEST-REPORT-HRM-v0.3.0-alpha.2.md", "TEST-REPORT.md", "VERSION", "pyproject.toml",
-    "APPLY-V030A2.cmd",
+    "APPLY-V030A2.cmd", "APPLY-V040A1.cmd", "README-V040A1.txt",
+    "RUN-DRY-RUN-V040A1.cmd", "TEST-REPORT-V040A1.txt", "VERSION-V040A1.json",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 
