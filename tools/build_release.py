@@ -34,13 +34,19 @@ ROOT_FILES = {
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 
 
-def digest(path: Path) -> str:
-    result = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            result.update(chunk)
-    return result.hexdigest()
+# HRM_MANIFEST_CANONICAL_LF_V1
+BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
 
+def canonical_bytes(path: Path) -> bytes:
+    # Git clean checkouts normalize text to LF. Windows working trees may
+    # expose CRLF, so manifest hashing must canonicalize text bytes.
+    raw = path.read_bytes()
+    if path.suffix.lower() in BINARY_SUFFIXES or b"\x00" in raw:
+        return raw
+    return raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(canonical_bytes(path)).hexdigest()
 
 def is_stable_overlay_file(path: Path) -> bool:
     relative = path.relative_to(ROOT)
@@ -88,7 +94,7 @@ def write_manifest(files: list[tuple[Path, Path]]) -> Path:
         "files": [
             {
                 "path": relative.as_posix(),
-                "bytes": path.stat().st_size,
+                "bytes": len(canonical_bytes(path)),
                 "sha256": digest(path),
             }
             for path, relative in files
@@ -120,7 +126,7 @@ def main() -> int:
             info.date_time = (2026, 8, 28, 0, 0, 0)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (0o644 & 0xFFFF) << 16
-            archive.writestr(info, path.read_bytes(), compresslevel=9)
+            archive.writestr(info, canonical_bytes(path), compresslevel=9)
 
     archive_sha = digest(ARCHIVE)
     (ARCHIVE.with_suffix(ARCHIVE.suffix + ".sha256")).write_text(

@@ -39,13 +39,19 @@ def fail(message: str) -> None:
     raise RuntimeError(message)
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+# HRM_MANIFEST_CANONICAL_LF_V1
+BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
 
+def canonical_bytes(path: Path) -> bytes:
+    # Git clean checkouts normalize text to LF. Windows working trees may
+    # expose CRLF, so manifest hashing must canonicalize text bytes.
+    raw = path.read_bytes()
+    if path.suffix.lower() in BINARY_SUFFIXES or b"\x00" in raw:
+        return raw
+    return raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(canonical_bytes(path)).hexdigest()
 
 def exe_name_from_spec(path: Path) -> str:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -227,7 +233,7 @@ def validate_package_manifest_paths() -> list[str]:
             fail(f"Invalid byte count in package manifest for {relative}: {expected_bytes!r}")
         if not isinstance(expected_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
             fail(f"Invalid SHA-256 in package manifest for {relative}: {expected_sha!r}")
-        actual_bytes = path.stat().st_size
+        actual_bytes = len(canonical_bytes(path))
         if actual_bytes != expected_bytes:
             fail(f"Package manifest byte mismatch for {relative}: expected {expected_bytes}, got {actual_bytes}")
         actual_sha = sha256_file(path)
