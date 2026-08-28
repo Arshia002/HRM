@@ -1,37 +1,19 @@
-# HRM v0.2.0-alpha.1 CI Package — Local Validation
+# HRM v0.2.0-alpha.2 — Local Validation
 
-Status: **READY FOR WINDOWS CI**
+تاریخ: 2026-08-27
 
-This package is intentionally not marked as a Windows-tested Setup. It is the source/CI candidate that must be pushed to GitHub Actions.
+نتیجه پیش از تحویل CI package:
 
-## Local checks completed
+- Packaging contract: **PASS**
+- PyInstaller spec output contract: **PASS** (`HRM.exe`, `HRMServer.exe`, `HRMService.exe`)
+- Inno source existence + ASCII-safe paths: **PASS**
+- Version contract: **PASS** (`0.2.0-alpha.2`)
+- Public-safe seed gate: **PASS** (36 رکورد synthetic، بدون داده واقعی)
+- Unit/Integration tests: **41/41 PASS**
+- Python compileall: **PASS**
+- GitHub Workflow YAML parse: **PASS**
+- JSON parse: **PASS**
+- CI overlay manifest path safety: **PASS** (تمام pathهای اعلام‌شده بسته ASCII-safe)
+- Regression with existing Persian-named repository docs: **PASS**
 
-- Python unit/integration/package/CI contract tests: **36 / 36 PASS**
-- Python source compilation (`compileall`): **PASS**
-- GitHub workflow YAML parse: **PASS**
-- Native Qt/no browser-engine package rule: **PASS**
-- Bootstrap secret unit test and forced-password-change behavior: **PASS**
-- Installer script structural hardening tests: **PASS**
-
-## Windows-only checks delegated to GitHub Actions
-
-The included Windows workflow will build and then test:
-
-- PyInstaller binaries
-- Inno Setup output
-- clean Full install
-- Windows Service `HRMCentral`
-- LocalSystem service identity
-- Service SID ACL
-- TLS/database/version health
-- Desktop shortcut
-- first login with project Bootstrap secret
-- dashboard blocked until password change
-- forced password change
-- Bootstrap invalidation after password change
-- in-place upgrade
-- account/data/sentinel preservation through upgrade
-- uninstall and service removal
-- operational data preservation after uninstall
-
-A release is not approved until the GitHub Actions run is GREEN and the resulting artifact is manually tested by the project owner.
+این Validation عمداً جای Windows CI را نمی‌گیرد. Build واقعی PyInstaller for Windows، Inno Setup، Service، TLS، ACL، Desktop Shortcut، Login، Upgrade و Uninstall باید روی GitHub `windows-2022` سبز شوند.

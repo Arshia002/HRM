@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_DIR = ROOT.parent / "release"
-ARCHIVE = RELEASE_DIR / "SazmanHR-Enterprise-16.0.7-CI-Source.zip"
+ARCHIVE = RELEASE_DIR / "HRM-v0.2.0-alpha.2-CI-Build-Package.zip"
 EXCLUDED_PARTS = {"__pycache__", "build-output", ".git"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".tmp"}
 
@@ -41,7 +41,7 @@ def main() -> int:
     ARCHIVE.unlink(missing_ok=True)
     with zipfile.ZipFile(ARCHIVE, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         for path, relative in files:
-            info = zipfile.ZipInfo(f"SazmanHR-Enterprise-16.0.7/{relative.as_posix()}")
+            info = zipfile.ZipInfo(f"HRM-v0.2.0-alpha.2-CI-Build-Package/{relative.as_posix()}")
             info.date_time = (2026, 8, 24, 0, 0, 0)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (0o644 & 0xFFFF) << 16

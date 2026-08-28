@@ -1,3 +1,16 @@
+# Changelog
+
+## 0.2.0-alpha.2
+
+- رفع ریشه‌ای mismatch خروجی PyInstaller Client: `SazmanHR.exe` → `HRM.exe`.
+- اضافه‌شدن Fail-fast packaging contract قبل از Build.
+- اعتبارسنجی فوری خروجی هر `.spec` پس از PyInstaller.
+- تغییر Installer script به `build/windows/HRM.iss`.
+- تغییر نام Preflight به `HRMServerPreflight.exe`.
+- تبدیل Source pathهای مستندات Inno به نام‌های ASCII-safe.
+- اضافه‌شدن inventory فایل‌های frozen و PyInstaller warningها به Failure diagnostics.
+- حفظ Guard دیتای عمومی: فقط Seed مصنوعی 36 رکوردی.
+
 # تغییرات
 
 ## 16.0.7 Proven Health Path and Durable Diagnostics
@@ -104,3 +117,7 @@
 
 - دیتاست پاک‌سازی‌شده ۱۳۵۶ پرسنل و ۵۳ صفحه چارت
 - هیچ باینری، runtime، سرویس یا حساب کاربری از بسته‌های خراب قبلی وارد پروژه نشده است
+
+## 0.2.0-alpha.2 CI package revision 2
+- Corrected the pre-push ASCII-path validator to inspect the CI overlay manifest and Inno payload, not unrelated files already present in the repository.
+- Added regression coverage for pre-existing Persian-named documentation.

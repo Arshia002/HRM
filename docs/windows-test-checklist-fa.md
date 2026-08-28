@@ -6,11 +6,11 @@
 2. `BUILD-SETUP.cmd` را عادی اجرا کنید و تا پیام موفقیت صبر کنید؛ این مسیر PowerShell را اجرا نمی‌کند.
 3. پس از build موفق، Setup خودکار باز می‌شود؛ درخواست UAC را تأیید کنید.
 4. حالت «سرور مرکزی و کلاینت مدیریت» را انتخاب کنید.
-5. پس از نصب، آیکون SazmanHR باید روی Desktop باشد.
+5. پس از نصب، آیکون HRM باید روی Desktop باشد.
 
 ## ورود و امنیت
 
-1. فایل `C:\ProgramData\SazmanHR-Enterprise\FIRST_LOGIN.txt` را باز کنید.
+1. فایل `C:\ProgramData\HRM-Kermanshah\FIRST_LOGIN.txt` را باز کنید.
 2. برنامه را اجرا کنید و اثرانگشت TLS نمایش‌داده‌شده را با فایل مقایسه کنید.
 3. با `arshia.shahbazi` و رمز یک‌بارمصرف وارد شوید.
 4. رمز جدید قوی تعیین کنید؛ فایل FIRST_LOGIN باید حذف شود.
@@ -37,7 +37,7 @@
 - `build-setup-bootstrap.log`
 - `build-output\build.log`
 - `build-output\installer\install-test.log`
-- خروجی `Get-Service SazmanHREnterpriseCentral`
-- فایل‌های `C:\ProgramData\SazmanHR-Enterprise\logs\server.jsonl*`
-- فایل `C:\ProgramData\SazmanHR-Enterprise\logs\setup-server.log`
+- خروجی `Get-Service HRMCentral`
+- فایل‌های `C:\ProgramData\HRM-Kermanshah\logs\server.jsonl*`
+- فایل `C:\ProgramData\HRM-Kermanshah\logs\setup-server.log`
 - نسخه Windows و مرحله‌ای که خطا رخ داده است

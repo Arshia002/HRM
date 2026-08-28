@@ -3,50 +3,50 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================================
-echo   HRM v0.2.0-alpha.1 - Push CI Build Package
+echo   HRM v0.2.0-alpha.2 - validate, commit and push
 echo ============================================================
 echo.
-echo This script stages this candidate and pushes the branch:
-echo   feat/native-v49-shell
-echo.
 
-git --version >nul 2>&1 || goto :nogit
+where git.exe >nul 2>&1 || goto :nogit
+where python.exe >nul 2>&1 || goto :nopython
 
-git status || goto :fail
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "BRANCH=%%B"
+if /I not "%BRANCH%"=="feat/native-v49-shell" (
+  echo ERROR: current branch is "%BRANCH%".
+  echo Switch to feat/native-v49-shell before pushing this candidate.
+  exit /b 11
+)
 
-git switch -C feat/native-v49-shell || goto :fail
+call "%~dp0APPLY-ALPHA2-FIX.cmd"
+if errorlevel 1 goto :fail
+
 git add -A || goto :fail
-git commit -m "build: prepare HRM v0.2.0-alpha.1 Windows CI candidate" || goto :commit_note
-git push -u origin feat/native-v49-shell || goto :fail
+git status || goto :fail
+git commit -m "fix: repair HRM alpha.2 Windows packaging contract" || goto :commit_note
+git push origin feat/native-v49-shell || goto :fail
 
 echo.
 echo PUSH COMPLETE.
-echo Open:
-echo https://github.com/Arshia002/HRM/actions
-echo.
+echo Open: https://github.com/Arshia002/HRM/actions
 echo Wait for workflow: HRM - Windows Build and Install Test
-echo If GREEN, download artifact: HRM-0.2.0-alpha.1-Tested-Setup
-echo If RED, download artifact: HRM-0.2.0-alpha.1-Failure-Logs
-echo.
-pause
+echo GREEN artifact: HRM-0.2.0-alpha.2-Tested-Setup
+echo RED artifact:   HRM-0.2.0-alpha.2-Failure-Logs
 exit /b 0
 
 :commit_note
 echo.
-echo Git could not create a new commit. If working tree is already clean,
-echo push the branch manually with:
-echo   git push -u origin feat/native-v49-shell
-echo.
-pause
+echo Git did not create a new commit. Review git status before pushing.
 exit /b 2
 
 :nogit
 echo ERROR: Git is not installed or is not on PATH.
-pause
 exit /b 10
+
+:nopython
+echo ERROR: Python is not installed or is not on PATH.
+exit /b 12
 
 :fail
 echo.
-echo ERROR: command failed. Review the output above. Nothing is Final yet.
-pause
+echo ERROR: command failed. Do not treat this candidate as Final.
 exit /b 1

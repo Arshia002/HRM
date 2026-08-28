@@ -28,7 +28,7 @@ build-output\build.log
 خروجی مورد انتظار:
 
 ```text
-build-output\installer\SazmanHR-Enterprise-Setup-x64.exe
+build-output\installer\HRM-Setup-x64.exe
 ```
 
 ## امضای دیجیتال
@@ -39,7 +39,7 @@ build-output\installer\SazmanHR-Enterprise-Setup-x64.exe
 
 1. نصب کامل روی ماشین تمیز.
 2. کنترل ساخته‌شدن Desktop shortcut.
-3. کنترل Running بودن `SazmanHREnterpriseCentral` پس از restart.
+3. کنترل Running بودن `HRMCentral` پس از restart.
 4. ورود با رمز یک‌بارمصرف و اجبار تغییر رمز.
 5. نصب پنج کلاینت و مشاهده تغییرات مشترک.
 6. تست تعارض با ویرایش هم‌زمان یک رکورد.

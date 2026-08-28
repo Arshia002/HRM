@@ -20,8 +20,8 @@ def main() -> None:
         draw.ellipse((x - 62, y - 62, x + 62, y + 62), fill="#f7fafc", outline="#26c6b5", width=20)
     bolt = [(520, 330), (410, 545), (505, 545), (455, 790), (660, 490), (550, 490)]
     draw.polygon(bolt, fill="#ffb020")
-    image.save(assets / "SazmanHR.png")
-    image.save(assets / "SazmanHR.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    image.save(assets / "HRM.png")
+    image.save(assets / "HRM.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
 
 
 if __name__ == "__main__":

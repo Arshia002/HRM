@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native Windows builder for SazmanHR.
+"""Native Windows builder for HRM.
 
 This replaces the one-click PowerShell bootstrap so enterprise execution
 policies cannot prevent the build before diagnostics are written.
@@ -25,7 +25,7 @@ WORK_DIR = BUILD_ROOT / "work"
 VENV_DIR = BUILD_ROOT / "venv"
 INSTALLER = BUILD_ROOT / "installer" / "HRM-Setup-x64.exe"
 REQUIREMENTS = PROJECT_ROOT / "build" / "windows" / "requirements-build.txt"
-INNO_SCRIPT = PROJECT_ROOT / "build" / "windows" / "SazmanHR.iss"
+INNO_SCRIPT = PROJECT_ROOT / "build" / "windows" / "HRM.iss"
 LOG_PATH = BUILD_ROOT / "build.log"
 
 
@@ -196,7 +196,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         raise BuildFailure("Python 3.11 x64 is required.")
 
     started = time.monotonic()
-    log.write("HRM 0.2.0-alpha.1 direct Setup candidate build started.")
+    log.write("HRM 0.2.0-alpha.2 direct Setup candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")
@@ -205,6 +205,11 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     venv_python = VENV_DIR / "Scripts" / "python.exe"
     if not venv_python.is_file():
         raise BuildFailure(f"Virtual environment Python was not created: {venv_python}")
+
+    # Validate names, installer inputs, versions and public-safe seed before
+    # spending time on dependency installation or PyInstaller.  This is the
+    # guard that prevents a repeat of the alpha.1 SazmanHR.exe/HRM.exe mismatch.
+    run(log, [sys.executable, PROJECT_ROOT / "ci" / "validate_package_contract.py"])
 
     run(log, [venv_python, "-m", "pip", "install", "--upgrade", "pip"])
     run(log, [venv_python, "-m", "pip", "install", "-r", REQUIREMENTS])
@@ -217,7 +222,12 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         env=environment,
     )
 
-    for spec_name in ("client.spec", "server.spec", "service.spec"):
+    spec_outputs = (
+        ("client.spec", "HRM.exe"),
+        ("server.spec", "HRMServer.exe"),
+        ("service.spec", "HRMService.exe"),
+    )
+    for spec_name, output_name in spec_outputs:
         run(
             log,
             [
@@ -234,12 +244,16 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
             ],
             env=environment,
         )
+        expected_output = DIST_DIR / output_name
+        if not expected_output.is_file():
+            produced = ", ".join(sorted(path.name for path in DIST_DIR.glob("*.exe"))) or "<none>"
+            raise BuildFailure(
+                f"PyInstaller contract failed after {spec_name}: expected {expected_output}; "
+                f"produced executables: {produced}"
+            )
+        log.write(f"PASS PyInstaller contract: {spec_name} -> {output_name}")
 
-    executables = [
-        DIST_DIR / "HRM.exe",
-        DIST_DIR / "HRMServer.exe",
-        DIST_DIR / "HRMService.exe",
-    ]
+    executables = [DIST_DIR / output_name for _, output_name in spec_outputs]
     missing = [str(path) for path in executables if not path.is_file()]
     if missing:
         raise BuildFailure("PyInstaller output is incomplete: " + ", ".join(missing))
@@ -301,7 +315,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the SazmanHR Windows Setup.")
+    parser = argparse.ArgumentParser(description="Build the HRM Windows Setup.")
     parser.add_argument("--launch", action="store_true", help="Open Setup after a successful build.")
     parser.add_argument("--sign-thumbprint", default="", help="Optional Windows code-signing certificate thumbprint.")
     return parser.parse_args()

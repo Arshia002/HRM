@@ -11,3 +11,5 @@ build-output/
 data/export/
 *.xlsx
 *.xls
+
+ci-contract-validation.log

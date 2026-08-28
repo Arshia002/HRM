@@ -13,9 +13,9 @@ sc.exe query HRMCentral >"%OUT%\service.txt" 2>&1
 sc.exe qc HRMCentral >>"%OUT%\service.txt" 2>&1
 netstat.exe -ano | findstr.exe ":8765" >"%OUT%\port-8765.txt" 2>&1
 
-if exist "%ProgramData%\HRM\server.json" copy /Y "%ProgramData%\HRM\server.json" "%OUT%\server.json" >nul 2>&1
-if exist "%ProgramData%\HRM\logs\server.jsonl*" copy /Y "%ProgramData%\HRM\logs\server.jsonl*" "%OUT%\" >nul 2>&1
-if exist "%ProgramData%\HRM\logs\setup-server.log" copy /Y "%ProgramData%\HRM\logs\setup-server.log" "%OUT%\" >nul 2>&1
+if exist "%ProgramData%\HRM-Kermanshah\server.json" copy /Y "%ProgramData%\HRM-Kermanshah\server.json" "%OUT%\server.json" >nul 2>&1
+if exist "%ProgramData%\HRM-Kermanshah\logs\server.jsonl*" copy /Y "%ProgramData%\HRM-Kermanshah\logs\server.jsonl*" "%OUT%\" >nul 2>&1
+if exist "%ProgramData%\HRM-Kermanshah\logs\setup-server.log" copy /Y "%ProgramData%\HRM-Kermanshah\logs\setup-server.log" "%OUT%\" >nul 2>&1
 
 set "HASHES=%OUT%\installed-hashes.txt"
 for %%F in (

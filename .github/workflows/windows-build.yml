@@ -34,6 +34,12 @@ jobs:
         shell: powershell
         run: choco install innosetup --no-progress -y
 
+      - name: Validate packaging contract
+        shell: pwsh
+        run: |
+          & python .\ci\validate_package_contract.py 2>&1 | Tee-Object -FilePath .\ci-contract-validation.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Build and unit test
         shell: cmd
         run: python build\windows\build_windows.py
@@ -57,11 +63,15 @@ jobs:
           Get-ChildItem -LiteralPath $directory -Force -ErrorAction SilentlyContinue |
             Select-Object Name,Length,LastWriteTime,Attributes |
             Format-Table -AutoSize | Out-File (Join-Path $directory 'diagnostic-files.txt') -Encoding utf8 -Force
+          $dist = Join-Path $PWD 'build-output/dist'
+          Get-ChildItem -LiteralPath $dist -Filter '*.exe' -Force -ErrorAction SilentlyContinue |
+            Select-Object Name,Length,LastWriteTime |
+            Format-Table -AutoSize | Out-File (Join-Path $directory 'frozen-executables.txt') -Encoding utf8 -Force
 
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.2.0-alpha.1-Tested-Setup
+          name: HRM-0.2.0-alpha.2-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -76,7 +86,9 @@ jobs:
             build-output/installer/service-cim.json
             build-output/installer/data-acl.txt
             build-output/installer/diagnostic-files.txt
+            build-output/installer/frozen-executables.txt
             build-output/build.log
+            ci-contract-validation.log
           if-no-files-found: error
           retention-days: 30
 
@@ -84,11 +96,13 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.2.0-alpha.1-Failure-Logs
+          name: HRM-0.2.0-alpha.2-Failure-Logs
           path: |
             build-output/build.log
+            ci-contract-validation.log
             build-output/installer/*.log
             build-output/installer/*.txt
             build-output/installer/*.json
+            build-output/work/*/warn-*.txt
           if-no-files-found: warn
           retention-days: 30

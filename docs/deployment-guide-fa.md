@@ -12,11 +12,11 @@
 1. فایل Setup را با Run as administrator اجرا کنید.
 2. حالت «سرور مرکزی و کلاینت مدیریت» را انتخاب کنید.
 3. آدرس محلی پیش‌فرض `https://127.0.0.1:8765` را نگه دارید.
-4. پس از پایان، سرویس `SazmanHREnterpriseCentral` باید در Services وضعیت Running داشته باشد.
-5. اطلاعات ورود یک‌بارمصرف را از `C:\ProgramData\SazmanHR-Enterprise\FIRST_LOGIN.txt` بردارید.
+4. پس از پایان، سرویس `HRMCentral` باید در Services وضعیت Running داشته باشد.
+5. اطلاعات ورود یک‌بارمصرف را از `C:\ProgramData\HRM-Kermanshah\FIRST_LOGIN.txt` بردارید.
 6. با نام کاربری `arshia.shahbazi` وارد شوید و بلافاصله رمز را تغییر دهید؛ فایل اطلاعات اولیه خودکار حذف می‌شود.
 
-دیتابیس عملیاتی در `C:\ProgramData\SazmanHR-Enterprise\enterprise.sqlite` قرار می‌گیرد. حذف برنامه عمداً این داده را پاک نمی‌کند تا سوابق سازمان از دست نرود. مسیر قدیمی `C:\ProgramData\SazmanHR` متعلق به نسل‌های پیشین است و این نسخه هرگز آن را باز، مهاجرت، ویرایش یا حذف نمی‌کند.
+دیتابیس عملیاتی در `C:\ProgramData\HRM-Kermanshah\hrm.sqlite` قرار می‌گیرد. حذف برنامه عمداً این داده را پاک نمی‌کند تا سوابق سازمان از دست نرود. مسیر قدیمی `C:\ProgramData\SazmanHR` متعلق به نسل‌های پیشین است و این نسخه هرگز آن را باز، مهاجرت، ویرایش یا حذف نمی‌کند.
 
 ## نصب روی رایانه مدیران
 
@@ -40,17 +40,17 @@
 
 ## پشتیبان‌گیری
 
-گزینه «تهیه پشتیبان مرکزی» از داخل برنامه یک snapshot سازگار در `C:\ProgramData\SazmanHR-Enterprise\backups` می‌سازد. این پوشه را با سیاست اداره روی مقصد دوم نیز کپی کنید. برای بازیابی، سرویس متوقف و فایل انتخابی با دیتابیس عملیاتی جایگزین شود؛ این کار را فقط مسئول IT انجام دهد.
+گزینه «تهیه پشتیبان مرکزی» از داخل برنامه یک snapshot سازگار در `C:\ProgramData\HRM-Kermanshah\backups` می‌سازد. این پوشه را با سیاست اداره روی مقصد دوم نیز کپی کنید. برای بازیابی، سرویس متوقف و فایل انتخابی با دیتابیس عملیاتی جایگزین شود؛ این کار را فقط مسئول IT انجام دهد.
 
 ## عیب‌یابی سریع
 
 ```powershell
-Get-Service SazmanHREnterpriseCentral
+Get-Service HRMCentral
 Test-NetConnection SERVER-IP -Port 8765
 curl.exe -k https://SERVER-IP:8765/api/health
 ```
 
-اگر health پاسخ می‌دهد ولی ورود ممکن نیست، زمان رایانه‌ها، نام کاربری، قفل ۱۵ دقیقه‌ای و فعال بودن حساب بررسی شود. اگر سرویس بالا نمی‌آید، Windows Event Viewer و فایل `C:\ProgramData\SazmanHR-Enterprise\logs\setup-server.log` بررسی شود.
+اگر health پاسخ می‌دهد ولی ورود ممکن نیست، زمان رایانه‌ها، نام کاربری، قفل ۱۵ دقیقه‌ای و فعال بودن حساب بررسی شود. اگر سرویس بالا نمی‌آید، Windows Event Viewer و فایل `C:\ProgramData\HRM-Kermanshah\logs\setup-server.log` بررسی شود.
 
 ## TLS
 
@@ -61,9 +61,9 @@ TLS در نصب جدید فعال است و برای تست گواهی self-sign
 بازیابی فقط در حالت توقف سرویس انجام شود:
 
 ```powershell
-Stop-Service SazmanHREnterpriseCentral
-& 'C:\Program Files\SazmanHR Enterprise\Server\SazmanHRServer.exe' --data-dir 'C:\ProgramData\SazmanHR-Enterprise' --restore 'C:\ProgramData\SazmanHR-Enterprise\backups\BACKUP.sqlite' --init-only
-Start-Service SazmanHREnterpriseCentral
+Stop-Service HRMCentral
+& 'C:\Program Files\HRM\Server\HRMServer.exe' --data-dir 'C:\ProgramData\HRM-Kermanshah' --restore 'C:\ProgramData\HRM-Kermanshah\backups\BACKUP.sqlite' --init-only
+Start-Service HRMCentral
 ```
 
 پیش از جایگزینی، سلامت فایل کنترل و از دیتابیس جاری safety copy ساخته می‌شود.
