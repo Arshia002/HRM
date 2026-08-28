@@ -1,0 +1,9 @@
+{
+  "product": "HRM",
+  "version": "0.4.0-alpha.1",
+  "feature": "Real Data Import & Migration",
+  "baseline": "HRM-0.3.0-alpha.2-Tested-Setup",
+  "mode": "additive guarded migration toolkit",
+  "production_db_write": false,
+  "real_data_in_git": false
+}

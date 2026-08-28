@@ -22,3 +22,12 @@ data/export/
 *.csv
 
 ci-contract-validation.log
+# BEGIN HRM V040A1 PRIVATE MIGRATION DATA
+migration/input/*
+!migration/input/.gitkeep
+migration/output/*
+!migration/output/.gitkeep
+private-data/
+*.migration.sqlite
+normalized-private.json
+# END HRM V040A1 PRIVATE MIGRATION DATA

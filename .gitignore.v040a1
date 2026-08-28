@@ -1,0 +1,8 @@
+# HRM private migration inputs/outputs — merge these rules into repo .gitignore
+migration/input/*
+!migration/input/.gitkeep
+migration/output/*
+!migration/output/.gitkeep
+private-data/
+*.migration.sqlite
+normalized-private.json

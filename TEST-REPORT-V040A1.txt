@@ -1,0 +1,24 @@
+HRM v0.4.0-alpha.1 - Candidate Verification Report
+
+Scope verified in this environment:
+- Python compile: PASS
+- Migration unit/integration tests: PASS (20 tests after final Git-ignore guard)
+- Migration package contract: PASS
+- ZIP create/extract and retest: PASS
+- No real .xls/.xlsx workbook included in package: PASS
+- Synthetic successful Dry Run: PASS
+- Synthetic private SQLite staging + PRAGMA integrity_check: PASS
+- Reconciliation error blocks staging: PASS
+- Routine issue reporting hashes identifiers instead of exposing raw personnel identifiers: PASS
+- Legacy .xls missing-dependency path fails closed with actionable READER_ERROR: PASS
+- Clean Git tracking simulation: PASS
+- Private migration .gitignore rules are idempotent: PASS
+
+Not claimed/tested here:
+- Existing HRM v0.3.0-alpha.2 full regression suite, because its physical source ZIP/repository is not mounted in this session.
+- Windows/Inno Setup/GitHub Actions build, which must run after overlaying this patch on the existing green repository and pushing the feature branch.
+- Real company workbook import, because the physical private spreadsheets are not mounted in this session.
+
+Important dependency note:
+- .xlsx uses openpyxl when present.
+- Legacy .xls requires xlrd. This patch intentionally does not alter the baseline dependency lock without first reading the actual v0.3.0-alpha.2 lock file.
