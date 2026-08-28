@@ -47,7 +47,7 @@ class ApiServer(ThreadingHTTPServer):
 
 
 class ApiHandler(BaseHTTPRequestHandler):
-    server_version = "SazmanHR-Enterprise/16"
+    server_version = "HRM/0.3"
     sys_version = ""
 
     @property

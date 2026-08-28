@@ -2,7 +2,7 @@
 
 ## ساخت و نصب
 
-1. سورس را کامل روی Desktop یا `C:\SazmanHR-Enterprise-16.0.7` Extract کنید؛ از داخل ZIP یا `Program Files` اجرا نکنید.
+1. سورس را کامل روی Desktop یا `C:\HRM-Build` Extract کنید؛ از داخل ZIP یا `Program Files` اجرا نکنید.
 2. `BUILD-SETUP.cmd` را عادی اجرا کنید و تا پیام موفقیت صبر کنید؛ این مسیر PowerShell را اجرا نمی‌کند.
 3. پس از build موفق، Setup خودکار باز می‌شود؛ درخواست UAC را تأیید کنید.
 4. حالت «سرور مرکزی و کلاینت مدیریت» را انتخاب کنید.

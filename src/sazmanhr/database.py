@@ -468,7 +468,7 @@ class Repository:
                 raise AuthenticationError("برای تغییر MFA، رمز عبور فعلی لازم است.")
             conn.execute("""INSERT OR REPLACE INTO mfa_totp(user_id,secret_encrypted,is_enabled,created_at,confirmed_at)
                 VALUES(?,?,0,?,NULL)""", (user_id, self.secrets.encrypt(secret), utc_now()))
-        uri = f"otpauth://totp/SazmanHR:{username}?secret={secret}&issuer=SazmanHR&digits=6&period=30"
+        uri = f"otpauth://totp/HRM:{username}?secret={secret}&issuer=HRM&digits=6&period=30"
         return {"secret": secret, "otpauth_uri": uri}
 
     def confirm_mfa(self, user_id: str, code: str) -> list[str]:

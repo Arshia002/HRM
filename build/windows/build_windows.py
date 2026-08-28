@@ -216,7 +216,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         raise BuildFailure("Python 3.11 x64 is required.")
 
     started = time.monotonic()
-    log.write("HRM 0.2.0-alpha.3 direct Setup candidate build started.")
+    log.write("HRM 0.3.0-alpha.1 native v4.9 shell candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")
@@ -285,6 +285,10 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     # Initialize the frozen Qt runtime without opening the login dialog. This
     # catches missing Qt platform plugins/DLLs before Inno Setup is compiled.
     run(log, [DIST_DIR / "HRM.exe", "--smoke-test"])
+    # Construct the actual native login and dashboard shell in the frozen EXE.
+    # No server/network is required; this catches missing bundled branding assets
+    # and Qt widget/plugin regressions before Inno Setup is compiled.
+    run(log, [DIST_DIR / "HRM.exe", "--ui-smoke-test", "--config", BUILD_ROOT / "ui-smoke-client.json"])
 
     # Execute the frozen server before creating Setup. This catches a missing
     # Python/cryptography/SQLite runtime inside the EXE on the actual build OS.

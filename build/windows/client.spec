@@ -7,7 +7,7 @@ a = Analysis(
     [str(root / "build" / "windows" / "entry_client.py")],
     pathex=[str(src)],
     binaries=[],
-    datas=[],
+    datas=[(str(root / "assets" / "HRM.png"), "assets")],
     hiddenimports=["PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets"],
     hookspath=[],
     runtime_hooks=[],

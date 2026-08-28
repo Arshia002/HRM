@@ -7,10 +7,10 @@ import sys
 from typing import Any
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
-    QFrame, QGraphicsScene, QGraphicsView, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QAbstractItemView, QApplication, QBoxLayout, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
+    QFrame, QGraphicsScene, QGraphicsView, QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
     QListWidget, QMainWindow, QMessageBox, QPushButton, QStackedWidget, QTableWidget,
     QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget,
 )
@@ -18,23 +18,41 @@ from PySide6.QtWidgets import (
 from . import __version__
 from .api_client import ApiClient, ApiError
 from .config import ClientConfig, default_client_config
+from .branding import APP_NAME, COMPANY_NAME, PRODUCT_TAGLINE, PRODUCT_TITLE, logo_path
 
 APP_STYLE = """
-QWidget { font-family: Tahoma, Segoe UI; font-size: 10pt; color: #172B4D; }
-QMainWindow, QDialog { background: #F4F7FB; }
-QFrame#sidebar { background: #12395B; border: none; }
-QListWidget#nav { background: transparent; border: none; color: #EAF2F8; outline: none; }
-QListWidget#nav::item { padding: 13px 16px; margin: 3px 6px; border-radius: 8px; }
-QListWidget#nav::item:selected { background: #0F8B8D; color: white; }
-QPushButton { background: #0F8B8D; color: white; border: none; border-radius: 7px; padding: 8px 14px; }
+QWidget { font-family: Tahoma, Segoe UI; font-size: 10pt; color: #18324A; }
+QMainWindow, QDialog { background: #F5F8FC; }
+QFrame#sidebar { background: #102F4C; border: none; }
+QFrame#topbar { background: #FFFFFF; border-bottom: 1px solid #DCE5EF; }
+QFrame#brandPanel { background: #102F4C; border-radius: 20px; }
+QFrame#loginPanel { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 20px; }
+QFrame#card { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 14px; }
+QFrame#softCard { background: #F9FBFD; border: 1px solid #E4EBF2; border-radius: 12px; }
+QListWidget#nav { background: transparent; border: none; color: #DDE9F3; outline: none; padding: 4px; }
+QListWidget#nav::item { padding: 12px 15px; margin: 3px 4px; border-radius: 9px; }
+QListWidget#nav::item:hover { background: #153B5C; color: white; }
+QListWidget#nav::item:selected { background: #0F8B8D; color: white; font-weight: 700; }
+QPushButton { background: #0F8B8D; color: white; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; }
 QPushButton:hover { background: #0B7476; }
-QPushButton[secondary="true"] { background: #E7EDF4; color: #12395B; }
-QLineEdit, QComboBox, QTextEdit { background: white; border: 1px solid #C7D2E0; border-radius: 6px; padding: 7px; }
-QTableWidget { background: white; border: 1px solid #D7E0EA; border-radius: 8px; gridline-color: #E7EDF4; }
-QHeaderView::section { background: #EAF2F8; color: #12395B; border: none; padding: 8px; font-weight: bold; }
-QLabel#title { font-size: 19pt; font-weight: 700; color: #12395B; }
-QLabel#cardValue { font-size: 24pt; font-weight: 700; color: #0F8B8D; }
-QFrame#card { background: white; border: 1px solid #DDE5EE; border-radius: 12px; }
+QPushButton:pressed { background: #086467; }
+QPushButton[secondary="true"] { background: #EAF0F6; color: #153B5C; }
+QPushButton[secondary="true"]:hover { background: #DDE7F0; }
+QPushButton[danger="true"] { background: #7F1D1D; color: white; }
+QLineEdit, QComboBox, QTextEdit { background: white; border: 1px solid #C9D6E3; border-radius: 8px; padding: 8px 10px; selection-background-color: #0F8B8D; }
+QLineEdit:focus, QComboBox:focus, QTextEdit:focus { border: 1px solid #0F8B8D; }
+QTableWidget { background: white; border: 1px solid #DCE5EF; border-radius: 10px; gridline-color: #E7EDF4; alternate-background-color: #F9FBFD; }
+QHeaderView::section { background: #EDF3F8; color: #153B5C; border: none; border-bottom: 1px solid #DCE5EF; padding: 9px; font-weight: bold; }
+QLabel#title { font-size: 18pt; font-weight: 700; color: #153B5C; }
+QLabel#pageTitle { font-size: 16pt; font-weight: 700; color: #153B5C; }
+QLabel#muted { color: #6A7D8F; }
+QLabel#brandTitle { color: white; font-size: 21pt; font-weight: 800; }
+QLabel#brandSubtitle { color: #DDE9F3; font-size: 10pt; }
+QLabel#cardValue { font-size: 25pt; font-weight: 800; color: #0F8B8D; }
+QLabel#cardCaption { color: #6A7D8F; font-size: 9pt; font-weight: 600; }
+QLabel#connectionBadge { background: #E5F5EE; color: #178A62; border-radius: 10px; padding: 5px 10px; font-weight: 700; }
+QLabel#userBadge { background: #EDF3F8; color: #153B5C; border-radius: 10px; padding: 7px 11px; }
+QStatusBar { background: #FFFFFF; color: #6A7D8F; border-top: 1px solid #E4EBF2; }
 """
 
 PERSON_FIELDS = (
@@ -58,37 +76,113 @@ class LoginDialog(QDialog):
         self.client: ApiClient | None = None
         self.user: dict[str, Any] | None = None
         self.setWindowTitle("ورود به HRM")
-        self.setMinimumWidth(470)
-        layout = QVBoxLayout(self)
-        title = QLabel("HRM | سامانه مدیریت منابع انسانی")
+        self.setWindowIcon(QIcon(str(logo_path())))
+        self.setMinimumSize(860, 520)
+        self.resize(920, 560)
+
+        root = QHBoxLayout(self)
+        root.setContentsMargins(24, 24, 24, 24)
+        root.setSpacing(18)
+        root.setDirection(QBoxLayout.Direction.RightToLeft)
+
+        login_panel = QFrame()
+        login_panel.setObjectName("loginPanel")
+        login_panel.setMinimumWidth(420)
+        login_box = QVBoxLayout(login_panel)
+        login_box.setContentsMargins(34, 30, 34, 30)
+        login_box.setSpacing(12)
+
+        eyebrow = QLabel("ورود امن به سامانه")
+        eyebrow.setObjectName("muted")
+        title = QLabel("HRM")
         title.setObjectName("title")
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
-        subtitle = QLabel("اتصال رمزنگاری‌شده به سرور مرکزی")
-        subtitle.setAlignment(Qt.AlignCenter)
-        layout.addWidget(subtitle)
+        subtitle = QLabel(PRODUCT_TITLE)
+        subtitle.setStyleSheet("font-size:11pt;font-weight:700;color:#31516E")
+        login_box.addWidget(eyebrow)
+        login_box.addWidget(title)
+        login_box.addWidget(subtitle)
+        login_box.addSpacing(8)
+
         form = QFormLayout()
-        self.server = QLineEdit(config.server_url)
+        form.setHorizontalSpacing(14)
+        form.setVerticalSpacing(11)
+        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.username = QLineEdit("arshia.shahbazi")
+        self.username.setPlaceholderText("نام کاربری")
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
+        self.password.setPlaceholderText("رمز عبور")
         self.otp = QLineEdit()
         self.otp.setPlaceholderText("کد ۶ رقمی یا کد بازیابی")
         self.otp.setMaxLength(11)
-        form.addRow("آدرس سرور:", self.server)
-        form.addRow("نام کاربری:", self.username)
-        form.addRow("رمز عبور:", self.password)
-        form.addRow("کد دومرحله‌ای:", self.otp)
-        layout.addLayout(form)
+        self.server = QLineEdit(config.server_url)
+        self.server.setPlaceholderText("https://server:8765")
+        form.addRow("نام کاربری", self.username)
+        form.addRow("رمز عبور", self.password)
+        form.addRow("کد دومرحله‌ای", self.otp)
+        form.addRow("سرور مرکزی", self.server)
+        login_box.addLayout(form)
+
+        hint = QLabel("در نصب تازه، رمز اولیه فقط برای فعال‌سازی حساب مالک معتبر است و پس از ورود باید تغییر کند.")
+        hint.setObjectName("muted")
+        hint.setWordWrap(True)
+        login_box.addWidget(hint)
         self.status = QLabel("")
-        self.status.setStyleSheet("color:#B42318")
-        layout.addWidget(self.status)
-        buttons = QDialogButtonBox()
-        login = buttons.addButton("ورود", QDialogButtonBox.AcceptRole)
-        cancel = buttons.addButton("انصراف", QDialogButtonBox.RejectRole)
+        self.status.setWordWrap(True)
+        self.status.setStyleSheet("color:#B42318;font-weight:600")
+        login_box.addWidget(self.status)
+        login_box.addStretch()
+
+        actions = QHBoxLayout()
+        cancel = QPushButton("انصراف")
+        cancel.setProperty("secondary", True)
+        login = QPushButton("ورود به HRM")
+        login.setDefault(True)
+        login.setMinimumWidth(140)
         login.clicked.connect(self.submit)
         cancel.clicked.connect(self.reject)
-        layout.addWidget(buttons)
+        actions.addWidget(login)
+        actions.addWidget(cancel)
+        login_box.addLayout(actions)
+
+        brand_panel = QFrame()
+        brand_panel.setObjectName("brandPanel")
+        brand_panel.setMinimumWidth(330)
+        brand_box = QVBoxLayout(brand_panel)
+        brand_box.setContentsMargins(34, 38, 34, 38)
+        brand_box.setSpacing(13)
+        logo = QLabel()
+        pixmap = QPixmap(str(logo_path()))
+        if not pixmap.isNull():
+            logo.setPixmap(pixmap.scaled(112, 112, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        logo.setAlignment(Qt.AlignCenter)
+        brand_box.addWidget(logo)
+        brand_box.addSpacing(4)
+        brand_title = QLabel("HRM")
+        brand_title.setObjectName("brandTitle")
+        brand_title.setAlignment(Qt.AlignCenter)
+        brand_box.addWidget(brand_title)
+        company = QLabel(COMPANY_NAME)
+        company.setObjectName("brandSubtitle")
+        company.setAlignment(Qt.AlignCenter)
+        company.setWordWrap(True)
+        brand_box.addWidget(company)
+        brand_box.addSpacing(8)
+        tagline = QLabel(PRODUCT_TAGLINE)
+        tagline.setObjectName("brandSubtitle")
+        tagline.setAlignment(Qt.AlignCenter)
+        tagline.setWordWrap(True)
+        brand_box.addWidget(tagline)
+        brand_box.addStretch()
+        security = QLabel("ارتباط رمزنگاری‌شده • TLS • ثبت رویدادهای مدیریتی")
+        security.setObjectName("brandSubtitle")
+        security.setAlignment(Qt.AlignCenter)
+        security.setWordWrap(True)
+        brand_box.addWidget(security)
+
+        root.addWidget(login_panel, 5)
+        root.addWidget(brand_panel, 4)
+        self.password.setFocus()
 
     def confirm_certificate(self, fingerprint: str) -> bool:
         text = ("این نخستین اتصال به سرور است. اثر انگشت گواهی را با فایل FIRST_LOGIN روی سرور مقایسه کنید:\n\n"
@@ -96,6 +190,7 @@ class LoginDialog(QDialog):
         return QMessageBox.question(self, "تأیید هویت سرور", text) == QMessageBox.Yes
 
     def submit(self) -> None:
+        self.status.setText("")
         server = self.server.text().strip().rstrip("/")
         if not server.startswith(("https://", "http://")):
             server = "https://" + server
@@ -125,17 +220,30 @@ class LoginDialog(QDialog):
 
     def force_password_change(self, client: ApiClient) -> None:
         dialog = QDialog(self)
-        dialog.setWindowTitle("تغییر اجباری رمز")
-        form = QFormLayout(dialog)
+        dialog.setWindowTitle("فعال‌سازی امن حساب")
+        dialog.setWindowIcon(QIcon(str(logo_path())))
+        dialog.setMinimumWidth(500)
+        outer = QVBoxLayout(dialog)
+        heading = QLabel("تغییر رمز اولیه")
+        heading.setObjectName("title")
+        detail = QLabel("برای ادامه استفاده از HRM باید یک رمز شخصی و قوی تعیین کنید. رمز اولیه پس از این مرحله برای همیشه نامعتبر می‌شود.")
+        detail.setObjectName("muted")
+        detail.setWordWrap(True)
+        outer.addWidget(heading)
+        outer.addWidget(detail)
+        form = QFormLayout()
         first, second = QLineEdit(), QLineEdit()
         first.setEchoMode(QLineEdit.Password)
         second.setEchoMode(QLineEdit.Password)
-        form.addRow("رمز جدید:", first)
-        form.addRow("تکرار رمز:", second)
+        first.setPlaceholderText("رمز جدید")
+        second.setPlaceholderText("تکرار رمز جدید")
+        form.addRow("رمز جدید", first)
+        form.addRow("تکرار رمز", second)
+        outer.addLayout(form)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        form.addRow(buttons)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
+        outer.addWidget(buttons)
         if dialog.exec() != QDialog.Accepted:
             raise ApiError("تغییر رمز اولیه لغو شد.")
         if first.text() != second.text():
@@ -150,6 +258,8 @@ class Page(QWidget):
         super().__init__()
         self.window = window
         self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(26, 22, 26, 22)
+        self.layout.setSpacing(14)
         label = QLabel(title)
         label.setObjectName("title")
         self.layout.addWidget(label)
@@ -170,7 +280,9 @@ class DashboardPage(Page):
         toolbar.addWidget(manage)
         toolbar.addStretch()
         self.layout.addLayout(toolbar)
-        self.cards = QHBoxLayout()
+        self.cards = QGridLayout()
+        self.cards.setHorizontalSpacing(12)
+        self.cards.setVerticalSpacing(12)
         self.layout.addLayout(self.cards)
         self.widgets = QVBoxLayout()
         self.layout.addLayout(self.widgets)
@@ -184,17 +296,19 @@ class DashboardPage(Page):
             item = self.cards.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        for key, title in (("personnel", "کل پرسنل"), ("active", "فعال"), ("units", "واحدها"), ("unassigned", "فاقد پست")):
+        for card_index, (key, title) in enumerate((("personnel", "کل پرسنل"), ("active", "پرسنل فعال"), ("units", "واحدهای سازمانی"), ("unassigned", "فاقد پست"))):
             frame = QFrame()
             frame.setObjectName("card")
             box = QVBoxLayout(frame)
             caption, value = QLabel(title), QLabel(str(result["stats"].get(key, 0)))
+            caption.setObjectName("cardCaption")
             value.setObjectName("cardValue")
-            caption.setAlignment(Qt.AlignCenter)
-            value.setAlignment(Qt.AlignCenter)
+            caption.setAlignment(Qt.AlignRight)
+            value.setAlignment(Qt.AlignRight)
+            box.setContentsMargins(18, 15, 18, 15)
             box.addWidget(caption)
             box.addWidget(value)
-            self.cards.addWidget(frame)
+            self.cards.addWidget(frame, 0, card_index)
         while self.widgets.count():
             item = self.widgets.takeAt(0)
             if item.widget():
@@ -589,20 +703,115 @@ class AuditPage(Page):
 
 
 class MainWindow(QMainWindow):
+    NAV_ITEMS = (
+        "داشبورد",
+        "پرسنل",
+        "چارت سازمانی",
+        "گردش کار",
+        "اعلان‌ها",
+    )
+
     def __init__(self, client: ApiClient, user: dict[str, Any], poll_seconds: int):
         super().__init__()
         self.client, self.user, self.revision = client, user, 0
         self.setWindowTitle(f"HRM {__version__} — {user['display_name']}")
+        self.setWindowIcon(QIcon(str(logo_path())))
+        self.setMinimumSize(1180, 700)
         self.resize(1380, 820)
-        shell = QWidget(); root = QHBoxLayout(shell); root.setContentsMargins(0, 0, 0, 0)
-        sidebar = QFrame(); sidebar.setObjectName("sidebar"); sidebar.setFixedWidth(220)
+
+        shell = QWidget()
+        root = QHBoxLayout(shell)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.setDirection(QBoxLayout.Direction.RightToLeft)
+
+        sidebar = QFrame()
+        sidebar.setObjectName("sidebar")
+        sidebar.setFixedWidth(248)
         side = QVBoxLayout(sidebar)
-        logo = QLabel("HRM\nمدیریت منابع انسانی"); logo.setStyleSheet("color:white;font-size:16pt;font-weight:bold;padding:16px")
-        logo.setAlignment(Qt.AlignCenter); side.addWidget(logo)
-        self.nav = QListWidget(); self.nav.setObjectName("nav"); side.addWidget(self.nav)
-        logout = QPushButton("خروج امن"); logout.clicked.connect(self.close); side.addWidget(logout)
-        self.stack = QStackedWidget(); root.addWidget(self.stack, 1); root.addWidget(sidebar)
+        side.setContentsMargins(14, 18, 14, 16)
+        side.setSpacing(8)
+
+        brand_row = QHBoxLayout()
+        mark = QLabel()
+        pixmap = QPixmap(str(logo_path()))
+        if not pixmap.isNull():
+            mark.setPixmap(pixmap.scaled(54, 54, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        mark.setFixedSize(58, 58)
+        brand_text = QVBoxLayout()
+        logo = QLabel("HRM")
+        logo.setStyleSheet("color:white;font-size:17pt;font-weight:800")
+        company = QLabel("منابع انسانی\nتوزیع برق کرمانشاه")
+        company.setStyleSheet("color:#C9D9E7;font-size:8.5pt")
+        brand_text.addWidget(logo)
+        brand_text.addWidget(company)
+        brand_row.addWidget(mark)
+        brand_row.addLayout(brand_text, 1)
+        side.addLayout(brand_row)
+        side.addSpacing(10)
+
+        menu_label = QLabel("منوی اصلی")
+        menu_label.setStyleSheet("color:#8FA9BF;font-size:8.5pt;padding:0 7px")
+        side.addWidget(menu_label)
+        self.nav = QListWidget()
+        self.nav.setObjectName("nav")
+        self.nav.setSpacing(1)
+        side.addWidget(self.nav, 1)
+
+        user_panel = QFrame()
+        user_panel.setObjectName("softCard")
+        user_panel.setStyleSheet("QFrame#softCard{background:#153B5C;border:1px solid #1B496D;border-radius:10px} QLabel{color:white}")
+        user_box = QVBoxLayout(user_panel)
+        user_box.setContentsMargins(12, 10, 12, 10)
+        who = QLabel(user.get("display_name") or user.get("username") or "کاربر HRM")
+        who.setStyleSheet("font-weight:700;color:white")
+        role = QLabel(f"نقش: {user.get('role', '-')}")
+        role.setStyleSheet("color:#BCD0E0;font-size:8.5pt")
+        user_box.addWidget(who)
+        user_box.addWidget(role)
+        side.addWidget(user_panel)
+        logout = QPushButton("خروج امن")
+        logout.setProperty("danger", True)
+        logout.clicked.connect(self.close)
+        side.addWidget(logout)
+        version = QLabel(f"نسخه {__version__}")
+        version.setAlignment(Qt.AlignCenter)
+        version.setStyleSheet("color:#8FA9BF;font-size:8pt")
+        side.addWidget(version)
+
+        content = QWidget()
+        content_box = QVBoxLayout(content)
+        content_box.setContentsMargins(0, 0, 0, 0)
+        content_box.setSpacing(0)
+        topbar = QFrame()
+        topbar.setObjectName("topbar")
+        topbar.setFixedHeight(78)
+        top = QHBoxLayout(topbar)
+        top.setContentsMargins(24, 12, 24, 12)
+        top.setDirection(QBoxLayout.Direction.RightToLeft)
+        heading = QVBoxLayout()
+        self.page_title = QLabel("داشبورد")
+        self.page_title.setObjectName("pageTitle")
+        self.page_context = QLabel(COMPANY_NAME)
+        self.page_context.setObjectName("muted")
+        heading.addWidget(self.page_title)
+        heading.addWidget(self.page_context)
+        top.addLayout(heading, 1)
+        self.connection_badge = QLabel("● اتصال امن برقرار است")
+        self.connection_badge.setObjectName("connectionBadge")
+        self.connection_badge.setAlignment(Qt.AlignCenter)
+        top.addWidget(self.connection_badge)
+        self.user_badge = QLabel(user.get("display_name") or user.get("username") or "کاربر")
+        self.user_badge.setObjectName("userBadge")
+        top.addWidget(self.user_badge)
+        content_box.addWidget(topbar)
+
+        self.stack = QStackedWidget()
+        content_box.addWidget(self.stack, 1)
+        root.addWidget(sidebar)
+        root.addWidget(content, 1)
         self.setCentralWidget(shell)
+
         definitions: list[tuple[str, Page]] = [
             ("داشبورد", DashboardPage(self)), ("پرسنل", PersonnelPage(self)), ("چارت سازمانی", ChartPage(self)),
             ("گردش کار", WorkflowPage(self)), ("اعلان‌ها", NotificationsPage(self)),
@@ -610,31 +819,45 @@ class MainWindow(QMainWindow):
         if user["role"] in {"owner", "admin"}:
             definitions.extend((("ممیزی", AuditPage(self)), ("مدیریت و پایش", AdminPage(self))))
         self.pages: list[Page] = []
+        self.page_names: list[str] = []
         for title, page in definitions:
-            self.nav.addItem(title); self.stack.addWidget(page); self.pages.append(page)
-        self.nav.currentRowChanged.connect(self.change_page); self.nav.setCurrentRow(0)
-        self.statusBar().showMessage("اتصال امن برقرار است")
-        self.timer = QTimer(self); self.timer.timeout.connect(self.poll_changes); self.timer.start(max(2, poll_seconds) * 1000)
+            self.nav.addItem(title)
+            self.stack.addWidget(page)
+            self.pages.append(page)
+            self.page_names.append(title)
+        self.nav.currentRowChanged.connect(self.change_page)
+        self.nav.setCurrentRow(0)
+        self.statusBar().showMessage("HRM آماده است")
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.poll_changes)
+        self.timer.start(max(2, poll_seconds) * 1000)
 
     def call(self, method: str, path: str, data=None, query=None):
         try:
             return self.client.request(method, path, data, query)
         except ApiError as exc:
-            error(self, str(exc)); return None
+            error(self, str(exc))
+            return None
 
     def change_page(self, index: int) -> None:
         if 0 <= index < len(self.pages):
-            self.stack.setCurrentIndex(index); self.pages[index].refresh()
+            self.page_title.setText(self.page_names[index])
+            self.stack.setCurrentIndex(index)
+            self.pages[index].refresh()
 
     def poll_changes(self) -> None:
         try:
             result = self.client.request("GET", "/api/changes", query={"since": self.revision})
             changed = bool(self.revision and result["items"])
             self.revision = int(result["current_revision"])
-            self.statusBar().showMessage(f"متصل و همگام — بازبینی {self.revision}")
+            self.connection_badge.setText("● متصل و همگام")
+            self.connection_badge.setStyleSheet("background:#E5F5EE;color:#178A62;border-radius:10px;padding:5px 10px;font-weight:700")
+            self.statusBar().showMessage(f"همگام‌سازی انجام شد — بازبینی {self.revision}")
             if changed and 0 <= self.stack.currentIndex() < len(self.pages):
                 self.pages[self.stack.currentIndex()].refresh()
         except ApiError:
+            self.connection_badge.setText("● ارتباط با سرور قطع است")
+            self.connection_badge.setStyleSheet("background:#FDECEC;color:#B42318;border-radius:10px;padding:5px 10px;font-weight:700")
             self.statusBar().showMessage("ارتباط با سرور قطع است؛ تلاش مجدد ادامه دارد")
 
     def closeEvent(self, event) -> None:  # noqa: N802
@@ -644,16 +867,54 @@ class MainWindow(QMainWindow):
             event.accept()
 
 
+class _UiSmokeClient:
+    """Minimal in-process client used only to construct the frozen native shell in CI."""
+    def request(self, method: str, path: str, data=None, query=None):
+        if path == "/api/dashboard":
+            return {
+                "stats": {"personnel": 36, "active": 36, "units": 8, "unassigned": 2, "revision": 1},
+                "widgets": [],
+            }
+        if path == "/api/changes":
+            return {"items": [], "current_revision": 1}
+        return {"items": []}
+
+    def logout(self) -> None:
+        return None
+
+
+def run_ui_smoke(config: ClientConfig, app: QApplication) -> int:
+    """Construct the login and dashboard shell without network I/O."""
+    login = LoginDialog(config)
+    login.ensurePolished()
+    if login.minimumWidth() < 800:
+        raise RuntimeError("Login shell minimum width contract failed")
+    login.close()
+    user = {"username": "ci.preview", "display_name": "کاربر آزمایشی", "role": "user"}
+    window = MainWindow(_UiSmokeClient(), user, 60)  # type: ignore[arg-type]
+    window.ensurePolished()
+    app.processEvents()
+    if window.minimumWidth() < 1100 or window.nav.count() < 5:
+        raise RuntimeError("Main shell geometry/navigation contract failed")
+    window.timer.stop()
+    window.close()
+    print(f"HRM native UI smoke test OK: {__version__}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="HRM Qt desktop client")
     parser.add_argument("--server")
     parser.add_argument("--tls-fingerprint", default="")
     parser.add_argument("--config")
     parser.add_argument("--smoke-test", action="store_true", help="Initialize the frozen Qt runtime and exit.")
+    parser.add_argument("--ui-smoke-test", action="store_true", help="Construct the native login and dashboard shell without network I/O.")
     args = parser.parse_args(argv)
     app = QApplication(sys.argv[:1])
-    app.setApplicationName("HRM")
+    app.setApplicationName(APP_NAME)
+    app.setApplicationDisplayName("HRM")
     app.setApplicationVersion(__version__)
+    app.setWindowIcon(QIcon(str(logo_path())))
     app.setLayoutDirection(Qt.RightToLeft)
     app.setStyleSheet(APP_STYLE)
     if args.smoke_test:
@@ -661,6 +922,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     config_path = default_client_config() if not args.config else __import__("pathlib").Path(args.config)
     config = ClientConfig.load(config_path)
+    if args.ui_smoke_test:
+        return run_ui_smoke(config, app)
     if args.server:
         config.server_url = args.server.rstrip("/")
     if args.tls_fingerprint:

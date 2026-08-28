@@ -201,7 +201,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.2.0-alpha.3'", lowered)
+        self.assertIn("version -ne '0.3.0-alpha.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -224,6 +224,12 @@ class PackageTests(unittest.TestCase):
         for item in manifest["files"]:
             parts = Path(item["path"]).parts
             self.assertFalse(forbidden_parts.intersection(parts), item["path"])
+
+    def test_release_builder_excludes_mutable_local_test_logs(self):
+        builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
+        self.assertIn('".log"', builder)
+        manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
+        self.assertFalse(any(item["path"].endswith(".log") for item in manifest["files"]))
 
     def test_release_builder_explicitly_excludes_pytest_cache(self):
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")

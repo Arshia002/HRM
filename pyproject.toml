@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sazmanhr"
-version = "16.0.7"
-description = "Native LAN HRM and organization chart platform"
+name = "hrm-kermanshah"
+version = "0.3.0a1"
+description = "HRM native desktop platform for Kermanshah Electricity Distribution"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography==50.0.1",

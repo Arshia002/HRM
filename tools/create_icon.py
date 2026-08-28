@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
+"""Rebuild HRM application icons from the bundled official company logo source."""
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
     assets = root / "assets"
-    assets.mkdir(parents=True, exist_ok=True)
-    size = 1024
-    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    draw.rounded_rectangle((48, 48, 976, 976), radius=210, fill="#17324d")
-    draw.rounded_rectangle((82, 82, 942, 942), radius=180, outline="#26c6b5", width=24)
-    nodes = [(270, 310), (512, 210), (754, 310), (350, 670), (674, 670)]
-    for start, end in ((0, 1), (1, 2), (0, 3), (2, 4), (3, 4)):
-        draw.line((nodes[start], nodes[end]), fill="#74e1d5", width=38)
-    for x, y in nodes:
-        draw.ellipse((x - 62, y - 62, x + 62, y + 62), fill="#f7fafc", outline="#26c6b5", width=20)
-    bolt = [(520, 330), (410, 545), (505, 545), (455, 790), (660, 490), (550, 490)]
-    draw.polygon(bolt, fill="#ffb020")
-    image.save(assets / "HRM.png")
-    image.save(assets / "HRM.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    source = assets / "company-logo-source.png"
+    if not source.is_file():
+        raise SystemExit(f"Missing official company logo source: {source}")
+    image = Image.open(source).convert("RGBA")
+    canvas = Image.new("RGBA", (256, 256), (255, 255, 255, 0))
+    scaled = image.resize((220, 220), Image.Resampling.NEAREST)
+    canvas.alpha_composite(scaled, ((256 - 220) // 2, (256 - 220) // 2))
+    canvas.save(assets / "HRM.png")
+    canvas.save(
+        assets / "HRM.ico",
+        format="ICO",
+        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+    )
+    print(f"HRM branding rebuilt from {source.name}")
 
 
 if __name__ == "__main__":

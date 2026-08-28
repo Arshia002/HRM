@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0-alpha.1
+
+- اولین Native UI milestone روی Baseline سبز `0.2.0-alpha.3`.
+- بازطراحی Login بومی Qt با RTL، پنل برند و نمایش رسمی HRM.
+- افزودن Sidebar سمت راست، Header مدیریتی، وضعیت اتصال و کارت کاربر.
+- بهینه‌سازی Dashboard cards برای نمای سازمانی 1366×768 و 1920×1080.
+- استفاده از لوگوی سازمانی به‌عنوان HRM application/installer branding asset.
+- افزودن Frozen `--ui-smoke-test` قبل از Inno Setup برای ساخت واقعی Login و Dashboard shell در Windows CI.
+- افزودن Contract مستقل UI/Branding و Regression tests بدون WebView/QtWebEngine.
+- حفظ بدون تغییر Baseline سرویس `HRMCentralService`، LocalService، TLS، ACL، Upgrade و Data Preservation.
+- حفظ Bootstrap `13811381` و Forced Password Change.
+
 ## 0.2.0-alpha.3
 
 - رفع Root Cause Failure نسخه alpha.2: حذف `.pytest_cache` و تمام فایل‌های transient از Manifest/CI overlay.

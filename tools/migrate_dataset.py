@@ -161,7 +161,7 @@ def migrate(source: Path, output_root: Path) -> dict:
     write_gzip_json(export_dir / "personnel.json.gz", people)
     write_gzip_json(export_dir / "organization-chart.json.gz", slides)
     manifest = {
-        "format": "SazmanHR 15 clean seed",
+        "format": "HRM clean seed",
         "schema_version": 5,
         "dataset_version": 1500,
         "generated_at": now,

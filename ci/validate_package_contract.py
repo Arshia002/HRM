@@ -20,7 +20,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.2.0-alpha.3"
+EXPECTED_VERSION = "0.3.0-alpha.1"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -130,9 +130,32 @@ def validate_builder_contract() -> None:
             fail(f"Builder does not validate expected output {exe}")
     if '"--smoke-test"' not in builder:
         fail("Builder no longer smoke-tests the frozen Qt client before compiling Setup")
+    if '"--ui-smoke-test"' not in builder:
+        fail("Builder does not construct the frozen native login/dashboard shell before Setup")
     if "--only-binary=:all:" not in builder:
         fail("Windows dependency install must be wheel-only for reproducible CI")
     print("PASS builder executable/runtime contract")
+
+
+def validate_branding_contract() -> None:
+    client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
+    branding = (PROJECT / "src" / "sazmanhr" / "branding.py").read_text(encoding="utf-8")
+    client_spec = (PROJECT / "build" / "windows" / "client.spec").read_text(encoding="utf-8")
+    required = ("brandPanel", "loginPanel", "topbar", "connectionBadge", "--ui-smoke-test", "COMPANY_NAME")
+    for item in required:
+        if item not in client:
+            fail(f"Native v4.9 shell branding marker missing from client.py: {item}")
+    if 'assets" / "HRM.png"' not in client_spec:
+        fail("client.spec does not bundle assets/HRM.png for frozen native branding")
+    for relative in ("assets/HRM.png", "assets/HRM.ico", "assets/company-logo-source.png"):
+        path = PROJECT / relative
+        if not path.is_file() or path.stat().st_size < 100:
+            fail(f"Brand asset missing or invalid: {relative}")
+    if 'COMPANY_NAME = "شرکت توزیع نیروی برق استان کرمانشاه"' not in branding:
+        fail("Official company branding constant is missing")
+    if "PySide6.QtWebEngine" in client:
+        fail("Native client must not use Qt WebEngine/WebView")
+    print("PASS native v4.9 shell and HRM branding contract")
 
 
 def validate_versions() -> None:
@@ -283,6 +306,7 @@ def main() -> int:
         validate_specs()
         validate_inno_sources()
         validate_builder_contract()
+        validate_branding_contract()
         validate_versions()
         paths = validate_package_manifest_paths()
         validate_git_tracking(paths, require_tracking)

@@ -39,8 +39,8 @@ def ensure_self_signed_certificate(data_dir: Path, hostnames: list[str] | None =
     san.extend([x509.IPAddress(ipaddress.ip_address(value)) for value in ("127.0.0.1", "::1")])
     now = dt.datetime.now(dt.timezone.utc)
     subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "SazmanHR Internal"),
-        x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname() or "SazmanHR Server"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "HRM Internal"),
+        x509.NameAttribute(NameOID.COMMON_NAME, socket.gethostname() or "HRM Server"),
     ])
     cert = (
         x509.CertificateBuilder()

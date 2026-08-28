@@ -1,51 +1,38 @@
-# HRM v0.2.0-alpha.3 — Windows CI Build Fix Candidate
+# HRM v0.3.0-alpha.1 — Native v4.9 Shell CI Candidate
 
-این بسته برای اصلاح Build ناموفق `v0.2.0-alpha.1` ساخته شده است. مشکل اصلی به‌صورت ریشه‌ای شناسایی شده: `client.spec` فایل `SazmanHR.exe` می‌ساخت ولی Builder و Installer منتظر `HRM.exe` بودند.
+این Candidate روی Baseline سبز `0.2.0-alpha.3` ساخته شده است. هدف این Milestone تغییر زیرساخت Windows نیست؛ تمرکز روی UI Native، Login، Dashboard shell و Branding نهایی HRM است.
 
-## تغییر اصلی
+## تغییرات اصلی
 
-- خروجی Client: `HRM.exe`
-- خروجی Server: `HRMServer.exe`
-- خروجی Service: `HRMService.exe`
-- Installer: `HRM-Setup-x64.exe`
-- نسخه: `0.2.0-alpha.3`
-- داده داخل Git: فقط 36 رکورد Demo/Synthetic
-- رمز Bootstrap آزمایشی: `13811381` با تغییر اجباری در اولین ورود
+- Login جدید Native Qt و RTL با Branding شرکت توزیع نیروی برق استان کرمانشاه.
+- Sidebar سمت راست + Header + Connection badge + User panel.
+- Dashboard کارت‌محور با ظاهر یکپارچه و مناسب رزولوشن‌های سازمانی.
+- لوگوی سازمانی روی Application و Installer.
+- اجرای `HRM.exe --ui-smoke-test` در Windows Builder قبل از Inno Setup.
+- حفظ Bootstrap `13811381`، تغییر اجباری رمز و ابطال رمز اولیه.
+- حفظ کامل Service/TLS/ACL/Upgrade/Uninstall از Baseline سبز.
+- عدم وجود دیتای واقعی در Git؛ Seed فقط 36 رکورد Demo/Synthetic است.
 
-## محافظ جدید Build
+## اعمال روی Branch
 
-قبل از PyInstaller، فایل `ci/validate_package_contract.py` موارد زیر را بررسی می‌کند:
-
-- نام خروجی هر سه فایل `.spec`
-- وجود تمام Sourceهای Inno Setup
-- ASCII-safe بودن مسیر Sourceهای Installer
-- یکسان بودن Version در Backend/Installer/Smoke Test/Manifest
-- نبود `data/export` و فایل‌های Excel واقعی
-- سلامت Seed مصنوعی
-
-اگر هر کدام ناسازگار باشد Build قبل از مرحله سنگین متوقف می‌شود.
-
-## اعمال روی Branch فعلی
-
-ZIP را روی ریشه Repository فعلی `feat/native-v49-shell` استخراج کنید و سپس:
+ZIP را در Root همان Repository استخراج کنید و اجرا کنید:
 
 ```cmd
-APPLY-ALPHA3-FIX.cmd
+APPLY-V030A1.cmd
 ```
 
-این فایل، فایل‌های منسوخ Candidate قبلی را از Git حذف می‌کند و Packaging Contract را اجرا می‌کند. بعد از PASS:
+پس از PASS:
 
 ```cmd
 git add -A
-git commit -m "fix: repair HRM alpha.3 Windows packaging contract"
+python ci\validate_package_contract.py --require-git-tracked
+git commit -m "feat: add HRM v0.3.0-alpha.1 native v4.9 shell"
 git push origin feat/native-v49-shell
 ```
 
-GitHub Actions باید Artifactهای زیر را تولید کند:
+## Artifactها
 
-- سبز: `HRM-0.2.0-alpha.3-Tested-Setup`
-- قرمز: `HRM-0.2.0-alpha.3-Failure-Logs`
+- موفق: `HRM-0.3.0-alpha.1-Tested-Setup`
+- ناموفق: `HRM-0.3.0-alpha.1-Failure-Logs`
 
-## Gate نهایی
-
-Local/Linux validation جای Windows CI را نمی‌گیرد. نسخه زمانی Windows-Tested محسوب می‌شود که Build + Inno Setup + Clean Install + Service/TLS/ACL + Bootstrap Login + Forced Password Change + Upgrade + Data Preservation + Uninstall در GitHub Actions سبز شوند.
+این Candidate زمانی Windows-Tested است که Build + Frozen UI Smoke + Inno Setup + Clean Install + Login + Password Change + Service/TLS/ACL + Upgrade + Data Preservation + Uninstall در GitHub Actions سبز شوند.
