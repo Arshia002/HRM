@@ -37,7 +37,7 @@
 - `build-setup-bootstrap.log`
 - `build-output\build.log`
 - `build-output\installer\install-test.log`
-- خروجی `Get-Service HRMCentral`
+- خروجی `Get-Service HRMCentralService`
 - فایل‌های `C:\ProgramData\HRM-Kermanshah\logs\server.jsonl*`
 - فایل `C:\ProgramData\HRM-Kermanshah\logs\setup-server.log`
 - نسخه Windows و مرحله‌ای که خطا رخ داده است

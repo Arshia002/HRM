@@ -105,7 +105,7 @@ function Wait-HrmHealth {
         Start-Sleep -Milliseconds 500
     }
     if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
-        $health.database -ne 'ready' -or $health.version -ne '0.2.0-alpha.2') {
+        $health.database -ne 'ready' -or $health.version -ne '0.2.0-alpha.3') {
         $detail = if ($health) { $health | ConvertTo-Json -Compress } else { 'no response' }
         throw "$Stage health check failed: $detail"
     }
@@ -127,17 +127,17 @@ try {
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$SetupLog`"") `
         -Stage 'Clean silent full Setup installation' -TimeoutSeconds 260
 
-    $service = Get-Service HRMCentral -ErrorAction Stop
+    $service = Get-Service HRMCentralService -ErrorAction Stop
     if ($service.Status -ne 'Running') {
-        Start-Service HRMCentral
+        Start-Service HRMCentralService
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
-    $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='HRMCentral'"
-    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'LocalSystem') {
-        throw "Windows Service account is not explicitly LocalSystem."
+    $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'"
+    if (-not $serviceInfo -or $serviceInfo.StartName -ne 'NT AUTHORITY\LocalService') {
+        throw "Windows Service is not running under the low-privilege LocalService account."
     }
 
-    $serviceAccount = New-Object System.Security.Principal.NTAccount('NT SERVICE', 'HRMCentral')
+    $serviceAccount = New-Object System.Security.Principal.NTAccount('NT SERVICE', 'HRMCentralService')
     $serviceSid = $serviceAccount.Translate([System.Security.Principal.SecurityIdentifier])
     $acl = Get-Acl $EnterpriseData
     $rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])
@@ -151,6 +151,9 @@ try {
     Wait-HrmHealth -Stage 'Clean install'
 
     if (-not (Test-Path (Join-Path $Target 'Client\HRM.exe'))) { throw 'Desktop client missing.' }
+    if (Test-Path (Join-Path $Target 'Server\data\seed\sazmanhr-seed.sqlite')) {
+        throw 'Synthetic seed was left behind in Program Files.'
+    }
     $desktopShortcut = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'HRM.lnk'
     if (-not (Test-Path $desktopShortcut)) { throw 'Desktop shortcut missing.' }
     $database = Join-Path $EnterpriseData 'hrm.sqlite'
@@ -194,9 +197,22 @@ try {
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$UpgradeLog`"") `
         -Stage 'Silent in-place upgrade installation' -TimeoutSeconds 260
 
-    $service = Get-Service HRMCentral -ErrorAction Stop
+    $UpgradeSetupText = Get-Content -LiteralPath $UpgradeLog -Raw
+    $StopBeforeCopyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-stop-before-copy')
+    $FirstFileEntryIndex = $UpgradeSetupText.IndexOf('-- File entry --')
+    if ($StopBeforeCopyIndex -lt 0 -or $FirstFileEntryIndex -lt 0 -or $StopBeforeCopyIndex -gt $FirstFileEntryIndex) {
+        throw 'Upgrade did not prove the existing service stopped before Setup replaced files.'
+    }
+    if ($UpgradeSetupText -match 'RestartManager found an application using one of our files: HRM') {
+        throw 'An HRM process still held an installed file when the upgrade copy phase started.'
+    }
+    if (Test-Path (Join-Path $Target 'Server\data\seed\sazmanhr-seed.sqlite')) {
+        throw 'Synthetic seed was persisted in Program Files during in-place upgrade.'
+    }
+
+    $service = Get-Service HRMCentralService -ErrorAction Stop
     if ($service.Status -ne 'Running') {
-        Start-Service HRMCentral
+        Start-Service HRMCentralService
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
     Wait-HrmHealth -Stage 'Post-upgrade'
@@ -225,10 +241,10 @@ try {
         -Stage 'Silent uninstall' -TimeoutSeconds 180
 
     for ($attempt = 0; $attempt -lt 20; $attempt++) {
-        if (-not (Get-Service HRMCentral -ErrorAction SilentlyContinue)) { break }
+        if (-not (Get-Service HRMCentralService -ErrorAction SilentlyContinue)) { break }
         Start-Sleep -Milliseconds 500
     }
-    if (Get-Service HRMCentral -ErrorAction SilentlyContinue) { throw 'Service was not removed.' }
+    if (Get-Service HRMCentralService -ErrorAction SilentlyContinue) { throw 'Service was not removed.' }
     if (-not (Test-Path $database)) { throw 'Operational database was removed by uninstall.' }
     if (-not (Test-Path $sentinel) -or (Get-FileHash $sentinel -Algorithm SHA256).Hash -ne $sentinelHash) {
         throw 'Operational data sentinel was removed or changed by uninstall.'
@@ -243,9 +259,9 @@ try {
         try { Stop-Transcript | Out-Null } catch { }
         $TranscriptStarted = $false
     }
-    try { & "$env:SystemRoot\System32\sc.exe" qc HRMCentral 2>&1 | Out-File -FilePath $ServiceConfigLog -Encoding utf8 -Force } catch { }
-    try { & "$env:SystemRoot\System32\sc.exe" queryex HRMCentral 2>&1 | Out-File -FilePath $ServiceStateLog -Encoding utf8 -Force } catch { }
-    try { Get-CimInstance Win32_Service -Filter "Name='HRMCentral'" | ConvertTo-Json -Depth 4 | Out-File -FilePath $ServiceCimLog -Encoding utf8 -Force } catch { }
+    try { & "$env:SystemRoot\System32\sc.exe" qc HRMCentralService 2>&1 | Out-File -FilePath $ServiceConfigLog -Encoding utf8 -Force } catch { }
+    try { & "$env:SystemRoot\System32\sc.exe" queryex HRMCentralService 2>&1 | Out-File -FilePath $ServiceStateLog -Encoding utf8 -Force } catch { }
+    try { Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'" | ConvertTo-Json -Depth 4 | Out-File -FilePath $ServiceCimLog -Encoding utf8 -Force } catch { }
     try { & "$env:SystemRoot\System32\icacls.exe" $EnterpriseData /T 2>&1 | Out-File -FilePath $AclLog -Encoding utf8 -Force } catch { }
     $serverLog = Join-Path $EnterpriseData 'logs\setup-server.log'
     $startupLog = Join-Path $EnterpriseData 'logs\startup-failure.log'

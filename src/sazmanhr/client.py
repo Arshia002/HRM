@@ -649,12 +649,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--server")
     parser.add_argument("--tls-fingerprint", default="")
     parser.add_argument("--config")
+    parser.add_argument("--smoke-test", action="store_true", help="Initialize the frozen Qt runtime and exit.")
     args = parser.parse_args(argv)
     app = QApplication(sys.argv[:1])
     app.setApplicationName("HRM")
     app.setApplicationVersion(__version__)
     app.setLayoutDirection(Qt.RightToLeft)
     app.setStyleSheet(APP_STYLE)
+    if args.smoke_test:
+        print(f"HRM Qt smoke test OK: {__version__}")
+        return 0
     config_path = default_client_config() if not args.config else __import__("pathlib").Path(args.config)
     config = ClientConfig.load(config_path)
     if args.server:

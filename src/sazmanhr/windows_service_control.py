@@ -10,14 +10,12 @@ import time
 from pathlib import Path
 from typing import Callable
 
-
 SERVICE_STOPPED = 1
 SERVICE_STOP_PENDING = 3
 ERROR_SERVICE_DOES_NOT_EXIST = 1060
 ERROR_SERVICE_NOT_ACTIVE = 1062
 SERVICE_NAME_PATTERN = re.compile(r"[A-Za-z0-9_.-]{1,128}\Z")
 STATE_PATTERN = re.compile(r"(?m)^\s*[^:\r\n]+:\s*([1-7])\s{2,}[^\r\n]*$")
-
 ScRunner = Callable[[str, str], tuple[int, str]]
 
 
@@ -77,7 +75,6 @@ def stop_windows_service(
         if os.name != "nt":
             raise RuntimeError("Windows Service control is only available on Windows.")
         runner = _run_sc
-
     initial_state = _query_state(service_name, runner)
     if initial_state is None:
         return {"exists": False, "was_running": False, "initial_state": None, "final_state": None}
@@ -88,17 +85,13 @@ def stop_windows_service(
             "initial_state": SERVICE_STOPPED,
             "final_state": SERVICE_STOPPED,
         }
-
     if initial_state != SERVICE_STOP_PENDING:
         return_code, output = runner("stop", service_name)
-        if return_code and not _contains_service_error(
-            return_code, output, ERROR_SERVICE_NOT_ACTIVE
-        ):
+        if return_code and not _contains_service_error(return_code, output, ERROR_SERVICE_NOT_ACTIVE):
             raise RuntimeError(
                 f"Unable to stop Windows Service {service_name!r} (exit {return_code}): "
                 f"{output.strip()[-1000:]}"
             )
-
     deadline = clock() + timeout_seconds
     while True:
         current_state = _query_state(service_name, runner)

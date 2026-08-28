@@ -1,4 +1,4 @@
-# HRM v0.2.0-alpha.2 — Windows CI Build Fix Candidate
+# HRM v0.2.0-alpha.3 — Windows CI Build Fix Candidate
 
 این بسته برای اصلاح Build ناموفق `v0.2.0-alpha.1` ساخته شده است. مشکل اصلی به‌صورت ریشه‌ای شناسایی شده: `client.spec` فایل `SazmanHR.exe` می‌ساخت ولی Builder و Installer منتظر `HRM.exe` بودند.
 
@@ -8,7 +8,7 @@
 - خروجی Server: `HRMServer.exe`
 - خروجی Service: `HRMService.exe`
 - Installer: `HRM-Setup-x64.exe`
-- نسخه: `0.2.0-alpha.2`
+- نسخه: `0.2.0-alpha.3`
 - داده داخل Git: فقط 36 رکورد Demo/Synthetic
 - رمز Bootstrap آزمایشی: `13811381` با تغییر اجباری در اولین ورود
 
@@ -30,21 +30,21 @@
 ZIP را روی ریشه Repository فعلی `feat/native-v49-shell` استخراج کنید و سپس:
 
 ```cmd
-APPLY-ALPHA2-FIX.cmd
+APPLY-ALPHA3-FIX.cmd
 ```
 
 این فایل، فایل‌های منسوخ Candidate قبلی را از Git حذف می‌کند و Packaging Contract را اجرا می‌کند. بعد از PASS:
 
 ```cmd
 git add -A
-git commit -m "fix: repair HRM alpha.2 Windows packaging contract"
+git commit -m "fix: repair HRM alpha.3 Windows packaging contract"
 git push origin feat/native-v49-shell
 ```
 
 GitHub Actions باید Artifactهای زیر را تولید کند:
 
-- سبز: `HRM-0.2.0-alpha.2-Tested-Setup`
-- قرمز: `HRM-0.2.0-alpha.2-Failure-Logs`
+- سبز: `HRM-0.2.0-alpha.3-Tested-Setup`
+- قرمز: `HRM-0.2.0-alpha.3-Failure-Logs`
 
 ## Gate نهایی
 

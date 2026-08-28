@@ -74,4 +74,3 @@ def remote_fingerprint(host: str, port: int, timeout: float = 8.0) -> str:
     with socket.create_connection((host, port), timeout=timeout) as raw:
         with context.wrap_socket(raw, server_hostname=host) as wrapped:
             return certificate_fingerprint(wrapped.getpeercert(binary_form=True))
-

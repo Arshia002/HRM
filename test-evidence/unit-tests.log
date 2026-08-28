@@ -2,18 +2,25 @@ test_health_login_and_shared_data (test_api.ApiTests.test_health_login_and_share
 test_fixed_bootstrap_is_only_for_initial_owner (test_bootstrap_hrm.HRMBootstrapTests.test_fixed_bootstrap_is_only_for_initial_owner) ... ok
 test_windows_ci_contract (test_ci_pipeline.CiPipelineTests.test_windows_ci_contract) ... ok
 test_five_admin_clients_share_changes (test_five_clients.FiveClientNetworkTests.test_five_admin_clients_share_changes) ... ok
+test_ci_manifest_never_contains_local_cache_or_generated_worktree_paths (test_package.PackageTests.test_ci_manifest_never_contains_local_cache_or_generated_worktree_paths) ... ok
 test_ci_package_manifest_paths_are_ascii_safe_for_windows_zip_roundtrip (test_package.PackageTests.test_ci_package_manifest_paths_are_ascii_safe_for_windows_zip_roundtrip) ... ok
+test_clean_checkout_gate_requires_manifest_files_in_git (test_package.PackageTests.test_clean_checkout_gate_requires_manifest_files_in_git) ... ok
 test_fail_fast_packaging_contract_validator (test_package.PackageTests.test_fail_fast_packaging_contract_validator) ... ok
+test_frozen_qt_client_smoke_test_is_restored (test_package.PackageTests.test_frozen_qt_client_smoke_test_is_restored) ... ok
 test_inno_sources_are_existing_ascii_safe_files (test_package.PackageTests.test_inno_sources_are_existing_ascii_safe_files) ... ok
 test_installer_is_offline_isolated_and_fail_fast (test_package.PackageTests.test_installer_is_offline_isolated_and_fail_fast) ... ok
 test_installer_registers_service_before_acl_and_verifies_hardening (test_package.PackageTests.test_installer_registers_service_before_acl_and_verifies_hardening) ... ok
+test_manifest_gate_verifies_content_hashes (test_package.PackageTests.test_manifest_gate_verifies_content_hashes) ... ok
 test_manifest_matches_database (test_package.PackageTests.test_manifest_matches_database) ... ok
 test_native_client_has_no_browser_engine (test_package.PackageTests.test_native_client_has_no_browser_engine) ... ok
 test_native_windows_builder_is_valid_python (test_package.PackageTests.test_native_windows_builder_is_valid_python) ... ok
 test_no_executable_payload_is_bundled (test_package.PackageTests.test_no_executable_payload_is_bundled) ... ok
 test_no_previous_broken_release_markers (test_package.PackageTests.test_no_previous_broken_release_markers) ... ok
 test_one_click_builder_does_not_invoke_powershell (test_package.PackageTests.test_one_click_builder_does_not_invoke_powershell) ... ok
+test_proven_alpha4_upgrade_contract_is_preserved (test_package.PackageTests.test_proven_alpha4_upgrade_contract_is_preserved) ... ok
+test_public_installer_does_not_persist_synthetic_seed (test_package.PackageTests.test_public_installer_does_not_persist_synthetic_seed) ... ok
 test_pyinstaller_spec_names_match_windows_builder_contract (test_package.PackageTests.test_pyinstaller_spec_names_match_windows_builder_contract) ... ok
+test_release_builder_explicitly_excludes_pytest_cache (test_package.PackageTests.test_release_builder_explicitly_excludes_pytest_cache) ... ok
 test_silent_installer_has_no_unsuppressible_message_box (test_package.PackageTests.test_silent_installer_has_no_unsuppressible_message_box) ... ok
 test_unrelated_unicode_repository_docs_do_not_expand_ci_package_contract (test_package.PackageTests.test_unrelated_unicode_repository_docs_do_not_expand_ci_package_contract) ... ok
 test_windows_builder_console_handles_persian_paths (test_package.PackageTests.test_windows_builder_console_handles_persian_paths) ... ok
@@ -40,12 +47,16 @@ test_username_normalization (test_security.SecurityTests.test_username_normaliza
 test_weak_password_is_rejected (test_security.SecurityTests.test_weak_password_is_rejected) ... ok
 test_pinned_tls_health_and_login (test_tls.TlsIntegrationTests.test_pinned_tls_health_and_login) ... connection_closed_before_http
 ok
+test_already_stopped_service_is_preserved (test_windows_service_control.WindowsServiceControlTests.test_already_stopped_service_is_preserved) ... ok
+test_invalid_service_name_is_rejected (test_windows_service_control.WindowsServiceControlTests.test_invalid_service_name_is_rejected) ... ok
+test_missing_service_is_safe (test_windows_service_control.WindowsServiceControlTests.test_missing_service_is_safe) ... ok
+test_running_service_is_stopped_and_verified (test_windows_service_control.WindowsServiceControlTests.test_running_service_is_stopped_and_verified) ... ok
 
 ----------------------------------------------------------------------
-Ran 41 tests in 10.188s
+Ran 52 tests in 8.995s
 
 OK
 Initial username: arshia.shahbazi
 One-time password: 13811381
-TLS fingerprint: 12:8A:D8:AD:4D:90:7F:F8:B4:F9:EC:1D:0A:9A:DB:FA:54:E5:99:C1:F6:29:6A:54:1A:D5:7A:51:C0:30:E4:07
-Saved to: /tmp/tmp_bizhmoe/FIRST_LOGIN.txt
+TLS fingerprint: 1D:D5:C0:9B:6F:AE:24:8A:7F:1A:DF:01:A3:38:D6:27:C9:D7:57:ED:D1:F3:58:48:01:BE:21:A0:23:B7:AD:83
+Saved to: /tmp/tmpowdibs7v/FIRST_LOGIN.txt

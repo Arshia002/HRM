@@ -12,7 +12,7 @@
 1. فایل Setup را با Run as administrator اجرا کنید.
 2. حالت «سرور مرکزی و کلاینت مدیریت» را انتخاب کنید.
 3. آدرس محلی پیش‌فرض `https://127.0.0.1:8765` را نگه دارید.
-4. پس از پایان، سرویس `HRMCentral` باید در Services وضعیت Running داشته باشد.
+4. پس از پایان، سرویس `HRMCentralService` باید در Services وضعیت Running داشته باشد.
 5. اطلاعات ورود یک‌بارمصرف را از `C:\ProgramData\HRM-Kermanshah\FIRST_LOGIN.txt` بردارید.
 6. با نام کاربری `arshia.shahbazi` وارد شوید و بلافاصله رمز را تغییر دهید؛ فایل اطلاعات اولیه خودکار حذف می‌شود.
 
@@ -45,7 +45,7 @@
 ## عیب‌یابی سریع
 
 ```powershell
-Get-Service HRMCentral
+Get-Service HRMCentralService
 Test-NetConnection SERVER-IP -Port 8765
 curl.exe -k https://SERVER-IP:8765/api/health
 ```
@@ -61,9 +61,9 @@ TLS در نصب جدید فعال است و برای تست گواهی self-sign
 بازیابی فقط در حالت توقف سرویس انجام شود:
 
 ```powershell
-Stop-Service HRMCentral
+Stop-Service HRMCentralService
 & 'C:\Program Files\HRM\Server\HRMServer.exe' --data-dir 'C:\ProgramData\HRM-Kermanshah' --restore 'C:\ProgramData\HRM-Kermanshah\backups\BACKUP.sqlite' --init-only
-Start-Service HRMCentral
+Start-Service HRMCentralService
 ```
 
 پیش از جایگزینی، سلامت فایل کنترل و از دیتابیس جاری safety copy ساخته می‌شود.

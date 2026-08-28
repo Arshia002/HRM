@@ -1,15 +1,24 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
 .venv/
+venv/
+.coverage
+coverage.xml
 runtime/
 build-output/
+release/
 *.sqlite-wal
 *.sqlite-shm
-
 
 # Never commit real organization/personnel exports
 data/export/
 *.xlsx
 *.xls
+*.csv
 
 ci-contract-validation.log

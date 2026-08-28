@@ -27,6 +27,7 @@ INSTALLER = BUILD_ROOT / "installer" / "HRM-Setup-x64.exe"
 REQUIREMENTS = PROJECT_ROOT / "build" / "windows" / "requirements-build.txt"
 INNO_SCRIPT = PROJECT_ROOT / "build" / "windows" / "HRM.iss"
 LOG_PATH = BUILD_ROOT / "build.log"
+DEPENDENCY_SNAPSHOT = BUILD_ROOT / "installer" / "dependencies.txt"
 
 
 class BuildFailure(RuntimeError):
@@ -88,6 +89,25 @@ def run(log: BuildLog, command: list[object], *, env: dict[str, str] | None = No
     return_code = process.wait()
     if return_code:
         raise BuildFailure(f"Command failed with exit code {return_code}: {rendered}")
+
+
+def capture(log: BuildLog, command: list[object], *, env: dict[str, str] | None = None) -> str:
+    rendered = command_text(command)
+    log.write(f"\n> {rendered}")
+    process = subprocess.run(
+        [str(item) for item in command], cwd=PROJECT_ROOT, env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        encoding="utf-8", errors="replace", check=False,
+    )
+    output = process.stdout.rstrip("\r\n")
+    if output:
+        for line in output.splitlines():
+            log.handle.write(line + "\n")
+            print_console(line)
+        log.handle.flush()
+    if process.returncode:
+        raise BuildFailure(f"Command failed with exit code {process.returncode}: {rendered}")
+    return process.stdout
 
 
 def sha256(path: Path) -> str:
@@ -196,7 +216,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         raise BuildFailure("Python 3.11 x64 is required.")
 
     started = time.monotonic()
-    log.write("HRM 0.2.0-alpha.2 direct Setup candidate build started.")
+    log.write("HRM 0.2.0-alpha.3 direct Setup candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")
@@ -212,7 +232,11 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     run(log, [sys.executable, PROJECT_ROOT / "ci" / "validate_package_contract.py"])
 
     run(log, [venv_python, "-m", "pip", "install", "--upgrade", "pip"])
-    run(log, [venv_python, "-m", "pip", "install", "-r", REQUIREMENTS])
+    run(log, [venv_python, "-m", "pip", "install", "--only-binary=:all:", "-r", REQUIREMENTS])
+
+    DEPENDENCY_SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
+    installed = capture(log, [venv_python, "-m", "pip", "freeze", "--all"])
+    DEPENDENCY_SNAPSHOT.write_text(installed, encoding="utf-8", newline="\n")
 
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(PROJECT_ROOT / "src")
@@ -257,6 +281,10 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     missing = [str(path) for path in executables if not path.is_file()]
     if missing:
         raise BuildFailure("PyInstaller output is incomplete: " + ", ".join(missing))
+
+    # Initialize the frozen Qt runtime without opening the login dialog. This
+    # catches missing Qt platform plugins/DLLs before Inno Setup is compiled.
+    run(log, [DIST_DIR / "HRM.exe", "--smoke-test"])
 
     # Execute the frozen server before creating Setup. This catches a missing
     # Python/cryptography/SQLite runtime inside the EXE on the actual build OS.

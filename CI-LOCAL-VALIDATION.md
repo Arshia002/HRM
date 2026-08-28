@@ -1,19 +1,19 @@
-# HRM v0.2.0-alpha.2 — Local Validation
+# HRM v0.2.0-alpha.3 — Local Validation
 
-تاریخ: 2026-08-27
+Date: 2026-08-28
 
-نتیجه پیش از تحویل CI package:
+Before delivery of this CI overlay:
 
+- Source Unit/Integration: **52/52 PASS**
 - Packaging contract: **PASS**
-- PyInstaller spec output contract: **PASS** (`HRM.exe`, `HRMServer.exe`, `HRMService.exe`)
-- Inno source existence + ASCII-safe paths: **PASS**
-- Version contract: **PASS** (`0.2.0-alpha.2`)
-- Public-safe seed gate: **PASS** (36 رکورد synthetic، بدون داده واقعی)
-- Unit/Integration tests: **41/41 PASS**
+- Spec outputs: **PASS** (`HRM.exe`, `HRMServer.exe`, `HRMService.exe`)
+- Proven alpha.4 upgrade/service compatibility markers: **PASS**
 - Python compileall: **PASS**
-- GitHub Workflow YAML parse: **PASS**
-- JSON parse: **PASS**
-- CI overlay manifest path safety: **PASS** (تمام pathهای اعلام‌شده بسته ASCII-safe)
-- Regression with existing Persian-named repository docs: **PASS**
+- Workflow YAML + JSON parse: **PASS**
+- SQLite integrity: **PASS**
+- Public-safe seed: **PASS** (36 Synthetic/Demo records, no real personnel/export spreadsheets)
+- Cache/ephemeral path exclusion: **PASS**
+- Clean extracted ZIP unit/contract re-test: **PASS**
+- Clean Git-index simulation with `--require-git-tracked`: **PASS**
 
-این Validation عمداً جای Windows CI را نمی‌گیرد. Build واقعی PyInstaller for Windows، Inno Setup، Service، TLS، ACL، Desktop Shortcut، Login، Upgrade و Uninstall باید روی GitHub `windows-2022` سبز شوند.
+Windows-only acceptance (PyInstaller Windows binaries, Inno Setup, SCM, UAC, ACL, Desktop shortcut, install/upgrade/uninstall) must still pass on GitHub `windows-2022`; this local validation does not falsely substitute for that runner.

@@ -19,7 +19,7 @@ from .tls import ensure_self_signed_certificate
 
 
 class SazmanHRService(win32serviceutil.ServiceFramework):
-    _svc_name_ = "HRMCentral"
+    _svc_name_ = "HRMCentralService"
     _svc_display_name_ = "HRM Central Service"
     _svc_description_ = "Central data and synchronization service for HRM clients"
 

@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """Fail-fast validation for the HRM Windows packaging contract.
 
-The validator deliberately checks *packaging inputs*, not every file already
-tracked by the repository. The repository contains historical Persian-named
-Markdown documents that are not part of the Windows installer/CI payload.
-Rejecting those unrelated files caused the alpha.2 pre-push false positive.
+alpha.3 hardens the overlay boundary after alpha.2 failed in GitHub Actions
+because PACKAGE-MANIFEST.json accidentally contained local .pytest_cache
+files. Those files existed on the packager machine but were ignored by Git,
+so a clean CI checkout could never contain them.
 """
 from __future__ import annotations
 
+import argparse
 import ast
+import hashlib
 import json
+import os
 import re
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
+EXPECTED_VERSION = "0.2.0-alpha.3"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -23,10 +28,23 @@ EXPECTED_EXES = {
 }
 INNO = PROJECT / "build" / "windows" / "HRM.iss"
 PACKAGE_MANIFEST = PROJECT / "PACKAGE-MANIFEST.json"
+EPHEMERAL_PARTS = {
+    ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox",
+    ".venv", "venv", "__pycache__", "build-output", ".git",
+}
+EPHEMERAL_NAMES = {".coverage", "coverage.xml"}
 
 
 def fail(message: str) -> None:
     raise RuntimeError(message)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def exe_name_from_spec(path: Path) -> str:
@@ -71,7 +89,8 @@ def validate_inno_sources() -> None:
     if "sazmanhr.exe" in lowered:
         fail("Legacy client executable name SazmanHR.exe is still referenced by Inno Setup")
 
-    # Only installer payload paths need the ASCII ZIP/Windows-path guarantee.
+    # ProjectRoot sources are repository files and must be ASCII-safe so ZIP ->
+    # Windows extraction cannot rewrite their names. DistDir is generated in CI.
     pattern = re.compile(r'^Source:\s*"\{#ProjectRoot\}\\([^\"]+)"', re.MULTILINE)
     sources = pattern.findall(script)
     if not sources:
@@ -86,6 +105,21 @@ def validate_inno_sources() -> None:
             fail(f"Inno Setup source does not exist: {raw} -> {path}")
         print(f"PASS Inno source exists: {raw}")
 
+    # Regression gates restored from the proven alpha.4 baseline.
+    required_markers = (
+        "service-stop-before-copy",
+        "--stop-windows-service HRMCentralService",
+        "HRMCentralService",
+        'obj= "NT AUTHORITY\\LocalService"',
+        "sidtype HRMCentralService unrestricted",
+    )
+    for marker in required_markers:
+        if marker.lower() not in lowered:
+            fail(f"Proven upgrade/service hardening marker is missing from HRM.iss: {marker!r}")
+    if "hrmcentral " in lowered and "hrmcentralservice" not in lowered:
+        fail("Legacy alpha.2 service name HRMCentral would break alpha.4 upgrade compatibility")
+    print("PASS proven alpha.4 upgrade/service baseline markers")
+
 
 def validate_builder_contract() -> None:
     builder = (PROJECT / "build" / "windows" / "build_windows.py").read_text(encoding="utf-8")
@@ -94,46 +128,52 @@ def validate_builder_contract() -> None:
     for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe"):
         if exe not in builder:
             fail(f"Builder does not validate expected output {exe}")
-    print("PASS builder executable contract")
+    if '"--smoke-test"' not in builder:
+        fail("Builder no longer smoke-tests the frozen Qt client before compiling Setup")
+    if "--only-binary=:all:" not in builder:
+        fail("Windows dependency install must be wheel-only for reproducible CI")
+    print("PASS builder executable/runtime contract")
 
 
 def validate_versions() -> None:
     version = (PROJECT / "VERSION").read_text(encoding="utf-8").strip()
-    expected = "0.2.0-alpha.2"
-    if version != expected:
-        fail(f"VERSION mismatch: expected {expected!r}, got {version!r}")
+    if version != EXPECTED_VERSION:
+        fail(f"VERSION mismatch: expected {EXPECTED_VERSION!r}, got {version!r}")
     checks = {
-        "src/sazmanhr/__init__.py": f'__version__ = "{expected}"',
-        "build/windows/HRM.iss": f"AppVersion={expected}",
-        "build/windows/smoke-install.ps1": f"version -ne '{expected}'",
-        "ci/write-ci-manifest.ps1": f"version = '{expected}'",
-        ".github/workflows/windows-build.yml": f"HRM-{expected}-Tested-Setup",
+        "src/sazmanhr/__init__.py": f'__version__ = "{EXPECTED_VERSION}"',
+        "build/windows/HRM.iss": f"AppVersion={EXPECTED_VERSION}",
+        "build/windows/smoke-install.ps1": EXPECTED_VERSION,
+        "ci/write-ci-manifest.ps1": f"version = '{EXPECTED_VERSION}'",
+        ".github/workflows/windows-build.yml": f"HRM-{EXPECTED_VERSION}-Tested-Setup",
     }
     for relative, marker in checks.items():
         text = (PROJECT / relative).read_text(encoding="utf-8")
         if marker not in text:
             fail(f"Version contract missing in {relative}: {marker!r}")
-    print(f"PASS version contract: {expected}")
+    print(f"PASS version contract: {EXPECTED_VERSION}")
 
 
-def validate_package_manifest_paths() -> None:
-    """Validate only files declared as part of this CI overlay package.
-
-    Existing repository files that are not installer/build inputs may use
-    Unicode names. This keeps the ZIP/Windows contract strict without making
-    unrelated documentation a build blocker.
-    """
+def load_manifest_items() -> list[dict[str, object]]:
     if not PACKAGE_MANIFEST.is_file():
         fail(f"Missing package manifest: {PACKAGE_MANIFEST}")
     manifest = json.loads(PACKAGE_MANIFEST.read_text(encoding="utf-8"))
+    if manifest.get("version") != EXPECTED_VERSION:
+        fail(f"PACKAGE-MANIFEST version mismatch: {manifest.get('version')!r}")
     items = manifest.get("files")
     if not isinstance(items, list) or not items:
         fail("PACKAGE-MANIFEST.json has no files list")
+    return items
 
+
+def validate_package_manifest_paths() -> list[str]:
+    """Validate the exact CI overlay boundary, never the whole worktree."""
+    items = load_manifest_items()
     bad: list[str] = []
     missing: list[str] = []
     unsafe: list[str] = []
+    ephemeral: list[str] = []
     seen: set[str] = set()
+    paths: list[str] = []
     for item in items:
         relative = item.get("path") if isinstance(item, dict) else None
         if not isinstance(relative, str) or not relative:
@@ -141,6 +181,7 @@ def validate_package_manifest_paths() -> None:
         if relative in seen:
             fail(f"Duplicate package manifest path: {relative}")
         seen.add(relative)
+        paths.append(relative)
         try:
             relative.encode("ascii")
         except UnicodeEncodeError:
@@ -150,16 +191,54 @@ def validate_package_manifest_paths() -> None:
         if pure.is_absolute() or ".." in pure.parts or "\\" in relative:
             unsafe.append(relative)
             continue
+        if any(part in EPHEMERAL_PARTS for part in pure.parts) or pure.name in EPHEMERAL_NAMES:
+            ephemeral.append(relative)
+            continue
         path = PROJECT.joinpath(*pure.parts)
         if not path.is_file():
             missing.append(relative)
+            continue
+        expected_bytes = item.get("bytes") if isinstance(item, dict) else None
+        expected_sha = item.get("sha256") if isinstance(item, dict) else None
+        if not isinstance(expected_bytes, int) or expected_bytes < 0:
+            fail(f"Invalid byte count in package manifest for {relative}: {expected_bytes!r}")
+        if not isinstance(expected_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
+            fail(f"Invalid SHA-256 in package manifest for {relative}: {expected_sha!r}")
+        actual_bytes = path.stat().st_size
+        if actual_bytes != expected_bytes:
+            fail(f"Package manifest byte mismatch for {relative}: expected {expected_bytes}, got {actual_bytes}")
+        actual_sha = sha256_file(path)
+        if actual_sha != expected_sha:
+            fail(f"Package manifest SHA-256 mismatch for {relative}: expected {expected_sha}, got {actual_sha}")
     if bad:
         fail(f"Non-ASCII paths declared in CI package manifest: {bad}")
     if unsafe:
         fail(f"Unsafe paths declared in CI package manifest: {unsafe}")
+    if ephemeral:
+        fail(f"Ephemeral/local-only files must never be declared in CI package manifest: {ephemeral}")
     if missing:
         fail(f"Files declared in CI package manifest are missing after overlay: {missing}")
-    print(f"PASS CI overlay manifest paths are ASCII-safe: {len(items)} files")
+    print(f"PASS CI overlay manifest paths/hashes are stable and present: {len(items)} files")
+    return paths
+
+
+def validate_git_tracking(paths: list[str], require: bool) -> None:
+    if not require:
+        return
+    try:
+        raw = subprocess.check_output(
+            ["git", "ls-files", "-z"], cwd=PROJECT, stderr=subprocess.STDOUT
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        fail(f"Git tracking verification could not run: {exc}")
+    tracked = {item.decode("utf-8") for item in raw.split(b"\0") if item}
+    untracked = [relative for relative in paths if relative not in tracked]
+    if untracked:
+        fail(
+            "CI package manifest contains files absent from the Git index/clean checkout: "
+            f"{untracked}"
+        )
+    print(f"PASS clean-checkout tracking contract: {len(paths)} manifest files are in Git")
 
 
 def validate_public_safe_seed() -> None:
@@ -167,7 +246,7 @@ def validate_public_safe_seed() -> None:
     if export_dir.exists():
         fail("data/export must not be present in a public CI package")
     for pattern in ("*.xls", "*.xlsx", "*.csv"):
-        matches = [p for p in PROJECT.rglob(pattern) if p.is_file()]
+        matches = [p for p in PROJECT.rglob(pattern) if p.is_file() and ".git" not in p.parts]
         if matches:
             fail(f"Public CI package contains forbidden data file(s): {matches}")
 
@@ -187,13 +266,26 @@ def validate_public_safe_seed() -> None:
     print("PASS public-safe synthetic seed: 36 demo personnel")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--require-git-tracked",
+        action="store_true",
+        help="Require every manifest file to exist in Git's index (clean-checkout CI gate).",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    args = parse_args()
+    require_tracking = args.require_git_tracked or os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
     try:
         validate_specs()
         validate_inno_sources()
         validate_builder_contract()
         validate_versions()
-        validate_package_manifest_paths()
+        paths = validate_package_manifest_paths()
+        validate_git_tracking(paths, require_tracking)
         validate_public_safe_seed()
     except Exception as exc:
         print(f"PACKAGE CONTRACT ERROR: {exc}", file=sys.stderr)

@@ -1,15 +1,18 @@
 # Changelog
 
-## 0.2.0-alpha.2
+## 0.2.0-alpha.3
 
-- رفع ریشه‌ای mismatch خروجی PyInstaller Client: `SazmanHR.exe` → `HRM.exe`.
-- اضافه‌شدن Fail-fast packaging contract قبل از Build.
-- اعتبارسنجی فوری خروجی هر `.spec` پس از PyInstaller.
-- تغییر Installer script به `build/windows/HRM.iss`.
-- تغییر نام Preflight به `HRMServerPreflight.exe`.
-- تبدیل Source pathهای مستندات Inno به نام‌های ASCII-safe.
-- اضافه‌شدن inventory فایل‌های frozen و PyInstaller warningها به Failure diagnostics.
-- حفظ Guard دیتای عمومی: فقط Seed مصنوعی 36 رکوردی.
+- رفع Root Cause Failure نسخه alpha.2: حذف `.pytest_cache` و تمام فایل‌های transient از Manifest/CI overlay.
+- افزودن clean-checkout gate با `--require-git-tracked` تا Manifest فقط فایل‌های واقعاً قابل بازسازی از Git را بپذیرد.
+- حفظ اصلاح نام خروجی PyInstaller: `client.spec -> HRM.exe`.
+- بازگردانی `HRMCentralService` برای سازگاری Upgrade با baseline سبز `0.1.0-alpha.4`.
+- بازگردانی `service-stop-before-copy` پیش از جایگزینی فایل‌های سرویس در Upgrade.
+- بازگردانی حساب کم‌اختیار `NT AUTHORITY\LocalService`، Service SID و ACL اثبات‌شده alpha.4.
+- بازگردانی Frozen Qt client smoke test پیش از Inno Setup.
+- عدم persist شدن synthetic seed در Program Files؛ seed فقط موقت در provisioning.
+- Pin شدن dependencyهای Windows build به snapshot baseline سبز alpha.4.
+- حفظ Bootstrap `13811381` + تغییر اجباری رمز + ابطال دائمی رمز اولیه.
+- حفظ Guard دیتای عمومی: فقط Seed مصنوعی 36 رکوردی و بدون داده واقعی شرکت.
 
 # تغییرات
 
@@ -33,7 +36,7 @@
 
 ## 16.0.5 Windows Service ACL Fix
 
-- تثبیت صریح حساب Windows Service روی LocalSystem
+- بازگردانی حساب کم‌اختیار Windows Service به NT AUTHORITY\LocalService مطابق baseline تأییدشده alpha.4
 - فعال‌سازی Service SID اختصاصی `SazmanHREnterpriseCentral`
 - اعطای Modify مستقیم به `NT SERVICE\SazmanHREnterpriseCentral` پیش از شروع سرویس
 - حذف `/C` از `icacls` تا هیچ خطای ACL نادیده نماند
@@ -118,6 +121,6 @@
 - دیتاست پاک‌سازی‌شده ۱۳۵۶ پرسنل و ۵۳ صفحه چارت
 - هیچ باینری، runtime، سرویس یا حساب کاربری از بسته‌های خراب قبلی وارد پروژه نشده است
 
-## 0.2.0-alpha.2 CI package revision 2
+## 0.2.0-alpha.3 CI package revision 2
 - Corrected the pre-push ASCII-path validator to inspect the CI overlay manifest and Inno payload, not unrelated files already present in the repository.
 - Added regression coverage for pre-existing Persian-named documentation.

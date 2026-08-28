@@ -36,4 +36,3 @@ class TlsIntegrationTests(unittest.TestCase):
                 self.assertTrue(client.login("arshia.shahbazi", "Initial!Password1500")["token"])
             finally:
                 server.shutdown(); server.server_close(); thread.join(timeout=3)
-

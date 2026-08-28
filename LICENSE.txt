@@ -5,4 +5,3 @@ All rights reserved. Distribution, sublicensing and commercial deployment
 require written authorization from the copyright holder.
 
 Third-party build tools are not bundled and retain their own licenses.
-

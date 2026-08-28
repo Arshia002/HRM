@@ -120,7 +120,7 @@ class PackageTests(unittest.TestCase):
             self.assertTrue((PROJECT / pure).is_file(), f"Missing overlay file: {relative}")
 
     def test_unrelated_unicode_repository_docs_do_not_expand_ci_package_contract(self):
-        # Regression for alpha.2 pre-push: historical Persian-named docs may
+        # Regression for alpha.3 pre-push: historical Persian-named docs may
         # exist in the repository, but they are not part of the CI overlay or
         # Inno installer payload. The manifest is the archive boundary.
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
@@ -180,15 +180,15 @@ class PackageTests(unittest.TestCase):
         script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
         lowered = script.lower()
         service = lowered.index("--startup auto install")
-        service_sid = lowered.index("sidtype hrmcentral unrestricted")
-        acl = lowered.index("nt service\\hrmcentral:(oi)(ci)m")
-        hardening = lowered.index("/inheritance:r /t")
+        service_sid = lowered.index("sidtype hrmcentralservice unrestricted")
+        acl = lowered.index("nt service\\hrmcentralservice:(oi)(ci)m")
+        hardening = lowered.index("/inheritance:d /t")
         final_health = lowered.index("آزمون نهایی tls")
         self.assertLess(service, service_sid)
         self.assertLess(service_sid, acl)
         self.assertLess(acl, hardening)
         self.assertLess(hardening, final_health)
-        self.assertIn("config hrmcentral obj= localsystem", lowered)
+        self.assertIn('config hrmcentralservice obj= "nt authority\\localservice" password= ""', lowered)
         self.assertIn("hrm_stage|", lowered)
         self.assertIn("logprotecteddiagnostics", lowered)
         self.assertNotIn("/t /c", lowered)
@@ -197,11 +197,11 @@ class PackageTests(unittest.TestCase):
         script = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8")
         lowered = script.lower()
         self.assertIn("get-ciminstance win32_service", lowered)
-        self.assertIn("startname -ne 'localsystem'", lowered)
+        self.assertIn("startname -ne 'nt authority\\localservice'", lowered)
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.2.0-alpha.2'", lowered)
+        self.assertIn("version -ne '0.2.0-alpha.3'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -217,6 +217,55 @@ class PackageTests(unittest.TestCase):
         self.assertIn("actions/setup-python@v7", workflow)
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
+
+    def test_ci_manifest_never_contains_local_cache_or_generated_worktree_paths(self):
+        manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
+        forbidden_parts = {".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", ".venv", "venv", "__pycache__", "build-output", ".git"}
+        for item in manifest["files"]:
+            parts = Path(item["path"]).parts
+            self.assertFalse(forbidden_parts.intersection(parts), item["path"])
+
+    def test_release_builder_explicitly_excludes_pytest_cache(self):
+        builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
+        self.assertIn('".pytest_cache"', builder)
+        self.assertIn("is_stable_overlay_file", builder)
+        self.assertNotIn('for path in sorted(ROOT.rglob("*")):\n        relative = path.relative_to(ROOT)', builder)
+
+    def test_manifest_gate_verifies_content_hashes(self):
+        validator = (PROJECT / "ci" / "validate_package_contract.py").read_text(encoding="utf-8")
+        self.assertIn("Package manifest SHA-256 mismatch", validator)
+        self.assertIn("sha256_file", validator)
+
+    def test_clean_checkout_gate_requires_manifest_files_in_git(self):
+        validator = (PROJECT / "ci" / "validate_package_contract.py").read_text(encoding="utf-8")
+        self.assertIn("--require-git-tracked", validator)
+        self.assertIn('["git", "ls-files", "-z"]', validator)
+        workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
+        self.assertIn("validate_package_contract.py --require-git-tracked", workflow)
+
+    def test_proven_alpha4_upgrade_contract_is_preserved(self):
+        script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8").lower()
+        smoke = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8").lower()
+        self.assertIn("service-stop-before-copy", script)
+        self.assertIn("--stop-windows-service hrmcentralservice", script)
+        self.assertIn('config hrmcentralservice obj= "nt authority\\localservice" password= ""', script)
+        self.assertIn("sidtype hrmcentralservice unrestricted", script)
+        self.assertIn("service-stop-before-copy", smoke)
+        self.assertIn("firstfileentryindex", smoke)
+        self.assertIn("nt authority\\localservice", smoke)
+        self.assertNotIn("hrmcentral obj= localsystem", script)
+
+    def test_frozen_qt_client_smoke_test_is_restored(self):
+        client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
+        builder = (PROJECT / "build" / "windows" / "build_windows.py").read_text(encoding="utf-8")
+        self.assertIn('--smoke-test', client)
+        self.assertIn('[DIST_DIR / "HRM.exe", "--smoke-test"]', builder)
+
+    def test_public_installer_does_not_persist_synthetic_seed(self):
+        script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        self.assertIn('DestName: "hrm-seed.sqlite"', script)
+        self.assertIn('Flags: dontcopy noencryption', script)
+        self.assertNotIn('DestDir: "{app}\\Server\\data\\seed"', script)
 
 
 if __name__ == "__main__":
