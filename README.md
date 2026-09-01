@@ -1,16 +1,17 @@
-# HRM v0.4.0-alpha.3 — Clean Runner Enterprise Candidate
+# HRM v0.5.0-alpha.1 — Full Native v4.9 UI Candidate
 
-این Candidate روی چهار Baseline سبز قبلی ساخته شده است. هدف این Milestone اتصال کنترل‌شده چهار فایل خصوصی به بک‌اند Enterprise، با حفظ چارت تأییدشده ۵۶۸ پستی است.
+این Candidate روی Baseline تست‌شده `v0.4.0-alpha.3` ساخته شده است. هدف این Milestone پیاده‌سازی همه صفحه‌های مرجع v4.9 به‌صورت Native روی بک‌اند امن Enterprise، بدون تغییر پرریسک در مسیر نصب، سرویس، TLS، ACL، Upgrade و مهاجرت داده است.
 
 ## تغییرات اصلی
 
-- تشخیص درست ۱۳۵۶ پرسنل از دو منبع اصلی بدون دوباره‌شماری برگه خلاصه.
-- اعمال ۵۹۰ نگاشت تکمیلی واحد سازمانی از فایل شهرستان.
-- حفظ ۵۳۶ پست ثابت، ۳۲ پست بانام، جمع ۵۶۸ و پست تأییدشده صفحه ۱۶.
-- پیش‌آزمون تطبیق کامل شماره پرسنلی و کد پست با دیتابیس Enterprise.
-- Backup همراه SHA-256، تراکنش یکپارچه، Audit batch و Rollback خودکار.
-- ابزار مستقل `HRMMigration.exe` با پشتیبانی آفلاین `.xls` و `.xlsx`.
-- حفظ کامل Service/TLS/ACL/Upgrade/Uninstall از Baseline سبز.
+- دوازده صفحه مرجع v4.9 شامل چارت، وضعیت چارت، فهرست پرسنل، تحصیلات، وضعیت، سن، گزارش‌ها، Excel، کاربران، سوابق/پشتیبان، سلامت و تنظیمات.
+- حفظ داشبورد، واحدها و پست‌ها، گردش کار و اعلان‌های Enterprise.
+- جست‌وجوی سراسری، ناوبری RTL و نمایش صفحه‌ها بر اساس دسترسی واقعی Server.
+- API تحلیلی Aggregate-only؛ هیچ شناسه، پروفایل خام یا اطلاعات فردی در پاسخ داشبورد منتشر نمی‌شود.
+- Dry Run امن Excel داخل UI؛ اعمال Production همچنان فقط از مسیر گاردشده مدیر سیستم انجام می‌شود.
+- جلوگیری Server-side از محدودسازی دسترسی مالک اصلی.
+- ساخت و Refresh تمام صفحه‌های Native در Frozen UI Smoke پیش از Inno Setup.
+- حفظ قرارداد ۱۳۵۶ پرسنل و چارت ۵۳۶ ثابت + ۳۲ بانام = ۵۶۸ برای مرحله داده واقعی.
 - عدم وجود دیتای واقعی در Git؛ Seed فقط 36 رکورد Demo/Synthetic است.
 
 ## اعمال روی Branch
@@ -21,15 +22,11 @@ ZIP را در Root همان Repository استخراج کنید و اجرا کن�
 PUSH-TO-GITHUB.cmd
 ```
 
-این دستور ابتدا محیط `.venv` مجزا می‌سازد، وابستگی‌های Pin‌شده را نصب و تست‌های محلی را اجرا می‌کند. فقط پس از PASS، Stage و Commit و Push انجام می‌شود:
-
-```cmd
-PUSH-TO-GITHUB.cmd
-```
+این دستور Branch `feat/full-v49-ui-v050a1` را انتخاب می‌کند، محیط `.venv` مجزا می‌سازد، وابستگی‌های Pin‌شده و تمام تست‌های Privacy/UI/API/Migration/Package را اجرا می‌کند و فقط پس از PASS، Stage و Commit و Push انجام می‌دهد.
 
 ## Artifactها
 
-- موفق: `HRM-0.4.0-alpha.3-Tested-Setup`
-- ناموفق: `HRM-0.4.0-alpha.3-Failure-Logs`
+- موفق: `HRM-0.5.0-alpha.1-Tested-Setup`
+- ناموفق: `HRM-0.5.0-alpha.1-Failure-Logs`
 
 این Candidate زمانی Windows-Tested است که Build + Frozen Migration Smoke + Inno Setup + Clean Install + Login + Service/TLS/ACL + Upgrade + Data Preservation + Uninstall در GitHub Actions سبز شوند.

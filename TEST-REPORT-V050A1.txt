@@ -1,0 +1,27 @@
+HRM v0.5.0-alpha.1 - Full Native v4.9 UI Candidate Verification
+================================================================
+
+Baseline
+--------
+- Source revision base: f5aea17 (v0.4.0-alpha.3 tested baseline)
+- Previous Windows acceptance: clean install, TLS, LocalService, ACL,
+  bootstrap login, forced password change, in-place upgrade, data
+  preservation and uninstall.
+
+New acceptance scope
+--------------------
+- Twelve v4.9 reference pages are represented in the native client.
+- Dashboard, organization/positions, workflow and notifications are retained.
+- Aggregate analytics return no raw personnel identifiers or profile payloads.
+- Education and age pages expose explicit missing-data states.
+- Excel integration is Dry Run only; no database apply control exists in UI.
+- User access is enforced by the server and owner permissions cannot be denied.
+- Every native page is constructed and refreshed by the frozen UI smoke test.
+- Public package remains free of private Excel/CSV/export data.
+
+Windows acceptance required after push
+--------------------------------------
+- Full Python regression and package contract.
+- Four frozen executables and full-page native UI smoke.
+- Setup clean install, login, upgrade, data preservation and uninstall.
+- Artifact: HRM-0.5.0-alpha.1-Tested-Setup.

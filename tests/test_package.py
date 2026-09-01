@@ -49,13 +49,13 @@ class PackageTests(unittest.TestCase):
     def test_isolated_local_gate_environment_is_never_packaged(self):
         gitignore = (PROJECT / ".gitignore").read_text(encoding="utf-8")
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
-        apply = (PROJECT / "APPLY-V040A3.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V050A1.cmd").read_text(encoding="utf-8")
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
         self.assertIn(".venv/", gitignore)
         self.assertIn('".venv"', builder)
         self.assertIn("python -m venv .venv", apply)
         self.assertIn("--only-binary=:all: -r ci\\requirements-source-gates.txt", apply)
-        self.assertIn("ci\\validate_v040a3_candidate.py", apply)
+        self.assertIn("ci\\validate_v050a1_candidate.py", apply)
         self.assertFalse(any(".venv" in Path(item["path"]).parts for item in manifest["files"]))
 
     def test_native_client_has_no_browser_engine(self):
@@ -228,7 +228,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.4.0-alpha.3'", lowered)
+        self.assertIn("version -ne '0.5.0-alpha.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -278,14 +278,14 @@ class PackageTests(unittest.TestCase):
 
     def test_guarded_push_runs_isolated_alpha3_gates_before_commit(self):
         push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
-        gate = push.index('call "%~dp0APPLY-V040A3.cmd"')
+        gate = push.index('call "%~dp0APPLY-V050A1.cmd"')
         stage = push.index("git add -A")
         commit = push.index("git commit -m")
-        remote = push.index("git push -u origin feat/real-data-import-v040a2")
+        remote = push.index("git push -u origin feat/full-v49-ui-v050a1")
         self.assertLess(gate, stage)
         self.assertLess(stage, commit)
         self.assertLess(commit, remote)
-        self.assertIn("local v0.4.0-alpha.3 gates failed. Nothing will be committed or pushed", push)
+        self.assertIn("local v0.5.0-alpha.1 gates failed. Nothing will be committed or pushed", push)
         self.assertIn(".venv\\Scripts\\python.exe", push)
 
     def test_proven_alpha4_upgrade_contract_is_preserved(self):

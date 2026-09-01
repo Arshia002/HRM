@@ -1,0 +1,15 @@
+{
+  "product": "HRM",
+  "version": "0.5.0-alpha.1",
+  "candidate_kind": "full-native-v49-ui-integration",
+  "baseline": "HRM-0.4.0-alpha.3-Tested-Setup",
+  "client_engine": "PySide6-native",
+  "reference_pages": 12,
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  },
+  "contains_private_data": false
+}

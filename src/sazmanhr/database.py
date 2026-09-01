@@ -630,7 +630,27 @@ class Repository:
                 """SELECT id,username,display_name,role,is_active,must_change_password,created_at,
                    updated_at,row_version FROM users ORDER BY display_name,username"""
             ).fetchall()
-        return [dict(row) for row in rows]
+            result: list[dict[str, Any]] = []
+            for row in rows:
+                item = dict(row)
+                base = {entry[0] for entry in conn.execute(
+                    "SELECT permission FROM role_permissions WHERE role=?", (item["role"],)
+                )}
+                overrides = {
+                    entry["permission"]: entry["effect"]
+                    for entry in conn.execute(
+                        "SELECT permission,effect FROM user_permissions WHERE user_id=?", (item["id"],)
+                    )
+                }
+                for permission, effect in overrides.items():
+                    if effect == "allow":
+                        base.add(permission)
+                    else:
+                        base.discard(permission)
+                item["permissions"] = sorted(base)
+                item["permission_overrides"] = overrides
+                result.append(item)
+        return result
 
     def mfa_status(self, user_id: str) -> dict[str, bool]:
         with self.connect() as conn:
@@ -664,8 +684,11 @@ class Repository:
         if invalid:
             raise ValueError("ریز‌دسترسی نامعتبر است.")
         with self.write() as conn:
-            if not conn.execute("SELECT 1 FROM users WHERE id=?", (target_user_id,)).fetchone():
+            target = conn.execute("SELECT role FROM users WHERE id=?", (target_user_id,)).fetchone()
+            if not target:
                 raise ValueError("کاربر پیدا نشد.")
+            if target["role"] == "owner":
+                raise ValueError("دسترسی‌های مالک اصلی قابل محدودسازی نیست.")
             conn.execute("DELETE FROM user_permissions WHERE user_id=?", (target_user_id,))
             for permission, effect in overrides.items():
                 conn.execute("INSERT INTO user_permissions(user_id,permission,effect) VALUES(?,?,?)",
@@ -713,6 +736,196 @@ class Repository:
             revision = conn.execute("SELECT COALESCE(MAX(revision),0) FROM change_feed").fetchone()[0]
         return {"personnel": total, "active": active, "units": units, "positions": positions,
                 "unassigned": unassigned, "revision": revision}
+
+    @staticmethod
+    def _profile_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, list):
+            parts = [Repository._profile_text(item) for item in value]
+            return "، ".join(part for part in parts if part)
+        if isinstance(value, dict):
+            for key in ("title", "label", "value", "level", "degree", "name"):
+                text = Repository._profile_text(value.get(key))
+                if text:
+                    return text
+        return ""
+
+    @staticmethod
+    def _profile_value(profile: dict[str, Any], keys: tuple[str, ...]) -> Any:
+        normalized = {str(key).strip().lower().replace("-", "_"): value for key, value in profile.items()}
+        for key in keys:
+            lookup = key.strip().lower().replace("-", "_")
+            if lookup in normalized and normalized[lookup] not in (None, "", [], {}):
+                return normalized[lookup]
+        return None
+
+    @staticmethod
+    def _age_from_profile(profile: dict[str, Any]) -> int | None:
+        digits = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+        direct = Repository._profile_value(profile, ("age", "سن"))
+        if direct is not None:
+            raw = "".join(ch for ch in Repository._profile_text(direct).translate(digits) if ch.isdigit())
+            if raw and 15 <= int(raw[:3]) <= 100:
+                return int(raw[:3])
+        birth = Repository._profile_value(profile, (
+            "birth_date", "date_of_birth", "birth_year", "سال تولد", "تاریخ تولد", "تاريخ تولد",
+        ))
+        if birth is None:
+            return None
+        raw = Repository._profile_text(birth).translate(digits)
+        numbers = [int(part) for part in raw.replace("-", "/").split("/") if part.isdigit()]
+        if not numbers:
+            return None
+        year = numbers[0]
+        current = dt.datetime.now(UTC).year
+        age = (current - 621 - year) if 1250 <= year <= 1500 else current - year
+        return age if 15 <= age <= 100 else None
+
+    def analytics(self) -> dict[str, Any]:
+        """Return aggregate-only HR analytics for the native v4.9 dashboards.
+
+        The response deliberately excludes personnel identifiers and raw profile
+        fields. Optional age/education values are read from ``extra_json`` when
+        a private deployment has imported them; public demo builds therefore
+        exercise the same UI with explicit missing-data states.
+        """
+        with self.connect() as conn:
+            summary = self.stats()
+            page = conn.execute(
+                "SELECT approved_fixed_posts,approved_named_posts,approved_total_posts FROM chart_pages WHERE page_no=1"
+            ).fetchone()
+            chart_pages = int(conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0])
+            profiles = conn.execute("SELECT extra_json FROM personnel").fetchall()
+            quality = {
+                "missing_unit": int(conn.execute(
+                    "SELECT COUNT(*) FROM personnel WHERE TRIM(organizational_unit)=''"
+                ).fetchone()[0]),
+                "missing_position": int(conn.execute(
+                    "SELECT COUNT(*) FROM personnel WHERE TRIM(position_code)='' AND TRIM(position_title)=''"
+                ).fetchone()[0]),
+                "missing_location": int(conn.execute(
+                    "SELECT COUNT(*) FROM personnel WHERE TRIM(actual_location)=''"
+                ).fetchone()[0]),
+                "missing_gender": int(conn.execute(
+                    "SELECT COUNT(*) FROM personnel WHERE TRIM(gender)=''"
+                ).fetchone()[0]),
+            }
+            unit_rows = conn.execute(
+                """SELECT CASE WHEN TRIM(p.organizational_unit)='' THEN 'ثبت‌نشده' ELSE TRIM(p.organizational_unit) END AS unit,
+                          COUNT(*) AS personnel,
+                          SUM(CASE WHEN TRIM(p.position_code)='' AND TRIM(p.position_title)='' THEN 1 ELSE 0 END) AS unassigned
+                   FROM personnel p GROUP BY unit ORDER BY personnel DESC,unit LIMIT 20"""
+            ).fetchall()
+
+        education: dict[str, int] = {}
+        age_bands = {"کمتر از ۳۰": 0, "۳۰ تا ۳۹": 0, "۴۰ تا ۴۹": 0, "۵۰ تا ۵۹": 0, "۶۰ و بیشتر": 0}
+        known_age = 0
+        for row in profiles:
+            try:
+                profile = json.loads(row["extra_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                profile = {}
+            if not isinstance(profile, dict):
+                profile = {}
+            degree = self._profile_text(self._profile_value(profile, (
+                "education", "education_level", "degree", "degree_title", "مدرک تحصیلی", "مقطع تحصیلی",
+            )))
+            if degree:
+                education[degree] = education.get(degree, 0) + 1
+            age = self._age_from_profile(profile)
+            if age is not None:
+                known_age += 1
+                if age < 30:
+                    age_bands["کمتر از ۳۰"] += 1
+                elif age < 40:
+                    age_bands["۳۰ تا ۳۹"] += 1
+                elif age < 50:
+                    age_bands["۴۰ تا ۴۹"] += 1
+                elif age < 60:
+                    age_bands["۵۰ تا ۵۹"] += 1
+                else:
+                    age_bands["۶۰ و بیشتر"] += 1
+
+        total = int(summary["personnel"])
+        quality["missing_education"] = max(0, total - sum(education.values()))
+        quality["missing_age"] = max(0, total - known_age)
+        summary.update({
+            "chart_pages": chart_pages,
+            "approved_fixed_posts": int(page[0] or 0) if page else 0,
+            "approved_named_posts": int(page[1] or 0) if page else 0,
+            "approved_chart_total": int(page[2] or 0) if page else 0,
+        })
+        # Keep the aggregate SQL connection lifetime short; these queries do
+        # not expose raw records and are safe to recompute on each refresh.
+        with self.connect() as conn:
+            def grouped(column: str, limit: int = 20) -> list[dict[str, Any]]:
+                rows = conn.execute(
+                    f"""SELECT CASE WHEN TRIM({column})='' THEN 'ثبت‌نشده' ELSE TRIM({column}) END AS label,
+                               COUNT(*) AS count
+                        FROM personnel GROUP BY label ORDER BY count DESC,label LIMIT ?""",
+                    (limit,),
+                ).fetchall()
+                return [{"label": row["label"], "count": int(row["count"])} for row in rows]
+
+            distributions = {
+                "employment": grouped("employment_group"),
+                "employment_subtype": grouped("employment_subtype"),
+                "status": grouped("status"),
+                "gender": grouped("gender"),
+                "unit": grouped("organizational_unit"),
+                "location": grouped("actual_location"),
+                "activity_area": grouped("activity_area"),
+                "education": [
+                    {"label": label, "count": count}
+                    for label, count in sorted(education.items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "age": [{"label": label, "count": count} for label, count in age_bands.items()],
+            }
+        return {
+            "summary": summary,
+            "distributions": distributions,
+            "quality": quality,
+            "unit_comparison": [
+                {"unit": row["unit"], "personnel": int(row["personnel"]), "unassigned": int(row["unassigned"] or 0)}
+                for row in unit_rows
+            ],
+            "generated_at": utc_now(),
+        }
+
+    def migration_status(self) -> dict[str, Any]:
+        with self.connect() as conn:
+            metadata = dict(conn.execute(
+                "SELECT key,value FROM metadata WHERE key IN ('dataset_kind','schema_version','product_id','schema_generation')"
+            ))
+            personnel = int(conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0])
+            chart_pages = int(conn.execute("SELECT COUNT(*) FROM chart_pages").fetchone()[0])
+            page = conn.execute(
+                "SELECT approved_fixed_posts,approved_named_posts,approved_total_posts FROM chart_pages WHERE page_no=1"
+            ).fetchone()
+            backup = conn.execute(
+                "SELECT created_at,filename,integrity_ok,kind FROM backup_catalog ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+        chart = {
+            "fixed": int(page[0] or 0) if page else 0,
+            "named": int(page[1] or 0) if page else 0,
+            "total": int(page[2] or 0) if page else 0,
+            "pages": chart_pages,
+        }
+        return {
+            "dataset_kind": metadata.get("dataset_kind", "unknown"),
+            "schema_version": int(metadata.get("schema_version", "0")),
+            "schema_generation": metadata.get("schema_generation", ""),
+            "personnel": personnel,
+            "chart": chart,
+            "last_backup": dict(backup) if backup else None,
+            "enterprise_target_ready": personnel == 1356 and chart["total"] == 568,
+            "expected": {"personnel": 1356, "fixed": 536, "named": 32, "total": 568},
+        }
 
     def organization_summary(self) -> dict[str, int]:
         with self.connect() as conn:

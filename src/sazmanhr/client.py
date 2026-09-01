@@ -19,6 +19,19 @@ from . import __version__
 from .api_client import ApiClient, ApiError
 from .config import ClientConfig, default_client_config
 from .branding import APP_NAME, COMPANY_NAME, PRODUCT_TAGLINE, PRODUCT_TITLE, logo_path
+from .ui_v49 import (
+    HistoryBackupPage,
+    ImportPage,
+    PersonnelAgePage,
+    PersonnelEducationPage,
+    PersonnelStatusPage,
+    ReportsPage,
+    SettingsPage,
+    StatusChartPage,
+    SystemHealthPage,
+    UsersPage,
+    V49_REFERENCE_PAGES,
+)
 
 APP_STYLE = """
 QWidget { font-family: Tahoma, Segoe UI; font-size: 10pt; color: #18324A; }
@@ -29,8 +42,10 @@ QFrame#brandPanel { background: #102F4C; border-radius: 20px; }
 QFrame#loginPanel { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 20px; }
 QFrame#card { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 14px; }
 QFrame#softCard { background: #F9FBFD; border: 1px solid #E4EBF2; border-radius: 12px; }
+QFrame#pageHero { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 15px; }
+QFrame#metricCard { background: #FFFFFF; border: 1px solid #DCE5EF; border-radius: 13px; min-width: 150px; }
 QListWidget#nav { background: transparent; border: none; color: #DDE9F3; outline: none; padding: 4px; }
-QListWidget#nav::item { padding: 12px 15px; margin: 3px 4px; border-radius: 9px; }
+QListWidget#nav::item { padding: 10px 13px; margin: 2px 4px; border-radius: 9px; }
 QListWidget#nav::item:hover { background: #153B5C; color: white; }
 QListWidget#nav::item:selected { background: #0F8B8D; color: white; font-weight: 700; }
 QPushButton { background: #0F8B8D; color: white; border: none; border-radius: 8px; padding: 9px 16px; font-weight: 600; }
@@ -50,8 +65,17 @@ QLabel#brandTitle { color: white; font-size: 21pt; font-weight: 800; }
 QLabel#brandSubtitle { color: #DDE9F3; font-size: 10pt; }
 QLabel#cardValue { font-size: 25pt; font-weight: 800; color: #0F8B8D; }
 QLabel#cardCaption { color: #6A7D8F; font-size: 9pt; font-weight: 600; }
+QLabel#eyebrow { color: #0F8B8D; font-size: 8.5pt; font-weight: 700; }
+QLabel#sectionTitle { color: #153B5C; font-size: 12pt; font-weight: 800; }
+QLabel#metricNote { color: #7C8FA1; font-size: 8pt; }
+QLabel#distributionValue { color: #0F8B8D; font-weight: 800; }
+QLabel#emptyState { background: #F8FAFC; color: #6A7D8F; border: 1px dashed #C9D6E3; border-radius: 9px; padding: 16px; }
+QLabel#healthBadge { background: #EAF6F3; color: #137A62; border: 1px solid #BCE2D7; border-radius: 9px; padding: 9px 12px; font-weight: 700; }
 QLabel#connectionBadge { background: #E5F5EE; color: #178A62; border-radius: 10px; padding: 5px 10px; font-weight: 700; }
 QLabel#userBadge { background: #EDF3F8; color: #153B5C; border-radius: 10px; padding: 7px 11px; }
+QProgressBar { background: #E7EEF4; border: none; border-radius: 4px; }
+QProgressBar::chunk { background: #0F8B8D; border-radius: 4px; }
+QScrollArea { background: #F5F8FC; }
 QStatusBar { background: #FFFFFF; color: #6A7D8F; border-top: 1px solid #E4EBF2; }
 """
 
@@ -272,6 +296,8 @@ class Page(QWidget):
 
 
 class DashboardPage(Page):
+    page_key = "dashboard"
+
     def __init__(self, window: "MainWindow"):
         super().__init__(window, "داشبورد مدیریتی")
         toolbar = QHBoxLayout()
@@ -431,6 +457,8 @@ class PersonnelProfileDialog(QDialog):
 
 
 class PersonnelPage(Page):
+    page_key = "personnelDirectory"
+
     columns = (("personnel_no", "شماره"), ("full_name", "نام کامل"),
                ("organizational_unit", "واحد"), ("position_title", "عنوان پست"),
                ("employment_group", "استخدام"), ("status", "وضعیت"))
@@ -529,6 +557,8 @@ class PersonnelPage(Page):
 
 
 class OrganizationPage(Page):
+    page_key = "organization"
+
     def __init__(self, window: "MainWindow"):
         super().__init__(window, "ساختار سازمانی، واحدها و پست‌ها")
         self.summary = QHBoxLayout(); self.layout.addLayout(self.summary)
@@ -582,6 +612,8 @@ class OrganizationPage(Page):
 
 
 class ChartPage(Page):
+    page_key = "formalChart"
+
     def __init__(self, window: "MainWindow"):
         super().__init__(window, "چارت سازمانی")
         bar = QHBoxLayout()
@@ -657,6 +689,8 @@ class ChartPage(Page):
 
 
 class WorkflowPage(Page):
+    page_key = "workflow"
+
     columns = (("title", "عنوان"), ("workflow_type", "نوع"), ("entity_id", "موضوع"),
                ("state", "وضعیت"), ("assigned_name", "مسئول"), ("updated_at", "آخرین تغییر"))
 
@@ -714,6 +748,8 @@ class WorkflowPage(Page):
 
 
 class NotificationsPage(Page):
+    page_key = "notifications"
+
     def __init__(self, window: "MainWindow"):
         super().__init__(window, "اعلان‌ها")
         self.table = QTableWidget(0, 4)
@@ -817,22 +853,39 @@ class AuditPage(Page):
 
 
 class MainWindow(QMainWindow):
-    NAV_ITEMS = (
-        "داشبورد",
-        "پرسنل",
-        "واحدها و پست‌ها",
-        "چارت سازمانی",
-        "گردش کار",
-        "اعلان‌ها",
-    )
+    ROLE_PERMISSIONS = {
+        "owner": {"read", "edit_personnel", "delete_personnel", "edit_chart", "edit_dashboard",
+                  "view_audit", "manage_users", "backup", "restore", "manage_workflows",
+                  "view_monitoring", "manage_security"},
+        "admin": {"read", "edit_personnel", "delete_personnel", "edit_chart", "edit_dashboard",
+                  "view_audit", "manage_users", "backup", "manage_workflows", "view_monitoring",
+                  "manage_security"},
+        "editor": {"read", "edit_personnel", "edit_chart", "edit_dashboard", "manage_workflows"},
+        "viewer": {"read"},
+    }
 
-    def __init__(self, client: ApiClient, user: dict[str, Any], poll_seconds: int):
+    def __init__(self, client: ApiClient, user: dict[str, Any], poll_seconds: int,
+                 config: ClientConfig | None = None):
         super().__init__()
         self.client, self.user, self.revision = client, user, 0
+        self.config = config or ClientConfig(
+            server_url=str(getattr(client, "base_url", "https://127.0.0.1:8765")),
+            poll_seconds=poll_seconds,
+            tls_fingerprint=str(getattr(client, "tls_fingerprint", "")),
+        )
+        try:
+            identity = client.request("GET", "/api/me")
+        except ApiError:
+            identity = None
+        if identity:
+            self.user = identity.get("user", user)
+            self.permissions = set(identity.get("permissions", []))
+        else:
+            self.permissions = set(self.ROLE_PERMISSIONS.get(str(user.get("role", "viewer")), {"read"}))
         self.setWindowTitle(f"HRM {__version__} — {user['display_name']}")
         self.setWindowIcon(QIcon(str(logo_path())))
         self.setMinimumSize(1180, 700)
-        self.resize(1380, 820)
+        self.resize(1480, 880)
 
         shell = QWidget()
         root = QHBoxLayout(shell)
@@ -842,7 +895,7 @@ class MainWindow(QMainWindow):
 
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(248)
+        sidebar.setFixedWidth(278)
         side = QVBoxLayout(sidebar)
         side.setContentsMargins(14, 18, 14, 16)
         side.setSpacing(8)
@@ -871,6 +924,7 @@ class MainWindow(QMainWindow):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setSpacing(1)
+        self.nav.setLayoutDirection(Qt.RightToLeft)
         side.addWidget(self.nav, 1)
 
         user_panel = QFrame()
@@ -912,6 +966,11 @@ class MainWindow(QMainWindow):
         heading.addWidget(self.page_title)
         heading.addWidget(self.page_context)
         top.addLayout(heading, 1)
+        self.global_search = QLineEdit()
+        self.global_search.setPlaceholderText("جست‌وجوی سراسری پرسنل…")
+        self.global_search.setMinimumWidth(260)
+        self.global_search.returnPressed.connect(self.open_personnel_search)
+        top.addWidget(self.global_search)
         self.connection_badge = QLabel("● اتصال امن برقرار است")
         self.connection_badge.setObjectName("connectionBadge")
         self.connection_badge.setAlignment(Qt.AlignCenter)
@@ -919,6 +978,10 @@ class MainWindow(QMainWindow):
         self.user_badge = QLabel(user.get("display_name") or user.get("username") or "کاربر")
         self.user_badge.setObjectName("userBadge")
         top.addWidget(self.user_badge)
+        self.notification_button = QPushButton("◇ پیام‌ها")
+        self.notification_button.setProperty("secondary", True)
+        self.notification_button.clicked.connect(self.open_notifications)
+        top.addWidget(self.notification_button)
         content_box.addWidget(topbar)
 
         self.stack = QStackedWidget()
@@ -927,26 +990,43 @@ class MainWindow(QMainWindow):
         root.addWidget(content, 1)
         self.setCentralWidget(shell)
 
-        definitions: list[tuple[str, Page]] = [
-            ("داشبورد", DashboardPage(self)), ("پرسنل", PersonnelPage(self)),
-            ("واحدها و پست‌ها", OrganizationPage(self)), ("چارت سازمانی", ChartPage(self)),
-            ("گردش کار", WorkflowPage(self)), ("اعلان‌ها", NotificationsPage(self)),
+        definitions: list[tuple[str, str, QWidget, set[str]]] = [
+            ("▦", "داشبورد مدیریتی", DashboardPage(self), {"read"}),
+            ("⌘", "چارت سازمان", ChartPage(self), {"read"}),
+            ("⌁", "وضعیت چارت", StatusChartPage(self), {"read"}),
+            ("☷", "لیست کلی پرسنل", PersonnelPage(self), {"read"}),
+            ("🎓", "تحصیلات پرسنل", PersonnelEducationPage(self), {"read"}),
+            ("⚡", "وضعیت پرسنل", PersonnelStatusPage(self), {"read"}),
+            ("◷", "سن پرسنل", PersonnelAgePage(self), {"read"}),
+            ("▤", "گزارش‌های مدیریتی", ReportsPage(self), {"read"}),
+            ("⌂", "واحدها و پست‌ها", OrganizationPage(self), {"read"}),
+            ("⇄", "گردش کار", WorkflowPage(self), {"read"}),
+            ("◇", "اعلان‌ها", NotificationsPage(self), {"read"}),
+            ("⇧", "ورود و به‌روزرسانی Excel", ImportPage(self), {"edit_personnel"}),
+            ("♙", "مدیریت کاربران", UsersPage(self), {"manage_users"}),
+            ("↻", "سوابق فعالیت و پشتیبان", HistoryBackupPage(self), {"view_audit", "backup"}),
+            ("✓", "سلامت سیستم", SystemHealthPage(self), {"view_monitoring"}),
+            ("⚙", "تنظیمات", SettingsPage(self), set()),
         ]
-        if user["role"] in {"owner", "admin"}:
-            definitions.extend((("ممیزی", AuditPage(self)), ("مدیریت و پایش", AdminPage(self))))
         self.pages: list[Page] = []
         self.page_names: list[str] = []
-        for title, page in definitions:
-            self.nav.addItem(title)
+        self.page_keys: dict[str, int] = {}
+        for icon, title, page, required in definitions:
+            if not required.issubset(self.permissions):
+                continue
+            self.nav.addItem(f"{icon}  {title}")
             self.stack.addWidget(page)
             self.pages.append(page)
             self.page_names.append(title)
+            page_key = str(getattr(page, "page_key", ""))
+            if page_key:
+                self.page_keys[page_key] = len(self.pages) - 1
         self.nav.currentRowChanged.connect(self.change_page)
         self.nav.setCurrentRow(0)
         self.statusBar().showMessage("HRM آماده است")
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.poll_changes)
-        self.timer.start(max(2, poll_seconds) * 1000)
+        self.timer.start(max(2, self.config.poll_seconds) * 1000)
 
     def call(self, method: str, path: str, data=None, query=None):
         try:
@@ -960,6 +1040,20 @@ class MainWindow(QMainWindow):
             self.page_title.setText(self.page_names[index])
             self.stack.setCurrentIndex(index)
             self.pages[index].refresh()
+
+    def open_personnel_search(self) -> None:
+        index = next((idx for idx, page in enumerate(self.pages) if isinstance(page, PersonnelPage)), -1)
+        if index < 0:
+            return
+        page = self.pages[index]
+        page.search.setText(self.global_search.text().strip())
+        self.nav.setCurrentRow(index)
+        page.refresh()
+
+    def open_notifications(self) -> None:
+        index = next((idx for idx, page in enumerate(self.pages) if isinstance(page, NotificationsPage)), -1)
+        if index >= 0:
+            self.nav.setCurrentRow(index)
 
     def poll_changes(self) -> None:
         try:
@@ -985,12 +1079,48 @@ class MainWindow(QMainWindow):
 
 class _UiSmokeClient:
     """Minimal in-process client used only to construct the frozen native shell in CI."""
+    base_url = "https://127.0.0.1:8765"
+    tls_fingerprint = "AA:BB:CC:DD"
+
     def request(self, method: str, path: str, data=None, query=None):
+        if path == "/api/me":
+            return {
+                "user": {"id": "ci-owner", "username": "ci.preview", "display_name": "کاربر آزمایشی",
+                         "role": "owner", "is_active": 1, "must_change_password": 0, "row_version": 1},
+                "permissions": sorted(MainWindow.ROLE_PERMISSIONS["owner"]),
+                "mfa": {"configured": False, "enabled": False},
+            }
         if path == "/api/dashboard":
             return {
-                "stats": {"personnel": 36, "active": 36, "units": 8, "unassigned": 2, "revision": 1},
+                "stats": {"personnel": 36, "active": 36, "units": 8, "positions": 568,
+                          "unassigned": 2, "revision": 1},
                 "widgets": [],
             }
+        if path == "/api/analytics":
+            return {
+                "summary": {"personnel": 36, "active": 36, "units": 8, "positions": 568,
+                            "unassigned": 2, "approved_chart_total": 568, "approved_fixed_posts": 536,
+                            "approved_named_posts": 32, "chart_pages": 53},
+                "distributions": {
+                    "employment": [{"label": "رسمی", "count": 20}, {"label": "شرکتی", "count": 16}],
+                    "employment_subtype": [{"label": "دائم", "count": 20}, {"label": "قراردادی", "count": 16}],
+                    "status": [{"label": "فعال", "count": 36}],
+                    "gender": [{"label": "ثبت‌نشده", "count": 36}],
+                    "unit": [{"label": "معاونت منابع انسانی", "count": 36}],
+                    "location": [{"label": "ستاد", "count": 36}],
+                    "activity_area": [{"label": "منابع انسانی", "count": 36}],
+                    "education": [], "age": [],
+                },
+                "quality": {"missing_unit": 0, "missing_position": 2, "missing_location": 0,
+                            "missing_gender": 36, "missing_education": 36, "missing_age": 36},
+                "unit_comparison": [{"unit": "معاونت منابع انسانی", "personnel": 36, "unassigned": 2}],
+                "generated_at": "2026-09-01T00:00:00+00:00",
+            }
+        if path == "/api/migration/status":
+            return {"dataset_kind": "synthetic-demo", "schema_version": 5, "schema_generation": "16",
+                    "personnel": 36, "chart": {"fixed": 536, "named": 32, "total": 568, "pages": 53},
+                    "last_backup": None, "enterprise_target_ready": False,
+                    "expected": {"personnel": 1356, "fixed": 536, "named": 32, "total": 568}}
         if path == "/api/organization/summary":
             return {"units": 8, "root_units": 8, "positions": 34, "occupied_positions": 32, "vacant_positions": 2}
         if path == "/api/units":
@@ -999,6 +1129,31 @@ class _UiSmokeClient:
             return {"items": [{"id": "p1", "code": "P-001", "title": "کارشناس منابع انسانی", "unit_title": "معاونت منابع انسانی", "location": "ستاد", "person_id": "demo-1", "occupant_name": "کاربر آزمایشی"}], "total": 1}
         if path == "/api/personnel":
             return {"items": [], "total": 0, "facets": {"units": [], "employment": [], "statuses": [], "locations": []}}
+        if path == "/api/chart/pages":
+            return {"items": [{"page_no": 1, "title": "چارت مصوب", "approved_total_posts": 568}]}
+        if path.startswith("/api/chart/pages/"):
+            return {"page_no": 1, "title": "چارت مصوب", "approved_fixed_posts": 536,
+                    "approved_named_posts": 32, "approved_total_posts": 568, "row_version": 1,
+                    "nodes": [{"id": "n1", "text": "مدیرعامل", "x": 42, "y": 8, "w": 16, "h": 7}],
+                    "lines": []}
+        if path == "/api/workflows":
+            return {"items": []}
+        if path == "/api/notifications":
+            return {"items": []}
+        if path == "/api/users":
+            return {"items": [{"id": "ci-owner", "username": "ci.preview", "display_name": "کاربر آزمایشی",
+                               "role": "owner", "is_active": 1, "must_change_password": 0,
+                               "permissions": sorted(MainWindow.ROLE_PERMISSIONS["owner"]),
+                               "permission_overrides": {}}]}
+        if path == "/api/audit":
+            return {"items": [], "chain_valid": True}
+        if path == "/api/backups":
+            return {"items": []}
+        if path == "/api/monitoring":
+            return {"metrics": {"database_size_bytes": 1024, "active_sessions": 1,
+                                "unread_notifications": 0, "pending_workflows": 0,
+                                "audit_chain_valid": True, "schema_version": 5, "last_backup": None},
+                    "events": []}
         if path == "/api/changes":
             return {"items": [], "current_revision": 1}
         return {"items": []}
@@ -1008,18 +1163,24 @@ class _UiSmokeClient:
 
 
 def run_ui_smoke(config: ClientConfig, app: QApplication) -> int:
-    """Construct the login and dashboard shell without network I/O."""
+    """Construct and refresh every native v4.9 page without network I/O."""
     login = LoginDialog(config)
     login.ensurePolished()
     if login.minimumWidth() < 800:
         raise RuntimeError("Login shell minimum width contract failed")
     login.close()
-    user = {"username": "ci.preview", "display_name": "کاربر آزمایشی", "role": "user"}
-    window = MainWindow(_UiSmokeClient(), user, 60)  # type: ignore[arg-type]
+    user = {"id": "ci-owner", "username": "ci.preview", "display_name": "کاربر آزمایشی",
+            "role": "owner", "is_active": 1, "must_change_password": 0, "row_version": 1}
+    window = MainWindow(_UiSmokeClient(), user, 60, config)  # type: ignore[arg-type]
     window.ensurePolished()
-    app.processEvents()
-    if window.minimumWidth() < 1100 or window.nav.count() < 5:
+    for index in range(window.nav.count()):
+        window.nav.setCurrentRow(index)
+        app.processEvents()
+    if window.minimumWidth() < 1100 or window.nav.count() < 15:
         raise RuntimeError("Main shell geometry/navigation contract failed")
+    missing = set(V49_REFERENCE_PAGES) - set(window.page_keys)
+    if missing:
+        raise RuntimeError(f"Native v4.9 page coverage failed: {sorted(missing)}")
     window.timer.stop()
     window.close()
     print(f"HRM native UI smoke test OK: {__version__}")
@@ -1055,7 +1216,7 @@ def main(argv: list[str] | None = None) -> int:
     login = LoginDialog(config)
     if login.exec() != QDialog.Accepted or not login.client or not login.user:
         return 1
-    window = MainWindow(login.client, login.user, config.poll_seconds)
+    window = MainWindow(login.client, login.user, config.poll_seconds, config)
     window.show()
     return app.exec()
 

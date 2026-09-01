@@ -1,8 +1,11 @@
 import unittest
 import importlib.metadata
+import os
+import subprocess
+import sys
 from pathlib import Path
 
-from ci.validate_v040a3_candidate import dependency_errors, pinned_requirements
+from ci.validate_v050a1_candidate import dependency_errors, pinned_requirements
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -15,8 +18,9 @@ class CiPipelineTests(unittest.TestCase):
         manifest = (PROJECT / "ci" / "write-ci-manifest.ps1").read_text(encoding="utf-8")
 
         self.assertIn("feat/native-v49-shell", workflow)
-        self.assertIn("HRM-0.4.0-alpha.3-Tested-Setup", workflow)
-        self.assertIn("HRM-0.4.0-alpha.3-Failure-Logs", workflow)
+        self.assertIn("HRM-0.5.0-alpha.1-Tested-Setup", workflow)
+        self.assertIn("HRM-0.5.0-alpha.1-Failure-Logs", workflow)
+        self.assertIn("feat/full-v49-ui-v050a1", workflow)
         self.assertIn("write-ci-manifest.ps1", workflow)
         self.assertIn("Validate packaging contract", workflow)
         self.assertIn("validate_package_contract.py", workflow)
@@ -36,14 +40,14 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("in_place_upgrade = $true", manifest)
         self.assertIn("uninstall_preserves_data = $true", manifest)
         self.assertIn("service_identity = 'NT AUTHORITY\\LocalService'", manifest)
-        self.assertIn("Tee-Object -FilePath .\\migration-validation.log", workflow)
-        self.assertGreaterEqual(workflow.count("migration-validation.log"), 3)
+        self.assertIn("Tee-Object -FilePath .\\candidate-validation.log", workflow)
+        self.assertGreaterEqual(workflow.count("candidate-validation.log"), 3)
 
     def test_source_dependencies_precede_migration_and_inno(self):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         contract = workflow.index("Validate packaging contract")
         dependencies = workflow.index("Install source gate dependencies")
-        migration = workflow.index("Validate v0.4.0 alpha.3 clean runner candidate")
+        migration = workflow.index("Validate v0.5.0 alpha.1 full native UI candidate")
         inno = workflow.index("Install Inno Setup")
         build = workflow.index("Build and unit test")
         self.assertLess(contract, dependencies)
@@ -69,6 +73,31 @@ class CiPipelineTests(unittest.TestCase):
             return source[name]
 
         self.assertEqual(dependency_errors(source, missing), ["openpyxl missing (expected 3.1.5)"])
+
+    def test_v050_validator_is_directly_executable(self):
+        result = subprocess.run(
+            [sys.executable, str(PROJECT / "ci" / "validate_v050a1_candidate.py"), "--dependency-self-check"],
+            cwd=PROJECT,
+            text=True,
+            capture_output=True,
+            timeout=90,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("direct-import contract", result.stdout)
+
+    def test_v050_validator_supplies_src_path_in_a_clean_environment(self):
+        environment = os.environ.copy()
+        environment.pop("PYTHONPATH", None)
+        result = subprocess.run(
+            [sys.executable, str(PROJECT / "ci" / "validate_v050a1_candidate.py"), "--source-path-self-check"],
+            cwd=PROJECT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            timeout=90,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("clean source-path contract", result.stdout)
 
 
 if __name__ == "__main__":

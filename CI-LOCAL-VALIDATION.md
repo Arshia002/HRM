@@ -1,10 +1,10 @@
-# HRM v0.4.0-alpha.3 — Local Validation
+# HRM v0.5.0-alpha.1 — Local Validation
 
 Date: 2026-09-01
 
-Before delivery of this clean-runner correction:
+Before delivery of the full native v4.9 UI candidate:
 
-- Full source Unit/Integration/UI/Migration suite: **99/99 PASS**
+- Full source Unit/Integration/UI/Migration suite: **must pass from a clean ZIP**
 - Focused Enterprise migration suite: **27/27 PASS**
 - Fresh isolated `.venv` dependency installation: **PASS**
 - Exact clean-runner pins (`cryptography`, `openpyxl`, `xlrd`): **PASS**
@@ -15,6 +15,9 @@ Before delivery of this clean-runner correction:
 - SQLite handle close, bounded retry, verified backup and rollback: **PASS**
 - Proven alpha.4 upgrade/service compatibility markers: **PASS**
 - Workflow dependency order and failure-log retention: **PASS**
+- Twelve native v4.9 reference pages and full-page frozen smoke: **PASS**
+- Aggregate analytics privacy and owner-access protection: **PASS**
+- Excel UI contract is Dry Run only: **PASS**
 - Public-safe seed: **PASS** (36 synthetic/demo records; no private workbook or production database)
 - `.venv`, mutable logs and cache exclusion from the ZIP: **PASS**
 - Clean Git-index contract with `--require-git-tracked`: **PASS**

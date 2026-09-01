@@ -47,7 +47,7 @@ class ApiServer(ThreadingHTTPServer):
 
 
 class ApiHandler(BaseHTTPRequestHandler):
-    server_version = "HRM/0.4"
+    server_version = "HRM/0.5"
     sys_version = ""
 
     @property
@@ -140,6 +140,14 @@ class ApiHandler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/dashboard":
             self.repo.require(user, "read")
             self._json(HTTPStatus.OK, {"stats": self.repo.stats(), "widgets": self.repo.list_widgets()})
+            return
+        if method == "GET" and path == "/api/analytics":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, self.repo.analytics())
+            return
+        if method == "GET" and path == "/api/migration/status":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, self.repo.migration_status())
             return
         if method in {"POST", "PUT"} and path == "/api/dashboard/widgets":
             self.repo.require(user, "edit_dashboard")

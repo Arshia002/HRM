@@ -8,6 +8,7 @@ on:
       - feat/native-v49-shell
       - feat/real-data-import-v040a1
       - feat/real-data-import-v040a2
+      - feat/full-v49-ui-v050a1
     tags:
       - "v*"
 
@@ -48,10 +49,10 @@ jobs:
           & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.4.0 alpha.3 clean runner candidate
+      - name: Validate v0.5.0 alpha.1 full native UI candidate
         shell: pwsh
         run: |
-          & python .\ci\validate_v040a3_candidate.py 2>&1 | Tee-Object -FilePath .\migration-validation.log
+          & python .\ci\validate_v050a1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup
@@ -89,7 +90,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.3-Tested-Setup
+          name: HRM-0.5.0-alpha.1-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -109,7 +110,7 @@ jobs:
             build-output/build.log
             ci-contract-validation.log
             source-gate-dependencies.log
-            migration-validation.log
+            candidate-validation.log
           if-no-files-found: error
           retention-days: 30
 
@@ -117,12 +118,12 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.3-Failure-Logs
+          name: HRM-0.5.0-alpha.1-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log
             source-gate-dependencies.log
-            migration-validation.log
+            candidate-validation.log
             build-output/installer/*.log
             build-output/installer/*.txt
             build-output/installer/*.json

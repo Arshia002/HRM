@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Fail-fast validation for the HRM Windows packaging contract.
 
-alpha.3 hardens the overlay boundary after alpha.2 failed in GitHub Actions
-because PACKAGE-MANIFEST.json accidentally contained local .pytest_cache
-files. Those files existed on the packager machine but were ignored by Git,
-so a clean CI checkout could never contain them.
+The v0.5 candidate preserves the clean-checkout boundary established by
+alpha.3 and adds a complete native v4.9 page-coverage contract.
 """
 from __future__ import annotations
 
@@ -20,7 +18,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.4.0-alpha.3"
+EXPECTED_VERSION = "0.5.0-alpha.1"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -148,6 +146,7 @@ def validate_builder_contract() -> None:
 
 def validate_branding_contract() -> None:
     client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
+    pages = (PROJECT / "src" / "sazmanhr" / "ui_v49.py").read_text(encoding="utf-8")
     branding = (PROJECT / "src" / "sazmanhr" / "branding.py").read_text(encoding="utf-8")
     client_spec = (PROJECT / "build" / "windows" / "client.spec").read_text(encoding="utf-8")
     required = ("brandPanel", "loginPanel", "topbar", "connectionBadge", "--ui-smoke-test", "COMPANY_NAME")
@@ -162,9 +161,27 @@ def validate_branding_contract() -> None:
             fail(f"Brand asset missing or invalid: {relative}")
     if 'COMPANY_NAME = "شرکت توزیع نیروی برق استان کرمانشاه"' not in branding:
         fail("Official company branding constant is missing")
-    if "PySide6.QtWebEngine" in client:
-        fail("Native client must not use Qt WebEngine/WebView")
-    print("PASS native v4.9 shell and HRM branding contract")
+    for page_key in (
+        "formalChart", "statusChart", "personnelDirectory", "personnelEducation",
+        "jobFamilies", "personnelAge", "reports", "imports", "users", "history",
+        "systemHealth", "settings",
+    ):
+        if f'"{page_key}"' not in client + pages:
+            fail(f"Native v4.9 reference page is missing: {page_key}")
+    for page_class in (
+        "StatusChartPage", "PersonnelEducationPage", "PersonnelStatusPage",
+        "PersonnelAgePage", "ReportsPage", "ImportPage", "UsersPage",
+        "HistoryBackupPage", "SystemHealthPage", "SettingsPage",
+    ):
+        if f"class {page_class}" not in pages or f"{page_class}(self)" not in client:
+            fail(f"Native v4.9 page is not wired into the client: {page_class}")
+    lowered = (client + pages).lower()
+    for forbidden in ("qtwebengine", "qwebengine", "chromium", "electron"):
+        if forbidden in lowered:
+            fail(f"Native client contains forbidden browser-runtime marker: {forbidden}")
+    if "set(V49_REFERENCE_PAGES) - set(window.page_keys)" not in client:
+        fail("Frozen native UI smoke does not enforce complete v4.9 page coverage")
+    print("PASS full native v4.9 shell, page coverage and HRM branding contract")
 
 
 def validate_versions() -> None:

@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================================
-echo   HRM v0.4.0-alpha.3 - isolated guarded GitHub CI push
+echo   HRM v0.5.0-alpha.1 - full native v4.9 UI guarded push
 echo ============================================================
 echo.
 
@@ -11,21 +11,21 @@ where git.exe >nul 2>&1 || (echo ERROR: git.exe not found.& exit /b 1)
 where python.exe >nul 2>&1 || (echo ERROR: python.exe not found.& exit /b 1)
 
 git rev-parse --is-inside-work-tree >nul 2>&1 || (echo ERROR: run this from the HRM Git repository root.& exit /b 1)
-git show-ref --verify --quiet refs/heads/feat/real-data-import-v040a2
+git show-ref --verify --quiet refs/heads/feat/full-v49-ui-v050a1
 if errorlevel 1 (
-  git switch -c feat/real-data-import-v040a2
+  git switch -c feat/full-v49-ui-v050a1
 ) else (
-  git switch feat/real-data-import-v040a2
+  git switch feat/full-v49-ui-v050a1
 )
 if errorlevel 1 (
-  echo ERROR: could not select the Enterprise data integration feature branch.
+  echo ERROR: could not select the full native v4.9 UI feature branch.
   exit /b 1
 )
 
-echo Running mandatory v0.4.0-alpha.3 isolated local gates before staging...
-call "%~dp0APPLY-V040A3.cmd"
+echo Running mandatory v0.5.0-alpha.1 isolated local gates before staging...
+call "%~dp0APPLY-V050A1.cmd"
 if errorlevel 1 (
-  echo ERROR: local v0.4.0-alpha.3 gates failed. Nothing will be committed or pushed.
+  echo ERROR: local v0.5.0-alpha.1 gates failed. Nothing will be committed or pushed.
   exit /b 1
 )
 
@@ -51,12 +51,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "fix: install pinned source gates before alpha3 validation"
+git commit -m "feat: integrate full native v4.9 UI for v0.5 alpha1"
 if errorlevel 1 exit /b 1
 
-git push -u origin feat/real-data-import-v040a2
+git push -u origin feat/full-v49-ui-v050a1
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: v0.4.0-alpha.3 was pushed. Watch GitHub Actions for Windows validation.
+echo PASS: v0.5.0-alpha.1 was pushed. Watch GitHub Actions for Windows validation.
 exit /b 0

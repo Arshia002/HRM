@@ -34,6 +34,7 @@ ROOT_FILES = {
     "TEST-REPORT-V040A2.txt", "VERSION-V040A2.json",
     "APPLY-V040A3.cmd", "README-V040A3.txt", "RUN-MIGRATION-V040A3.cmd",
     "TEST-REPORT-V040A3.txt", "VERSION-V040A3.json",
+    "APPLY-V050A1.cmd", "README-V050A1.txt", "TEST-REPORT-V050A1.txt", "VERSION-V050A1.json",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 

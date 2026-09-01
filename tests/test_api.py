@@ -62,6 +62,13 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(result["total"], 36)
         self.assertEqual(len(result["items"]), 5)
+        status, analytics = self.request("GET", "/api/analytics", token=token)
+        self.assertEqual(status, 200)
+        self.assertEqual(analytics["summary"]["personnel"], 36)
+        self.assertEqual(analytics["summary"]["approved_chart_total"], 0)
+        status, migration = self.request("GET", "/api/migration/status", token=token)
+        self.assertEqual(status, 200)
+        self.assertEqual(migration["expected"]["personnel"], 1356)
 
 
 if __name__ == "__main__":

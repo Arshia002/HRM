@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "src" / "sazmanhr" / "client.py"
+V49_PAGES = ROOT / "src" / "sazmanhr" / "ui_v49.py"
 BRANDING = ROOT / "src" / "sazmanhr" / "branding.py"
 CLIENT_SPEC = ROOT / "build" / "windows" / "client.spec"
 
@@ -13,6 +14,7 @@ CLIENT_SPEC = ROOT / "build" / "windows" / "client.spec"
 class NativeUiShellTests(unittest.TestCase):
     def test_client_source_is_valid_python(self) -> None:
         ast.parse(CLIENT.read_text(encoding="utf-8"), filename=str(CLIENT))
+        ast.parse(V49_PAGES.read_text(encoding="utf-8"), filename=str(V49_PAGES))
 
     def test_native_v49_shell_markers_are_present(self) -> None:
         text = CLIENT.read_text(encoding="utf-8")
@@ -29,10 +31,39 @@ class NativeUiShellTests(unittest.TestCase):
             self.assertIn(marker, text)
 
     def test_native_shell_has_no_webview(self) -> None:
-        text = CLIENT.read_text(encoding="utf-8")
+        text = CLIENT.read_text(encoding="utf-8") + V49_PAGES.read_text(encoding="utf-8")
         self.assertNotIn("QtWebEngine", text)
         self.assertNotIn("QWebEngine", text)
         self.assertNotIn("WebView", text)
+
+    def test_all_v49_reference_pages_are_native_and_smoke_refreshed(self) -> None:
+        client = CLIENT.read_text(encoding="utf-8")
+        pages = V49_PAGES.read_text(encoding="utf-8")
+        for marker in (
+            '"formalChart"', '"statusChart"', '"personnelDirectory"',
+            '"personnelEducation"', '"jobFamilies"', '"personnelAge"',
+            '"reports"', '"imports"', '"users"', '"history"',
+            '"systemHealth"', '"settings"',
+        ):
+            self.assertIn(marker, client + pages)
+        for page_class in (
+            "StatusChartPage", "PersonnelEducationPage", "PersonnelStatusPage",
+            "PersonnelAgePage", "ReportsPage", "ImportPage", "UsersPage",
+            "HistoryBackupPage", "SystemHealthPage", "SettingsPage",
+        ):
+            self.assertIn(f"class {page_class}", pages)
+            self.assertIn(f"{page_class}(self)", client)
+        self.assertIn("for index in range(window.nav.count())", client)
+        self.assertIn("set(V49_REFERENCE_PAGES) - set(window.page_keys)", client)
+
+    def test_v49_analytics_and_import_pages_use_real_service_contracts(self) -> None:
+        pages = V49_PAGES.read_text(encoding="utf-8")
+        self.assertIn('self.call("GET", "/api/analytics")', pages)
+        self.assertIn('self.call("GET", "/api/migration/status")', pages)
+        self.assertIn('"--expected-personnel"', pages)
+        self.assertIn('"--expected-fixed", "536"', pages)
+        self.assertIn('"--expected-named", "32"', pages)
+        self.assertNotIn("--apply-to-db", pages)
 
     def test_official_hrm_branding_is_bundled(self) -> None:
         branding = BRANDING.read_text(encoding="utf-8")

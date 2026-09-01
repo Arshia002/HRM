@@ -1,17 +1,15 @@
-# راهنمای CI — HRM v0.3.0-alpha.2
+# راهنمای CI — HRM v0.5.0-alpha.1
 
-این Build اولین Feature Milestone بعد از Baseline سبز `0.2.0-alpha.3` است و روی Native UI/Branding تمرکز دارد.
+این Build رابط Native کامل v4.9 را روی Baseline سبز `0.4.0-alpha.3` ادغام می‌کند.
 
 ## روش اعمال
 
-1. روی Branch `feat/native-v49-shell` بمانید.
-2. ZIP را در Root Repository استخراج کنید.
-3. `APPLY-V030A2.cmd` را اجرا کنید.
-4. پس از PASS، `git add -A` بزنید.
-5. `python ci\validate_package_contract.py --require-git-tracked` را اجرا کنید.
-6. Commit و Push کنید.
-7. Artifact سبز: `HRM-0.3.0-alpha.2-Tested-Setup`.
-8. Artifact قرمز: `HRM-0.3.0-alpha.2-Failure-Logs`.
+1. ZIP را در Root همان Repository استخراج کنید.
+2. فقط `PUSH-TO-GITHUB.cmd` را اجرا کنید.
+3. اسکریپت Branch `feat/full-v49-ui-v050a1` را می‌سازد یا انتخاب می‌کند.
+4. `APPLY-V050A1.cmd`، Regression کامل و clean-index gate اجباری اجرا می‌شوند.
+5. Artifact سبز: `HRM-0.5.0-alpha.1-Tested-Setup`.
+6. Artifact قرمز: `HRM-0.5.0-alpha.1-Failure-Logs`.
 
 ## Windows acceptance path
 
