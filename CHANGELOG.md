@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0-alpha.3
+
+- ساخت Candidate جدید از Commit شکست‌خورده GitHub به‌جای بازنام‌گذاری ZIP نسخه alpha.2.
+- رفع Root Cause قطعی `ModuleNotFoundError` برای `openpyxl` و `cryptography` روی Runner تمیز.
+- افزودن `ci/requirements-source-gates.txt` با نسخه‌های دقیق و الزام همسانی با Build requirements.
+- ساخت خودکار `.venv` مجزا در `APPLY-V040A3.cmd` و نصب وابستگی‌ها پیش از هر تست محلی.
+- نصب و ثبت وابستگی‌های Source Gate پیش از Migration Validation در GitHub Actions.
+- انتقال نصب Inno Setup به بعد از عبور Source Gate برای اجرای سریع‌تر و Fail-fast.
+- حفظ لاگ Dependency، Package، Migration و Build در Artifact شکست.
+- حفظ بدون تغییر قرارداد ۵۳۶ ثابت + ۳۲ بانام = ۵۶۸ و پست صفحه ۱۶.
+
 ## 0.4.0-alpha.2
 
 - اتصال guarded چهار فایل خصوصی به دیتابیس Enterprise generation 16.

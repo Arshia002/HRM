@@ -1,4 +1,4 @@
-# HRM v0.4.0-alpha.2 — Enterprise Data Integration Candidate
+# HRM v0.4.0-alpha.3 — Clean Runner Enterprise Candidate
 
 این Candidate روی چهار Baseline سبز قبلی ساخته شده است. هدف این Milestone اتصال کنترل‌شده چهار فایل خصوصی به بک‌اند Enterprise، با حفظ چارت تأییدشده ۵۶۸ پستی است.
 
@@ -18,21 +18,18 @@
 ZIP را در Root همان Repository استخراج کنید و اجرا کنید:
 
 ```cmd
-APPLY-V040A2.cmd
+PUSH-TO-GITHUB.cmd
 ```
 
-پس از PASS:
+این دستور ابتدا محیط `.venv` مجزا می‌سازد، وابستگی‌های Pin‌شده را نصب و تست‌های محلی را اجرا می‌کند. فقط پس از PASS، Stage و Commit و Push انجام می‌شود:
 
 ```cmd
-git add -A
-python ci\validate_package_contract.py --require-git-tracked
-git commit -m "feat: add HRM v0.4.0-alpha.2 Enterprise data integration"
-git push origin feat/real-data-import-v040a2
+PUSH-TO-GITHUB.cmd
 ```
 
 ## Artifactها
 
-- موفق: `HRM-0.4.0-alpha.2-Tested-Setup`
-- ناموفق: `HRM-0.4.0-alpha.2-Failure-Logs`
+- موفق: `HRM-0.4.0-alpha.3-Tested-Setup`
+- ناموفق: `HRM-0.4.0-alpha.3-Failure-Logs`
 
 این Candidate زمانی Windows-Tested است که Build + Frozen Migration Smoke + Inno Setup + Clean Install + Login + Service/TLS/ACL + Upgrade + Data Preservation + Uninstall در GitHub Actions سبز شوند.

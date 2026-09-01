@@ -20,7 +20,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.4.0-alpha.2"
+EXPECTED_VERSION = "0.4.0-alpha.3"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",

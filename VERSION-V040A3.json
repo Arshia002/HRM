@@ -1,0 +1,14 @@
+{
+  "product": "HRM",
+  "version": "0.4.0-alpha.3",
+  "candidate_kind": "clean-runner-dependency-fix",
+  "base_feature": "v0.4.0-alpha.2 Enterprise data integration",
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  },
+  "source_gate_requirements": "ci/requirements-source-gates.txt",
+  "contains_private_data": false
+}

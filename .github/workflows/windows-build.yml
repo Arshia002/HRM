@@ -32,10 +32,9 @@ jobs:
           python-version: "3.11"
           architecture: "x64"
           cache: "pip"
-
-      - name: Install Inno Setup
-        shell: powershell
-        run: choco install innosetup --no-progress -y
+          cache-dependency-path: |
+            ci/requirements-source-gates.txt
+            build/windows/requirements-build.txt
 
       - name: Validate packaging contract
         shell: pwsh
@@ -43,11 +42,21 @@ jobs:
           & python .\ci\validate_package_contract.py --require-git-tracked 2>&1 | Tee-Object -FilePath .\ci-contract-validation.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.4.0 alpha.2 Enterprise migration
+      - name: Install source gate dependencies
         shell: pwsh
         run: |
-          & python .\ci\validate_v040a2_migration.py 2>&1 | Tee-Object -FilePath .\migration-validation.log
+          & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Validate v0.4.0 alpha.3 clean runner candidate
+        shell: pwsh
+        run: |
+          & python .\ci\validate_v040a3_candidate.py 2>&1 | Tee-Object -FilePath .\migration-validation.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup --no-progress -y
 
       - name: Build and unit test
         shell: cmd
@@ -80,7 +89,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.2-Tested-Setup
+          name: HRM-0.4.0-alpha.3-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -99,6 +108,7 @@ jobs:
             build-output/installer/dependencies.txt
             build-output/build.log
             ci-contract-validation.log
+            source-gate-dependencies.log
             migration-validation.log
           if-no-files-found: error
           retention-days: 30
@@ -107,10 +117,11 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.2-Failure-Logs
+          name: HRM-0.4.0-alpha.3-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log
+            source-gate-dependencies.log
             migration-validation.log
             build-output/installer/*.log
             build-output/installer/*.txt

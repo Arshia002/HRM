@@ -22,6 +22,8 @@ data/export/
 *.csv
 
 ci-contract-validation.log
+migration-validation.log
+source-gate-dependencies.log
 # BEGIN HRM V040A1 PRIVATE MIGRATION DATA
 migration/input/*
 !migration/input/.gitkeep

@@ -1,0 +1,28 @@
+HRM v0.4.0-alpha.3 - Clean Runner Candidate Verification
+
+Root cause from GitHub migration-validation.log:
+- openpyxl was missing when test_v040a2_enterprise_import was imported.
+- cryptography was missing when the dry-run CLI imported the Enterprise repository.
+- The workflow ran migration validation before installing Python dependencies.
+
+Durable correction:
+- Exact source-gate dependencies are maintained in ci/requirements-source-gates.txt.
+- Source pins must match the Windows build requirement pins.
+- GitHub installs and logs these dependencies before migration validation.
+- Local APPLY creates an isolated .venv and uses the same requirement file.
+- Inno Setup installation runs only after source validation passes.
+- Dependency, package, migration and build logs are retained in failure artifacts.
+
+No private workbook or production database is included.
+The approved chart remains 536 fixed + 32 named = 568 total; page 16 remains 24.
+
+Final local verification on 2026-09-01:
+- Fresh isolated environment and exact wheel-only dependency install: PASS
+- Enterprise migration tests: 27/27 PASS
+- Full source Unit/Integration/UI/Migration tests: 99/99 PASS
+- Package contract and manifest verification: PASS
+- Private workbook/database exclusion: PASS
+- Local .venv exclusion from the release ZIP: PASS
+
+GitHub Windows acceptance is intentionally not claimed here. The Windows installer,
+service, ACL, login, upgrade and uninstall gates run after push on windows-2022.

@@ -10,7 +10,10 @@ from pathlib import Path
 
 
 PROJECT = Path(__file__).resolve().parents[1]
-GENERATED_PARTS = {"build-output", "__pycache__", ".git"}
+GENERATED_PARTS = {
+    "build-output", "__pycache__", ".git", ".venv", "venv",
+    ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox",
+}
 
 
 class PackageTests(unittest.TestCase):
@@ -42,6 +45,18 @@ class PackageTests(unittest.TestCase):
             and not any(part in GENERATED_PARTS for part in path.relative_to(PROJECT).parts)
         ]
         self.assertEqual(found, [])
+
+    def test_isolated_local_gate_environment_is_never_packaged(self):
+        gitignore = (PROJECT / ".gitignore").read_text(encoding="utf-8")
+        builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V040A3.cmd").read_text(encoding="utf-8")
+        manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
+        self.assertIn(".venv/", gitignore)
+        self.assertIn('".venv"', builder)
+        self.assertIn("python -m venv .venv", apply)
+        self.assertIn("--only-binary=:all: -r ci\\requirements-source-gates.txt", apply)
+        self.assertIn("ci\\validate_v040a3_candidate.py", apply)
+        self.assertFalse(any(".venv" in Path(item["path"]).parts for item in manifest["files"]))
 
     def test_native_client_has_no_browser_engine(self):
         source = "\n".join(path.read_text(encoding="utf-8") for path in (PROJECT / "src").rglob("*.py")).lower()
@@ -213,7 +228,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.4.0-alpha.2'", lowered)
+        self.assertIn("version -ne '0.4.0-alpha.3'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -261,16 +276,17 @@ class PackageTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         self.assertIn("validate_package_contract.py --require-git-tracked", workflow)
 
-    def test_guarded_push_runs_local_alpha2_gates_before_commit(self):
+    def test_guarded_push_runs_isolated_alpha3_gates_before_commit(self):
         push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
-        gate = push.index('call "%~dp0APPLY-V040A2.cmd"')
+        gate = push.index('call "%~dp0APPLY-V040A3.cmd"')
         stage = push.index("git add -A")
         commit = push.index("git commit -m")
         remote = push.index("git push -u origin feat/real-data-import-v040a2")
         self.assertLess(gate, stage)
         self.assertLess(stage, commit)
         self.assertLess(commit, remote)
-        self.assertIn("local v0.4.0-alpha.2 gates failed. Nothing will be committed or pushed", push)
+        self.assertIn("local v0.4.0-alpha.3 gates failed. Nothing will be committed or pushed", push)
+        self.assertIn(".venv\\Scripts\\python.exe", push)
 
     def test_proven_alpha4_upgrade_contract_is_preserved(self):
         script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8").lower()

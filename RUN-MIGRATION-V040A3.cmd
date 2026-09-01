@@ -3,7 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 if "%~1"=="" (
-  echo Usage: RUN-MIGRATION-V040A2.cmd "D:\HRM-Private-Data" "D:\HRM-Migration-Output" "D:\HRM-Private-Backup" [database]
+  echo Usage: RUN-MIGRATION-V040A3.cmd "D:\HRM-Private-Data" "D:\HRM-Migration-Output" "D:\HRM-Private-Backup" [database]
   exit /b 2
 )
 if "%~2"=="" (echo ERROR: private output directory is required.& exit /b 2)
