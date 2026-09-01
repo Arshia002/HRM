@@ -22,6 +22,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+echo Running mandatory v0.4.0-alpha.2 local gates before staging...
+call "%~dp0APPLY-V040A2.cmd"
+if errorlevel 1 (
+  echo ERROR: local v0.4.0-alpha.2 gates failed. Nothing will be committed or pushed.
+  exit /b 1
+)
+
 git add -A
 if errorlevel 1 exit /b 1
 
@@ -38,7 +45,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "feat: add HRM v0.4.0-alpha.2 Enterprise data integration"
+git commit -m "fix: harden Windows SQLite rollback and diagnostics"
 if errorlevel 1 exit /b 1
 
 git push -u origin feat/real-data-import-v040a2

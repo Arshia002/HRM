@@ -33,6 +33,8 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("in_place_upgrade = $true", manifest)
         self.assertIn("uninstall_preserves_data = $true", manifest)
         self.assertIn("service_identity = 'NT AUTHORITY\\LocalService'", manifest)
+        self.assertIn("Tee-Object -FilePath .\\migration-validation.log", workflow)
+        self.assertGreaterEqual(workflow.count("migration-validation.log"), 3)
 
 
 if __name__ == "__main__":

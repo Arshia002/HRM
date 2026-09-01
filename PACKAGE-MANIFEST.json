@@ -14,8 +14,8 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 4247,
-      "sha256": "04cf4537bf7f36b687d1f41601966b9dcf4f2d68cd1bf381c4ddac06a0ced90e"
+      "bytes": 4376,
+      "sha256": "10e2b1a47ed878055d028fc0fb5d24f0cc604d6e658e23bd2069879df0158668"
     },
     {
       "path": ".gitignore",
@@ -44,8 +44,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 11081,
-      "sha256": "f5b36fe9cd17ae27ea090ba07c58373839fe0b8b0b6a1c1cf6f9a7c743e0f608"
+      "bytes": 11576,
+      "sha256": "39cc5b958b63dcf9c8e2c2fc5dba131efc78bb015d9ee9592e94db9a1f5c75bb"
     },
     {
       "path": "CI-LOCAL-VALIDATION.md",
@@ -74,8 +74,8 @@
     },
     {
       "path": "PUSH-TO-GITHUB.cmd",
-      "bytes": 1483,
-      "sha256": "540c5d2c38ffd922e31625dec02e94aada31f814bff2f1ab75fe2e4c0a85ce8b"
+      "bytes": 1694,
+      "sha256": "f7ea426ad9d0412646f8b5dd3646e1412a90aa66e8c17eaec87e07e11ad9502c"
     },
     {
       "path": "README-V040A1.txt",
@@ -129,8 +129,8 @@
     },
     {
       "path": "TEST-REPORT-V040A2.txt",
-      "bytes": 1244,
-      "sha256": "0a4a4e6c6f67c5c8fa98855972e8fd18b6f9416323764fd56eb007c38432f073"
+      "bytes": 1495,
+      "sha256": "41c07d44d8c3381886028fccf200ccb8679d083eb490e0ff760a250c0a2b72b7"
     },
     {
       "path": "TEST-REPORT.md",
@@ -276,6 +276,11 @@
       "path": "docs/API.md",
       "bytes": 1945,
       "sha256": "fead446ed9ae6ec1576f8d7a0e4f3bf1eeb18ab6e42406f98267c80d9968294d"
+    },
+    {
+      "path": "docs/ROOT-CAUSE-V040A2-WINDOWS-SQLITE-LOCK.md",
+      "bytes": 1733,
+      "sha256": "b19c193797f7f061db6cc1641af7261587f2da5ccc3419ecb0c8c85a56029786"
     },
     {
       "path": "docs/V040A1-REAL-DATA-MIGRATION.md",
@@ -429,8 +434,8 @@
     },
     {
       "path": "tests/test_ci_pipeline.py",
-      "bytes": 1827,
-      "sha256": "af4c13e7dffbe5549f773f0d8e21719e4c3a6caf0a3b09b3e28e8a147e1b894d"
+      "bytes": 1990,
+      "sha256": "9f4e4bd5289a9045f05ae67b4ac6dc1db942d4ddd010f863789bf52e84758219"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -449,8 +454,8 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 16055,
-      "sha256": "f7797d831f780e5ada4bb9a87d4afea281d5c7744da667d31f7fdbaa3194ceb0"
+      "bytes": 16644,
+      "sha256": "ef8e3a7ab450b3c632881c9e4686d7b39fa3b23a77ff7b9c994cefc040f2f04b"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -489,8 +494,8 @@
     },
     {
       "path": "tests/test_v040a2_enterprise_import.py",
-      "bytes": 9783,
-      "sha256": "4136b17bb9335674fba9474d666ec6ce34044f7fa159a40e36ed33d723fd01b7"
+      "bytes": 12890,
+      "sha256": "12d4eaa6bc53a62ba39782aa1e4e641f692f3dc9463548947c86cace0a090177"
     },
     {
       "path": "tests/test_windows_service_control.py",
@@ -559,8 +564,8 @@
     },
     {
       "path": "tools/real_data_migration/production.py",
-      "bytes": 9338,
-      "sha256": "d1336d3eb7fbbc677a79f5d947fcfa830ea0637c7ff6ae73cad0c18ffd9f7d50"
+      "bytes": 10494,
+      "sha256": "4be1503292b79f9140c97ce6a89e66967adab13359ce00b550b0dbfc01fe448a"
     },
     {
       "path": "tools/real_data_migration/readers.py",

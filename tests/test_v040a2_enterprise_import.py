@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import contextlib
+import gc
 import hashlib
 import json
+import os
+import shutil
 import sqlite3
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -18,7 +22,12 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from sazmanhr.database import Repository
 from tools.real_data_migration.engine import load_directory
-from tools.real_data_migration.production import CONFIRMATION, apply_to_enterprise, validate_target
+from tools.real_data_migration.production import (
+    CONFIRMATION,
+    apply_to_enterprise,
+    replace_with_retry,
+    validate_target,
+)
 from tools.real_data_migration.reconcile import reconcile, summary
 
 
@@ -31,6 +40,37 @@ def _save_book(path: Path, sheets: list[tuple[str, list[list[object]]]]) -> None
             sheet.append(row)
     workbook.save(path)
     workbook.close()
+
+
+@contextlib.contextmanager
+def _temporary_workspace():
+    """Remove SQLite/WAL fixtures reliably without hiding persistent locks.
+
+    Windows may keep a just-closed SQLite or antivirus scan handle alive for a
+    fraction of a second. The stock TemporaryDirectory performs one immediate
+    deletion and turns that harmless race into WinError 32. Retry for at most
+    two seconds; a real connection leak still fails the test.
+    """
+    root = Path(tempfile.mkdtemp())
+    try:
+        yield root
+    finally:
+        last_error: OSError | None = None
+        for attempt in range(20):
+            try:
+                shutil.rmtree(root)
+                break
+            except FileNotFoundError:
+                break
+            except OSError as exc:
+                last_error = exc
+                gc.collect()
+                if attempt == 19:
+                    raise
+                time.sleep(0.1)
+        else:  # pragma: no cover - defensive; the loop always breaks or raises
+            assert last_error is not None
+            raise last_error
 
 
 def _private_fixture(root: Path):
@@ -94,8 +134,8 @@ def _target_database(path: Path) -> Repository:
 
 class EnterpriseImportV040A2Tests(unittest.TestCase):
     def test_private_workbook_profiles_are_reconciled_without_false_duplicates(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            ds = _private_fixture(Path(tmp))
+        with _temporary_workspace() as root:
+            ds = _private_fixture(root)
             result = summary(ds)
             self.assertEqual(result["persons"], 3)
             self.assertEqual(result["positions"], 1)
@@ -112,8 +152,7 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
             )
 
     def test_target_preflight_keeps_approved_extra_page_16_contract(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+        with _temporary_workspace() as root:
             source = root / "source"
             source.mkdir()
             ds = _private_fixture(source)
@@ -127,8 +166,7 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
             self.assertEqual(result["matched_named_assignments"], 1)
 
     def test_production_apply_is_backed_up_atomic_and_audited(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+        with _temporary_workspace() as root:
             source = root / "source"
             source.mkdir()
             ds = _private_fixture(source)
@@ -153,8 +191,7 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT approved_total_posts FROM chart_pages WHERE page_no=1").fetchone()[0], 568)
 
     def test_failed_apply_restores_verified_backup(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+        with _temporary_workspace() as root:
             source = root / "source"
             source.mkdir()
             ds = _private_fixture(source)
@@ -174,8 +211,7 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT COUNT(*) FROM import_batches").fetchone()[0], 0)
 
     def test_confirmation_is_required_before_backup_or_write(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+        with _temporary_workspace() as root:
             source = root / "source"
             source.mkdir()
             ds = _private_fixture(source)
@@ -188,6 +224,52 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
                     expected_chart_named=32, expected_chart_total=568,
                 )
             self.assertFalse((root / "backups").exists())
+
+    def test_windows_replace_retries_transient_access_denied(self):
+        with _temporary_workspace() as root:
+            source = root / "rollback.sqlite"
+            destination = root / "hrm.sqlite"
+            source.write_bytes(b"verified-backup")
+            destination.write_bytes(b"failed-import")
+            real_replace = os.replace
+            calls = 0
+
+            def transient_then_replace(src, dst):
+                nonlocal calls
+                calls += 1
+                if calls < 3:
+                    raise PermissionError(13, "transient Windows file lock", str(dst))
+                return real_replace(src, dst)
+
+            with (
+                mock.patch("tools.real_data_migration.production.os.replace", side_effect=transient_then_replace),
+                mock.patch("tools.real_data_migration.production.time.sleep") as sleep,
+            ):
+                replace_with_retry(source, destination)
+
+            self.assertEqual(destination.read_bytes(), b"verified-backup")
+            self.assertEqual(calls, 3)
+            self.assertEqual(sleep.call_count, 2)
+
+    def test_windows_replace_does_not_hide_a_persistent_lock(self):
+        with _temporary_workspace() as root:
+            source = root / "rollback.sqlite"
+            destination = root / "hrm.sqlite"
+            source.write_bytes(b"verified-backup")
+            destination.write_bytes(b"failed-import")
+            failure = PermissionError(13, "persistent Windows file lock", str(destination))
+
+            with (
+                mock.patch("tools.real_data_migration.production.os.replace", side_effect=failure) as replace,
+                mock.patch("tools.real_data_migration.production.time.sleep") as sleep,
+            ):
+                with self.assertRaises(PermissionError):
+                    replace_with_retry(source, destination)
+
+            self.assertEqual(replace.call_count, 20)
+            self.assertEqual(sleep.call_count, 19)
+            self.assertEqual(source.read_bytes(), b"verified-backup")
+            self.assertEqual(destination.read_bytes(), b"failed-import")
 
 
 if __name__ == "__main__":

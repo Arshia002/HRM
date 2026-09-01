@@ -10,6 +10,9 @@
 - افزودن `HRMMigration.exe` آفلاین با readerهای pinشده `openpyxl` و `xlrd`.
 - افزودن تست واقعی محلی روی ۱۳۵۶ پرسنل و تست‌های مصنوعی بدون انتشار PII در Git.
 - بستن صریح اتصال‌های مستقیم SQLite در تست‌های مهاجرت برای جلوگیری از قفل `hrm.sqlite` و `WinError 32` روی Windows.
+- افزودن Retry محدود برای جایگزینی اتمیک Rollback و پاک‌سازی Workspace در برابر قفل لحظه‌ای Defender/Indexing روی Windows.
+- افزودن `migration-validation.log` به Artifact موفق و ناموفق GitHub تا Traceback مرحله مهاجرت همیشه حفظ شود.
+- اجباری شدن اجرای گیت‌های محلی `APPLY-V040A2.cmd` داخل اسکریپت Push پیش از Stage، Commit و ارسال به GitHub.
 
 ## 0.3.0-alpha.2
 

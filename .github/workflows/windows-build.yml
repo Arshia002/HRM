@@ -46,7 +46,7 @@ jobs:
       - name: Validate v0.4.0 alpha.2 Enterprise migration
         shell: pwsh
         run: |
-          & python .\ci\validate_v040a2_migration.py
+          & python .\ci\validate_v040a2_migration.py 2>&1 | Tee-Object -FilePath .\migration-validation.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build and unit test
@@ -99,6 +99,7 @@ jobs:
             build-output/installer/dependencies.txt
             build-output/build.log
             ci-contract-validation.log
+            migration-validation.log
           if-no-files-found: error
           retention-days: 30
 
@@ -110,6 +111,7 @@ jobs:
           path: |
             build-output/build.log
             ci-contract-validation.log
+            migration-validation.log
             build-output/installer/*.log
             build-output/installer/*.txt
             build-output/installer/*.json

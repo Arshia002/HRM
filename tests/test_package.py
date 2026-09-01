@@ -261,6 +261,17 @@ class PackageTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         self.assertIn("validate_package_contract.py --require-git-tracked", workflow)
 
+    def test_guarded_push_runs_local_alpha2_gates_before_commit(self):
+        push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
+        gate = push.index('call "%~dp0APPLY-V040A2.cmd"')
+        stage = push.index("git add -A")
+        commit = push.index("git commit -m")
+        remote = push.index("git push -u origin feat/real-data-import-v040a2")
+        self.assertLess(gate, stage)
+        self.assertLess(stage, commit)
+        self.assertLess(commit, remote)
+        self.assertIn("local v0.4.0-alpha.2 gates failed. Nothing will be committed or pushed", push)
+
     def test_proven_alpha4_upgrade_contract_is_preserved(self):
         script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8").lower()
         smoke = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8").lower()

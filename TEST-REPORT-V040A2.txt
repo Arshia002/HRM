@@ -1,7 +1,8 @@
 HRM v0.4.0-alpha.2 - Candidate Verification Report
 
 Verified locally:
-- Full source regression suite passed: 93/93 tests.
+- Full source regression suite passed: 96/96 tests.
+- Migration-specific source gate passed: 27/27 tests.
 - All four private workbooks were read without placing private data in Git.
 - 1356 unique personnel records matched the Enterprise target exactly.
 - 590 organization-unit enrichments were applied without duplicate personnel.
@@ -14,6 +15,8 @@ Verified locally:
 - Existing chart pages, nodes, lines, users and sessions were preserved.
 - Random one-time bootstrap password passed forced-change and invalidation tests without being printed to logs.
 - Direct SQLite test handles are explicitly closed so Windows can remove and atomically restore temporary databases.
+- Transient Windows access-denied replacement is retried with a strict bound; persistent locks still fail safely.
+- Migration validation output is retained in GitHub success and failure artifacts.
 
 Required before declaring Windows-Tested:
 - Push feat/real-data-import-v040a2.

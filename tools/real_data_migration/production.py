@@ -8,6 +8,7 @@ import os
 import shutil
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,8 @@ from .reconcile import summary  # noqa: E402
 
 
 CONFIRMATION = "APPLY-TO-HRM"
+WINDOWS_FILE_RETRY_ATTEMPTS = 20
+WINDOWS_FILE_RETRY_SECONDS = 0.1
 
 
 def sha256_file(path: Path) -> str:
@@ -150,6 +153,30 @@ def create_verified_backup(database_path: Path, backup_dir: Path) -> tuple[Path,
     return backup, digest
 
 
+def replace_with_retry(source: Path, destination: Path) -> None:
+    """Replace a database file after transient Windows scanners release it.
+
+    SQLite connections are explicitly closed before this function is called.
+    Windows can nevertheless return access-denied briefly while Defender or an
+    indexing filter still holds a non-delete-sharing handle. Retry only the
+    transient permission case, keep the interval bounded, and re-raise the
+    original failure if the file never becomes replaceable.
+    """
+    last_error: PermissionError | None = None
+    for attempt in range(WINDOWS_FILE_RETRY_ATTEMPTS):
+        try:
+            os.replace(source, destination)
+            return
+        except PermissionError as exc:
+            last_error = exc
+            if attempt + 1 == WINDOWS_FILE_RETRY_ATTEMPTS:
+                break
+            time.sleep(WINDOWS_FILE_RETRY_SECONDS)
+    if last_error is None:  # pragma: no cover - loop always attempts replace
+        raise RuntimeError("Database replacement ended without a result.")
+    raise last_error
+
+
 def restore_verified_backup(database_path: Path, backup_path: Path, expected_digest: str) -> None:
     if sha256_file(backup_path) != expected_digest:
         raise RuntimeError("Automatic rollback blocked because the backup hash changed.")
@@ -159,7 +186,7 @@ def restore_verified_backup(database_path: Path, backup_path: Path, expected_dig
     if not ok:
         staged.unlink(missing_ok=True)
         raise RuntimeError(f"Automatic rollback staging failed: {detail}")
-    os.replace(staged, database_path)
+    replace_with_retry(staged, database_path)
     for suffix in ("-wal", "-shm"):
         database_path.with_name(database_path.name + suffix).unlink(missing_ok=True)
 
