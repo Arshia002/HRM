@@ -216,7 +216,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         raise BuildFailure("Python 3.11 x64 is required.")
 
     started = time.monotonic()
-    log.write("HRM 0.4.0-alpha.1 native v4.9 shell candidate build started.")
+    log.write("HRM 0.4.0-alpha.2 Enterprise data integration candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")
@@ -250,6 +250,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         ("client.spec", "HRM.exe"),
         ("server.spec", "HRMServer.exe"),
         ("service.spec", "HRMService.exe"),
+        ("migration.spec", "HRMMigration.exe"),
     )
     for spec_name, output_name in spec_outputs:
         run(
@@ -289,6 +290,10 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     # No server/network is required; this catches missing bundled branding assets
     # and Qt widget/plugin regressions before Inno Setup is compiled.
     run(log, [DIST_DIR / "HRM.exe", "--ui-smoke-test", "--config", BUILD_ROOT / "ui-smoke-client.json"])
+
+    # The production migration utility must carry both modern XLSX and legacy
+    # XLS readers; no Python installation is allowed on the target server.
+    run(log, [DIST_DIR / "HRMMigration.exe", "--self-test"])
 
     # Execute the frozen server before creating Setup. This catches a missing
     # Python/cryptography/SQLite runtime inside the EXE on the actual build OS.

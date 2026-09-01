@@ -65,3 +65,6 @@ class Dataset:
     issues: list[Issue] = field(default_factory=list)
     source_rows: int = 0
     source_files: list[str] = field(default_factory=list)
+    enrichment_rows: int = 0
+    enrichment_applied: int = 0
+    ignored_rows: int = 0

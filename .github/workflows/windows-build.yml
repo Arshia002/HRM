@@ -7,6 +7,7 @@ on:
       - main
       - feat/native-v49-shell
       - feat/real-data-import-v040a1
+      - feat/real-data-import-v040a2
     tags:
       - "v*"
 
@@ -42,10 +43,10 @@ jobs:
           & python .\ci\validate_package_contract.py --require-git-tracked 2>&1 | Tee-Object -FilePath .\ci-contract-validation.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.4.0 migration
+      - name: Validate v0.4.0 alpha.2 Enterprise migration
         shell: pwsh
         run: |
-          & python .\ci\validate_v040a1_migration.py
+          & python .\ci\validate_v040a2_migration.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build and unit test
@@ -79,7 +80,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.1-Tested-Setup
+          name: HRM-0.4.0-alpha.2-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -105,7 +106,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.4.0-alpha.1-Failure-Logs
+          name: HRM-0.4.0-alpha.2-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log

@@ -20,7 +20,7 @@
 - Windows Service: `HRMCentralService`
 - Service account: `NT AUTHORITY\\LocalService`
 - TLS / ACL / Firewall
-- Bootstrap اولیه `13811381` و Change Password اجباری
+- Bootstrap اولیه قدیمی و Change Password اجباری
 - Upgrade و حفظ Data Directory
 - Uninstall با حفظ داده
 - Server / Client / Full installer modes

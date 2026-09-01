@@ -3,12 +3,24 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 echo ============================================================
-echo   HRM v0.4.0-alpha.1 - guarded GitHub CI push
+echo   HRM v0.4.0-alpha.2 - guarded GitHub CI push
 echo ============================================================
 echo.
 
 where git.exe >nul 2>&1 || (echo ERROR: git.exe not found.& exit /b 1)
 where python.exe >nul 2>&1 || (echo ERROR: python.exe not found.& exit /b 1)
+
+git rev-parse --is-inside-work-tree >nul 2>&1 || (echo ERROR: run this from the HRM Git repository root.& exit /b 1)
+git show-ref --verify --quiet refs/heads/feat/real-data-import-v040a2
+if errorlevel 1 (
+  git switch -c feat/real-data-import-v040a2
+) else (
+  git switch feat/real-data-import-v040a2
+)
+if errorlevel 1 (
+  echo ERROR: could not select the v0.4.0-alpha.2 feature branch.
+  exit /b 1
+)
 
 git add -A
 if errorlevel 1 exit /b 1
@@ -26,12 +38,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "fix: align HRM v0.4.0-alpha.1 CI release contract"
+git commit -m "feat: add HRM v0.4.0-alpha.2 Enterprise data integration"
 if errorlevel 1 exit /b 1
 
-git push origin feat/real-data-import-v040a1
+git push -u origin feat/real-data-import-v040a2
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: v0.4.0-alpha.1 was pushed. Watch GitHub Actions for Windows validation.
+echo PASS: v0.4.0-alpha.2 was pushed. Watch GitHub Actions for Windows validation.
 exit /b 0

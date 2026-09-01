@@ -373,6 +373,115 @@ class Repository:
         with self.connect() as conn:
             return bool(conn.execute("SELECT 1 FROM users LIMIT 1").fetchone())
 
+    def apply_real_data_import(
+        self,
+        people: list[dict[str, str]],
+        named_positions: list[dict[str, str]],
+        *,
+        source_name: str,
+        source_digest: str,
+        warning_count: int = 0,
+        actor_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Atomically refresh existing Enterprise personnel from reconciled private data.
+
+        The import deliberately requires an exact personnel-number set match. It
+        never guesses inserts/deletes, never replaces chart JSON, and records one
+        auditable batch. Callers must create and verify a database backup first.
+        """
+        incoming = {str(row.get("personnel_no", "")).strip(): row for row in people}
+        if not incoming or "" in incoming or len(incoming) != len(people):
+            raise ValueError("Import requires unique, non-empty personnel numbers.")
+
+        now = utc_now()
+        batch_id = "import-" + secrets.token_hex(12)
+        updated = 0
+        marked_named = 0
+        with self.write() as conn:
+            existing_rows = conn.execute(
+                "SELECT * FROM personnel ORDER BY personnel_no"
+            ).fetchall()
+            existing = {str(row["personnel_no"]): row for row in existing_rows}
+            if set(existing) != set(incoming):
+                raise ValueError(
+                    "Production import blocked: source and target personnel-number sets differ "
+                    f"(source={len(incoming)}, target={len(existing)}, "
+                    f"source_only={len(set(incoming) - set(existing))}, "
+                    f"target_only={len(set(existing) - set(incoming))})."
+                )
+
+            for personnel_no in sorted(incoming):
+                source = incoming[personnel_no]
+                old = existing[personnel_no]
+
+                def value(name: str, fallback: str = "") -> str:
+                    candidate = str(source.get(name, "") or "").strip()
+                    return candidate if candidate else str(old[fallback or name] or "").strip()
+
+                first_name = value("first_name")
+                last_name = value("last_name")
+                full_name = " ".join(part for part in (first_name, last_name) if part).strip() or str(old["full_name"])
+                values = {
+                    "organizational_unit": value("org_unit", "organizational_unit"),
+                    "position_code": value("position_no", "position_code"),
+                    "position_title": value("position_title"),
+                    "employment_group": value("employment_type", "employment_group"),
+                    "actual_location": value("location", "actual_location"),
+                }
+                new_version = int(old["row_version"]) + 1
+                conn.execute(
+                    """UPDATE personnel SET first_name=?,last_name=?,full_name=?,organizational_unit=?,
+                       position_code=?,position_title=?,employment_group=?,actual_location=?,
+                       row_version=?,updated_at=?,updated_by=? WHERE id=? AND row_version=?""",
+                    (
+                        first_name, last_name, full_name, values["organizational_unit"],
+                        values["position_code"], values["position_title"], values["employment_group"],
+                        values["actual_location"], new_version, now, actor_id, old["id"], old["row_version"],
+                    ),
+                )
+                if conn.execute("SELECT changes()").fetchone()[0] != 1:
+                    raise ConflictError(f"Personnel import conflict for batch {batch_id}.")
+                self._sync_person_projection(conn, str(old["id"]), values, actor_id, now)
+                updated += 1
+
+            for item in named_positions:
+                position_no = str(item.get("position_no", "")).strip()
+                occupant_no = str(item.get("occupant_personnel_no", "")).strip()
+                post_type = str(item.get("position_type", "")).strip()
+                row = conn.execute(
+                    """SELECT p.id,p.row_version,pe.personnel_no
+                       FROM positions p
+                       JOIN personnel_assignments a ON a.position_id=p.id AND a.is_primary=1 AND a.end_date=''
+                       JOIN personnel pe ON pe.id=a.person_id
+                       WHERE p.code=?""",
+                    (position_no,),
+                ).fetchone()
+                if row is None or str(row["personnel_no"]) != occupant_no:
+                    raise ValueError("Named-position assignment does not match the Enterprise target.")
+                conn.execute(
+                    "UPDATE positions SET post_type=?,row_version=row_version+1,updated_at=?,updated_by=? WHERE id=?",
+                    (post_type, now, actor_id, row["id"]),
+                )
+                marked_named += 1
+
+            result = {
+                "batch_id": batch_id,
+                "updated_personnel": updated,
+                "named_position_assignments": marked_named,
+                "source_digest": source_digest,
+            }
+            conn.execute(
+                """INSERT INTO import_batches(id,source_name,source_kind,mode,row_count,accepted_count,
+                   warning_count,error_count,summary_json,created_by,created_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    batch_id, source_name, "private-workbooks", "production-apply", len(people), updated,
+                    max(0, int(warning_count)), 0, canonical(result), actor_id, now,
+                ),
+            )
+            self._record(conn, actor_id, "production_import", "import_batch", batch_id, None, result, 1)
+        return result
+
     def create_user(
         self,
         username: str,

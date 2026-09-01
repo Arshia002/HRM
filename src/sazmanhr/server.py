@@ -334,8 +334,11 @@ def ensure_initial_owner(repo: Repository, username: str, display_name: str, pas
                          tls_fingerprint: str = "") -> str | None:
     if repo.has_users():
         return None
-    temporary = password or "13811381"
-    owner = repo.create_user(username, display_name, temporary, "owner", must_change_password=True, bootstrap_password=(temporary == "13811381"))
+    temporary = password or generate_temporary_password()
+    owner = repo.create_user(
+        username, display_name, temporary, "owner",
+        must_change_password=True, bootstrap_password=password is None,
+    )
     with repo.write() as conn:
         conn.execute("INSERT OR REPLACE INTO metadata(key,value) VALUES('initial_owner_id',?)", (owner["id"],))
     notice = repo.path.parent / "FIRST_LOGIN.txt"
@@ -450,10 +453,7 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
     repo.record_operational("INFO", "server", "startup", "Server initialization completed",
                             {"version": __version__, "tls": bool(cert)})
     if temporary:
-        print(f"Initial username: {args.initial_user}")
-        print(f"One-time password: {temporary}")
-        print(f"TLS fingerprint: {fingerprint}")
-        print(f"Saved to: {db_path.parent / 'FIRST_LOGIN.txt'}")
+        print(f"Protected one-time login notice created: {db_path.parent / 'FIRST_LOGIN.txt'}")
     if args.backup_now:
         scheduler = BackupScheduler(repo, config.backup_interval_hours, config.backup_retention)
         print(scheduler.run_once())

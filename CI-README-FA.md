@@ -15,6 +15,6 @@
 
 ## Windows acceptance path
 
-Package contract -> Source tests -> PyInstaller سه EXE -> Frozen Qt smoke -> Frozen Native UI smoke -> Frozen Server smoke -> Inno Setup -> Clean Install -> `HRMCentralService` -> LocalService + SID/ACL -> TLS -> Desktop Shortcut -> Bootstrap `13811381` -> Forced Password Change -> Bootstrap invalidation -> Upgrade -> Data Preservation -> Uninstall.
+Package contract -> Source tests -> PyInstaller چهار EXE -> Frozen Qt smoke -> Frozen Native UI smoke -> Frozen Migration smoke -> Frozen Server smoke -> Inno Setup -> Clean Install -> `HRMCentralService` -> LocalService + SID/ACL -> TLS -> Desktop Shortcut -> Random Bootstrap -> Forced Password Change -> Bootstrap invalidation -> Upgrade -> Data Preservation -> Uninstall.
 
 دیتای واقعی شرکت در این Candidate وجود ندارد.

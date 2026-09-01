@@ -1,0 +1,21 @@
+HRM v0.4.0-alpha.2 - Candidate Verification Report
+
+Verified locally:
+- Full source regression suite passed: 93/93 tests.
+- All four private workbooks were read without placing private data in Git.
+- 1356 unique personnel records matched the Enterprise target exactly.
+- 590 organization-unit enrichments were applied without duplicate personnel.
+- 185 active named-position assignments matched the Enterprise target.
+- One legacy type-0 row was excluded with an auditable warning.
+- Approved chart page 1 remained 536 fixed + 32 named = 568 total.
+- Approved chart page 16 remained 24.
+- Pre-import backup, SHA-256, transaction, audit batch and automatic rollback passed.
+- Production database integrity_check passed after apply.
+- Existing chart pages, nodes, lines, users and sessions were preserved.
+- Random one-time bootstrap password passed forced-change and invalidation tests without being printed to logs.
+- Direct SQLite test handles are explicitly closed so Windows can remove and atomically restore temporary databases.
+
+Required before declaring Windows-Tested:
+- Push feat/real-data-import-v040a2.
+- Obtain a green GitHub Actions Windows build/install/upgrade/uninstall run.
+- Download and retain HRM-0.4.0-alpha.2-Tested-Setup.

@@ -4,12 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hrm-kermanshah"
-version = "0.4.0a1"
+version = "0.4.0a2"
 description = "HRM native desktop platform for Kermanshah Electricity Distribution"
 requires-python = ">=3.11"
 dependencies = [
   "cryptography==50.0.1",
   "PySide6==6.11.2",
+  "openpyxl==3.1.5",
+  "xlrd==2.0.1",
 ]
 
 [project.scripts]

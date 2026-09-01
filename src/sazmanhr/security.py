@@ -50,8 +50,7 @@ def hash_password(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
 
 def hash_bootstrap_password(password: str, *, iterations: int = PBKDF2_ITERATIONS) -> str:
     """Hash the installer-only first-login secret without weakening normal password policy."""
-    if password != "13811381":
-        raise ValueError("رمز Bootstrap مجاز نیست.")
+    validate_password(password)
     return _hash_password_unchecked(password, iterations=iterations)
 
 

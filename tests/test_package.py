@@ -74,6 +74,17 @@ class PackageTests(unittest.TestCase):
         self.assertTrue(builder.is_file())
         ast.parse(builder.read_text(encoding="utf-8"), filename=str(builder))
 
+    def test_bootstrap_secret_is_random_and_not_logged(self):
+        server = (PROJECT / "src" / "sazmanhr" / "server.py").read_text(encoding="utf-8")
+        security = (PROJECT / "src" / "sazmanhr" / "security.py").read_text(encoding="utf-8")
+        installer = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8")
+        smoke = (PROJECT / "build" / "windows" / "smoke-install.ps1").read_text(encoding="utf-8")
+        retired_secret = "1381" + "1381"
+        self.assertIn("generate_temporary_password()", server)
+        self.assertNotIn("One-time password:", server)
+        self.assertNotIn(retired_secret, server + security + installer + smoke)
+        self.assertIn("Password:\\s*(.+)", smoke)
+
 
     def test_pyinstaller_spec_names_match_windows_builder_contract(self):
         import ast as _ast
@@ -82,6 +93,7 @@ class PackageTests(unittest.TestCase):
             "client.spec": "HRM",
             "server.spec": "HRMServer",
             "service.spec": "HRMService",
+            "migration.spec": "HRMMigration",
         }
         for spec_name, expected_name in expected.items():
             path = PROJECT / "build" / "windows" / spec_name
@@ -201,7 +213,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.4.0-alpha.1'", lowered)
+        self.assertIn("version -ne '0.4.0-alpha.2'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))

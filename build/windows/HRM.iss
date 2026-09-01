@@ -8,7 +8,7 @@
 [Setup]
 AppId={{4F82A3C7-1D55-4B80-9F21-6B3D4E7A1600}
 AppName=HRM
-AppVersion=0.4.0-alpha.1
+AppVersion=0.4.0-alpha.2
 AppPublisher=HRM
 DefaultDirName={autopf}\HRM
 DefaultGroupName=HRM
@@ -44,9 +44,11 @@ Source: "{#ProjectRoot}\data\seed\sazmanhr-seed.sqlite"; DestName: "hrm-seed.sql
 Source: "{#DistDir}\HRM.exe"; DestDir: "{app}\Client"; Components: client; Flags: ignoreversion
 Source: "{#DistDir}\HRMServer.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
 Source: "{#DistDir}\HRMService.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
+Source: "{#DistDir}\HRMMigration.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\deployment-guide-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\windows-test-checklist-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\tools\collect-diagnostics.cmd"; DestDir: "{app}\Tools"; Flags: ignoreversion
+Source: "{#ProjectRoot}\docs\V040A2-ENTERPRISE-DATA-INTEGRATION.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -395,8 +397,7 @@ begin
       if FileExists(EnterpriseDataDir + '\FIRST_LOGIN.txt') then
         SuppressibleMsgBox('سرور مرکزی با موفقیت نصب و آزمون شد. اطلاعات ورود یک‌بارمصرف:' + #13#10 +
           EnterpriseDataDir + '\FIRST_LOGIN.txt' + #13#10 +
-          'نام کاربری: arshia.shahbazi' + #13#10 +
-          'رمز اولیه یک بار مصرف: 13811381' + #13#10 +
+          'این فایل فقط برای مدیران سیستم قابل دسترسی است.' + #13#10 +
           'پس از اولین ورود تغییر رمز اجباری است.', mbInformation, MB_OK, IDOK)
       else
         SuppressibleMsgBox('سرور مرکزی با موفقیت نصب، به‌روزرسانی و آزمون شد.', mbInformation, MB_OK, IDOK);

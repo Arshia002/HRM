@@ -1,6 +1,6 @@
-"""HRM v0.4.0-alpha.1 real-data migration toolkit.
+"""HRM v0.4.0-alpha.2 real-data migration toolkit.
 
-This package is deliberately isolated from the production database layer.
-It performs read/normalize/reconcile/report and optional staging only.
+Private workbooks are reconciled before an explicitly confirmed, backed-up,
+transactional update of a compatible Enterprise generation-16 database.
 """
-__version__ = "0.4.0-alpha.1"
+__version__ = "0.4.0-alpha.2"

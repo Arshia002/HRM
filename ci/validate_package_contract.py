@@ -20,11 +20,12 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.4.0-alpha.1"
+EXPECTED_VERSION = "0.4.0-alpha.2"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
     "service.spec": "HRMService",
+    "migration.spec": "HRMMigration",
 }
 INNO = PROJECT / "build" / "windows" / "HRM.iss"
 PACKAGE_MANIFEST = PROJECT / "PACKAGE-MANIFEST.json"
@@ -89,7 +90,7 @@ def validate_inno_sources() -> None:
         fail(f"Missing Inno Setup script: {INNO}")
     script = INNO.read_text(encoding="utf-8")
     lowered = script.lower()
-    for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe"):
+    for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe", "HRMMigration.exe"):
         if exe.lower() not in lowered:
             fail(f"Inno Setup does not reference required frozen executable: {exe}")
     if "sazmanhr.exe" in lowered:
@@ -131,7 +132,7 @@ def validate_builder_contract() -> None:
     builder = (PROJECT / "build" / "windows" / "build_windows.py").read_text(encoding="utf-8")
     if '"HRM.iss"' not in builder:
         fail("build_windows.py is not wired to build/windows/HRM.iss")
-    for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe"):
+    for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe", "HRMMigration.exe"):
         if exe not in builder:
             fail(f"Builder does not validate expected output {exe}")
     if '"--smoke-test"' not in builder:
@@ -140,6 +141,8 @@ def validate_builder_contract() -> None:
         fail("Builder does not construct the frozen native login/dashboard shell before Setup")
     if "--only-binary=:all:" not in builder:
         fail("Windows dependency install must be wheel-only for reproducible CI")
+    if '"HRMMigration.exe", "--self-test"' not in builder:
+        fail("Builder does not smoke-test the frozen migration runtime")
     print("PASS builder executable/runtime contract")
 
 

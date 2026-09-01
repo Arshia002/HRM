@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0-alpha.2
+
+- اتصال guarded چهار فایل خصوصی به دیتابیس Enterprise generation 16.
+- تثبیت قرارداد تأییدشده چارت روی ۵۳۶ ثابت + ۳۲ بانام = ۵۶۸ و حفظ پست صفحه ۱۶.
+- حذف ۵۹۰ duplicate کاذب با شناسایی فایل شهرستان به‌عنوان enrichment.
+- انتخاب خودکار برگه کامل فایل شرکتی و جلوگیری از دوباره‌شماری برگه خلاصه.
+- افزودن Backup سلامت‌سنجی‌شده، SHA-256، تراکنش اتمیک، Audit batch و Rollback خودکار.
+- افزودن `HRMMigration.exe` آفلاین با readerهای pinشده `openpyxl` و `xlrd`.
+- افزودن تست واقعی محلی روی ۱۳۵۶ پرسنل و تست‌های مصنوعی بدون انتشار PII در Git.
+- بستن صریح اتصال‌های مستقیم SQLite در تست‌های مهاجرت برای جلوگیری از قفل `hrm.sqlite` و `WinError 32` روی Windows.
+
 ## 0.3.0-alpha.2
 
 - اولین Native UI milestone روی Baseline سبز `0.2.0-alpha.3`.
@@ -10,7 +21,7 @@
 - افزودن Frozen `--ui-smoke-test` قبل از Inno Setup برای ساخت واقعی Login و Dashboard shell در Windows CI.
 - افزودن Contract مستقل UI/Branding و Regression tests بدون WebView/QtWebEngine.
 - حفظ بدون تغییر Baseline سرویس `HRMCentralService`، LocalService، TLS، ACL، Upgrade و Data Preservation.
-- حفظ Bootstrap `13811381` و Forced Password Change.
+- حفظ Bootstrap قدیمی و Forced Password Change (رمز ثابت در alpha.2 بازنشسته شد).
 
 ## 0.2.0-alpha.3
 
@@ -23,7 +34,7 @@
 - بازگردانی Frozen Qt client smoke test پیش از Inno Setup.
 - عدم persist شدن synthetic seed در Program Files؛ seed فقط موقت در provisioning.
 - Pin شدن dependencyهای Windows build به snapshot baseline سبز alpha.4.
-- حفظ Bootstrap `13811381` + تغییر اجباری رمز + ابطال دائمی رمز اولیه.
+- حفظ Bootstrap قدیمی + تغییر اجباری رمز + ابطال دائمی رمز اولیه.
 - حفظ Guard دیتای عمومی: فقط Seed مصنوعی 36 رکوردی و بدون داده واقعی شرکت.
 
 # تغییرات

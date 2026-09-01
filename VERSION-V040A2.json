@@ -1,0 +1,16 @@
+{
+  "product": "HRM",
+  "version": "0.4.0-alpha.2",
+  "feature": "Enterprise real-data integration",
+  "baseline": "HRM-0.4.0-alpha.1-Tested-Setup",
+  "mode": "guarded private production apply",
+  "production_db_write": true,
+  "real_data_in_git": false,
+  "expected_personnel": 1356,
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  }
+}

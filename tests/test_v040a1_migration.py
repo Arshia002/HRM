@@ -54,12 +54,15 @@ class MigrationV040A1Tests(unittest.TestCase):
             self.assertEqual(len(ds.positions), 1)
             self.assertEqual(ds.positions[0].position_no, "100")
 
-    def test_county_profile(self):
+    def test_county_workbook_enriches_existing_person(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _write_csv(root / "شهرستان.csv", [["نام شهرستان","کد شهرستان"],["اسلام آباد غرب","02"]])
+            _write_csv(root / "اکسل رسمی.csv", [["شماره پرسنلی","نام","نام خانوادگی"],["1","علی","رضایی"]])
+            _write_csv(root / "شهرستان.csv", [["شماره پرسنلی","واحد سازمانی"],["1","ناحیه غرب"]])
             ds = load_directory(root)
-            self.assertEqual(len(ds.counties), 1)
+            self.assertEqual(len(ds.counties), 0)
+            self.assertEqual(ds.persons[0].org_unit, "ناحیه غرب")
+            self.assertEqual(ds.enrichment_applied, 1)
 
     def test_duplicate_personnel_error(self):
         origin = Origin("x", "s", 2)

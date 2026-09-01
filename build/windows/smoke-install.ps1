@@ -23,7 +23,7 @@ $FailureSummaryLog = Join-Path $ArtifactDir "install-failure-summary.txt"
 $DiagnosticCopyLog = Join-Path $ArtifactDir "diagnostic-copy-errors.txt"
 $EnterpriseData = Join-Path $env:ProgramData "HRM-Kermanshah"
 $ApiBase = 'https://127.0.0.1:8765'
-$BootstrapPassword = '13811381'
+$BootstrapPassword = ''
 $ChangedPassword = 'CI-Changed!Password1401'
 $Username = 'arshia.shahbazi'
 
@@ -105,7 +105,7 @@ function Wait-HrmHealth {
         Start-Sleep -Milliseconds 500
     }
     if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
-        $health.database -ne 'ready' -or $health.version -ne '0.4.0-alpha.1') {
+        $health.database -ne 'ready' -or $health.version -ne '0.4.0-alpha.2') {
         $detail = if ($health) { $health | ConvertTo-Json -Compress } else { 'no response' }
         throw "$Stage health check failed: $detail"
     }
@@ -160,6 +160,11 @@ try {
     if (-not (Test-Path $database)) { throw 'Enterprise database missing.' }
     $firstLogin = Join-Path $EnterpriseData 'FIRST_LOGIN.txt'
     if (-not (Test-Path $firstLogin)) { throw 'First-login notice missing.' }
+    $firstLoginText = Get-Content -LiteralPath $firstLogin -Raw
+    $passwordMatch = [regex]::Match($firstLoginText, '(?m)^Password:\s*(.+)\s*$')
+    if (-not $passwordMatch.Success) { throw 'Random bootstrap password was not found in FIRST_LOGIN.txt.' }
+    $BootstrapPassword = $passwordMatch.Groups[1].Value.Trim()
+    if ($BootstrapPassword.Length -lt 12) { throw 'Random bootstrap password is unexpectedly weak.' }
     if ((Get-FileHash $LegacyDatabase -Algorithm SHA256).Hash -ne $LegacyHash) {
         throw 'Legacy ProgramData was modified by the clean HRM installer.'
     }
