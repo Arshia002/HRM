@@ -32,11 +32,12 @@ class ManifestEolPortabilityTests(unittest.TestCase):
     def test_binary_bytes_are_never_rewritten(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            png = root / "sample.png"
             raw = b"\x89PNG\r\n\x1a\n\x00binary\r\npayload"
-            png.write_bytes(raw)
-            self.assertEqual(builder.canonical_bytes(png), raw)
-            self.assertEqual(validator.canonical_bytes(png), raw)
+            for name in ("sample.png", "hrm-real-data-v060b1.enc"):
+                binary = root / name
+                binary.write_bytes(raw)
+                self.assertEqual(builder.canonical_bytes(binary), raw)
+                self.assertEqual(validator.canonical_bytes(binary), raw)
 
     def test_builder_and_validator_use_same_canonical_bytes(self):
         with tempfile.TemporaryDirectory() as temp:

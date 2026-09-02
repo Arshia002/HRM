@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ci.validate_v050a1_candidate import dependency_errors, pinned_requirements
+from ci.validate_v060b1_candidate import dependency_errors, pinned_requirements
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -18,15 +18,19 @@ class CiPipelineTests(unittest.TestCase):
         manifest = (PROJECT / "ci" / "write-ci-manifest.ps1").read_text(encoding="utf-8")
 
         self.assertIn("feat/native-v49-shell", workflow)
-        self.assertIn("HRM-0.5.0-alpha.1-Tested-Setup", workflow)
-        self.assertIn("HRM-0.5.0-alpha.1-Failure-Logs", workflow)
-        self.assertIn("feat/full-v49-ui-v050a1", workflow)
+        self.assertIn("HRM-0.6.0-beta.1-Tested-Setup", workflow)
+        self.assertIn("HRM-0.6.0-beta.1-Failure-Logs", workflow)
+        self.assertIn("feat/organizational-pilot-v060b1", workflow)
         self.assertIn("write-ci-manifest.ps1", workflow)
         self.assertIn("Validate packaging contract", workflow)
         self.assertIn("validate_package_contract.py", workflow)
         self.assertIn("--require-git-tracked", workflow)
         self.assertIn("contract-validation.log", workflow)
         self.assertIn("setup-upgrade.log", workflow)
+        self.assertIn("environment: real-data-validation", workflow)
+        self.assertIn("secrets.HRM_REAL_DATA_KEY", workflow)
+        self.assertIn("validate_v060b1_real_data.py", workflow)
+        self.assertIn("real-data-validation-summary.json", workflow)
 
         self.assertIn("Random bootstrap password was not found", smoke)
         self.assertIn("FIRST_LOGIN.txt", smoke)
@@ -47,12 +51,14 @@ class CiPipelineTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         contract = workflow.index("Validate packaging contract")
         dependencies = workflow.index("Install source gate dependencies")
-        migration = workflow.index("Validate v0.5.0 alpha.1 full native UI candidate")
+        candidate = workflow.index("Validate v0.6.0 beta.1 pilot candidate")
+        real_data = workflow.index("Validate protected real data")
         inno = workflow.index("Install Inno Setup")
         build = workflow.index("Build and unit test")
         self.assertLess(contract, dependencies)
-        self.assertLess(dependencies, migration)
-        self.assertLess(migration, inno)
+        self.assertLess(dependencies, candidate)
+        self.assertLess(candidate, real_data)
+        self.assertLess(real_data, inno)
         self.assertLess(inno, build)
         self.assertIn("--only-binary=:all: -r .\\ci\\requirements-source-gates.txt", workflow)
         self.assertIn("cache-dependency-path", workflow)
@@ -74,9 +80,9 @@ class CiPipelineTests(unittest.TestCase):
 
         self.assertEqual(dependency_errors(source, missing), ["openpyxl missing (expected 3.1.5)"])
 
-    def test_v050_validator_is_directly_executable(self):
+    def test_v060_validator_is_directly_executable(self):
         result = subprocess.run(
-            [sys.executable, str(PROJECT / "ci" / "validate_v050a1_candidate.py"), "--dependency-self-check"],
+            [sys.executable, str(PROJECT / "ci" / "validate_v060b1_candidate.py"), "--dependency-self-check"],
             cwd=PROJECT,
             text=True,
             capture_output=True,
@@ -85,11 +91,11 @@ class CiPipelineTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("direct-import contract", result.stdout)
 
-    def test_v050_validator_supplies_src_path_in_a_clean_environment(self):
+    def test_v060_validator_supplies_src_path_in_a_clean_environment(self):
         environment = os.environ.copy()
         environment.pop("PYTHONPATH", None)
         result = subprocess.run(
-            [sys.executable, str(PROJECT / "ci" / "validate_v050a1_candidate.py"), "--source-path-self-check"],
+            [sys.executable, str(PROJECT / "ci" / "validate_v060b1_candidate.py"), "--source-path-self-check"],
             cwd=PROJECT,
             env=environment,
             text=True,

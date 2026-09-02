@@ -35,12 +35,15 @@ ROOT_FILES = {
     "APPLY-V040A3.cmd", "README-V040A3.txt", "RUN-MIGRATION-V040A3.cmd",
     "TEST-REPORT-V040A3.txt", "VERSION-V040A3.json",
     "APPLY-V050A1.cmd", "README-V050A1.txt", "TEST-REPORT-V050A1.txt", "VERSION-V050A1.json",
+    "APPLY-V060B1.cmd", "CONFIGURE-REAL-DATA-SECRET-V060B1.cmd",
+    "PREPARE-REAL-DATA-V060B1.cmd", "README-V060B1.txt",
+    "RELEASE-QUALITY-GATES.md", "TEST-REPORT-V060B1.txt", "VERSION-V060B1.json",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 
 
 # HRM_MANIFEST_CANONICAL_LF_V1
-BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
+BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.enc', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
 
 def canonical_bytes(path: Path) -> bytes:
     # Git clean checkouts normalize text to LF. Windows working trees may
@@ -93,8 +96,12 @@ def write_manifest(files: list[tuple[Path, Path]]) -> Path:
         "product": "HRM",
         "version": VERSION,
         "purpose": "github-windows-ci-clean-checkout-candidate",
-        "contains_real_personnel": False,
-        "contains_real_organization_chart": False,
+        "contains_plaintext_real_data": False,
+        "contains_encrypted_real_data_bundle": any(
+            relative.as_posix() == "ci/real-data/hrm-real-data-v060b1.enc"
+            for _, relative in files
+        ),
+        "real_data_artifact_policy": "aggregate-only",
         "expected_windows_artifact": f"HRM-{VERSION}-Tested-Setup",
         "files": [
             {

@@ -9,6 +9,7 @@ on:
       - feat/real-data-import-v040a1
       - feat/real-data-import-v040a2
       - feat/full-v49-ui-v050a1
+      - feat/organizational-pilot-v060b1
     tags:
       - "v*"
 
@@ -18,7 +19,8 @@ permissions:
 jobs:
   build-test:
     runs-on: windows-2022
-    timeout-minutes: 30
+    timeout-minutes: 45
+    environment: real-data-validation
     env:
       PYTHONUTF8: "1"
       PYTHONIOENCODING: "utf-8"
@@ -49,10 +51,22 @@ jobs:
           & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.5.0 alpha.1 full native UI candidate
+      - name: Validate v0.6.0 beta.1 pilot candidate
         shell: pwsh
         run: |
-          & python .\ci\validate_v050a1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
+          & python .\ci\validate_v060b1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Validate protected real data
+        shell: pwsh
+        env:
+          HRM_REAL_DATA_KEY: ${{ secrets.HRM_REAL_DATA_KEY }}
+        run: |
+          New-Item -ItemType Directory -Force -Path .\build-output\installer | Out-Null
+          & python .\ci\validate_v060b1_real_data.py `
+            --bundle .\ci\real-data\hrm-real-data-v060b1.enc `
+            --output .\build-output\installer\real-data-validation-summary.json `
+            2>&1 | Tee-Object -FilePath .\real-data-validation.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install Inno Setup
@@ -90,7 +104,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.5.0-alpha.1-Tested-Setup
+          name: HRM-0.6.0-beta.1-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -111,6 +125,8 @@ jobs:
             ci-contract-validation.log
             source-gate-dependencies.log
             candidate-validation.log
+            real-data-validation.log
+            build-output/installer/real-data-validation-summary.json
           if-no-files-found: error
           retention-days: 30
 
@@ -118,12 +134,14 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-0.5.0-alpha.1-Failure-Logs
+          name: HRM-0.6.0-beta.1-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log
             source-gate-dependencies.log
             candidate-validation.log
+            real-data-validation.log
+            build-output/installer/real-data-validation-summary.json
             build-output/installer/*.log
             build-output/installer/*.txt
             build-output/installer/*.json

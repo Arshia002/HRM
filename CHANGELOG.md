@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0-beta.1
+
+- تثبیت `v0.5.0-alpha.1` به‌عنوان Baseline غیرقابل تغییر رابط کامل Native v4.9.
+- افزودن انتقال رمز‌شده و احرازهویت‌شده چهار منبع واقعی با کلید جدا از Repository.
+- افزودن GitHub Environment Secret با نام `HRM_REAL_DATA_KEY` و حذف کامل Plaintext از Artifact و Log.
+- افزودن چرخه اجباری Reconcile، Staging، Backup، Apply، Rollback و Replay روی Runner موقت.
+- افزودن قرارداد اجرایی ۱۳۵۶ پرسنل، ۵۳۶ پست ثابت، ۳۲ پست بانام، مجموع ۵۶۸ و صفحه ۱۶ با ۲۴ پست.
+- اصلاح تشخیص گونه‌های پست بانام مانند «بانام ایثار».
+- افزودن آزمون‌های Wrong-key، Tamper، مجموعه ناقص، حذف PII از Summary و تکرارپذیری Apply.
+- جلوگیری از تغییر بایت‌های `.enc` در Canonicalization پکیج و کنترل SHA-256 قبل و بعد از ZIP.
+- مسدودکردن کلید، Excel/CSV خام، دیتابیس خصوصی و خروجی رمزگشایی‌شده در Package Contract و Guarded Push.
+
 ## 0.5.0-alpha.1
 
 - پیاده‌سازی دوازده صفحه مرجع v4.9 به‌صورت Native PySide6 بدون موتور مرورگر.

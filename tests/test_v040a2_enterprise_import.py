@@ -99,7 +99,9 @@ def _private_fixture(root: Path):
         ["P1", "مدیر", "1", "بانام ایثار"],
         ["OLD", "سابقه قدیمی", "999", "0"],
     ])])
-    return reconcile(load_directory(root), expected_personnel=3)
+    return reconcile(
+        load_directory(root), expected_fixed=0, expected_named=1, expected_personnel=3
+    )
 
 
 def _target_database(path: Path) -> Repository:
@@ -128,6 +130,11 @@ def _target_database(path: Path) -> Repository:
             """INSERT INTO chart_pages(page_no,title,approved_fixed_posts,approved_named_posts,
                approved_total_posts,extra_json,row_version,updated_at,updated_by)
                VALUES(1,'مصوب',536,32,568,'{}',1,'2026-01-01T00:00:00+00:00',NULL)"""
+        )
+        conn.execute(
+            """INSERT INTO chart_pages(page_no,title,approved_fixed_posts,approved_named_posts,
+               approved_total_posts,extra_json,row_version,updated_at,updated_by)
+               VALUES(16,'مصوب صفحه ۱۶',NULL,NULL,24,'{}',1,'2026-01-01T00:00:00+00:00',NULL)"""
         )
     return repo
 
@@ -163,7 +170,24 @@ class EnterpriseImportV040A2Tests(unittest.TestCase):
                 expected_chart_fixed=536, expected_chart_named=32, expected_chart_total=568,
             )
             self.assertEqual(result["approved_total_posts"], 568)
+            self.assertEqual(result["approved_page_16_total"], 24)
             self.assertEqual(result["matched_named_assignments"], 1)
+
+    def test_target_preflight_rejects_page_16_contract_drift(self):
+        with _temporary_workspace() as root:
+            source = root / "source"
+            source.mkdir()
+            ds = _private_fixture(source)
+            database = root / "hrm.sqlite"
+            repo = _target_database(database)
+            with repo.write() as conn:
+                conn.execute("UPDATE chart_pages SET approved_total_posts=23 WHERE page_no=16")
+            with self.assertRaisesRegex(ValueError, "page-16"):
+                validate_target(
+                    ds, database, expected_personnel=3,
+                    expected_chart_fixed=536, expected_chart_named=32,
+                    expected_chart_total=568, expected_page_16_total=24,
+                )
 
     def test_production_apply_is_backed_up_atomic_and_audited(self):
         with _temporary_workspace() as root:

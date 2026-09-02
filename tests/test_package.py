@@ -49,13 +49,13 @@ class PackageTests(unittest.TestCase):
     def test_isolated_local_gate_environment_is_never_packaged(self):
         gitignore = (PROJECT / ".gitignore").read_text(encoding="utf-8")
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
-        apply = (PROJECT / "APPLY-V050A1.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
         self.assertIn(".venv/", gitignore)
         self.assertIn('".venv"', builder)
         self.assertIn("python -m venv .venv", apply)
         self.assertIn("--only-binary=:all: -r ci\\requirements-source-gates.txt", apply)
-        self.assertIn("ci\\validate_v050a1_candidate.py", apply)
+        self.assertIn("ci\\validate_v060b1_candidate.py", apply)
         self.assertFalse(any(".venv" in Path(item["path"]).parts for item in manifest["files"]))
 
     def test_native_client_has_no_browser_engine(self):
@@ -228,7 +228,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.5.0-alpha.1'", lowered)
+        self.assertIn("version -ne '0.6.0-beta.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -276,17 +276,35 @@ class PackageTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         self.assertIn("validate_package_contract.py --require-git-tracked", workflow)
 
-    def test_guarded_push_runs_isolated_alpha3_gates_before_commit(self):
+    def test_guarded_push_runs_v060_gates_before_commit(self):
         push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
-        gate = push.index('call "%~dp0APPLY-V050A1.cmd"')
-        stage = push.index("git add -A")
+        gate = push.index('call "%~dp0APPLY-V060B1.cmd"')
+        stage = push.index("ci\\stage_v060b1_overlay.py")
         commit = push.index("git commit -m")
-        remote = push.index("git push -u origin feat/full-v49-ui-v050a1")
+        remote = push.index("git push -u origin feat/organizational-pilot-v060b1")
         self.assertLess(gate, stage)
         self.assertLess(stage, commit)
         self.assertLess(commit, remote)
-        self.assertIn("local v0.5.0-alpha.1 gates failed. Nothing will be committed or pushed", push)
+        self.assertIn("local v0.6.0-beta.1 gates failed. Nothing will be committed or pushed", push)
         self.assertIn(".venv\\Scripts\\python.exe", push)
+        self.assertNotIn("git add -A", push)
+
+    def test_guarded_stage_is_manifest_limited(self):
+        stage = (PROJECT / "ci" / "stage_v060b1_overlay.py").read_text(encoding="utf-8")
+        self.assertIn('"PACKAGE-MANIFEST.json", "SHA256SUMS.txt"', stage)
+        self.assertIn('staged - set(paths)', stage)
+        self.assertIn('"git", "add", "--"', stage)
+
+    def test_protected_real_data_boundary_excludes_plaintext_key_and_artifacts(self):
+        manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
+        paths = {item["path"] for item in manifest["files"]}
+        self.assertFalse(any(path.lower().endswith((".key", ".xls", ".xlsx", ".csv")) for path in paths))
+        self.assertFalse(any(path.startswith("private-data/") for path in paths))
+        workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
+        self.assertIn("environment: real-data-validation", workflow)
+        self.assertIn("secrets.HRM_REAL_DATA_KEY", workflow)
+        self.assertIn("real-data-validation-summary.json", workflow)
+        self.assertNotRegex(workflow, r"(?mi)^\s+ci[/\\]real-data[/\\].*$")
 
     def test_proven_alpha4_upgrade_contract_is_preserved(self):
         script = (PROJECT / "build" / "windows" / "HRM.iss").read_text(encoding="utf-8").lower()

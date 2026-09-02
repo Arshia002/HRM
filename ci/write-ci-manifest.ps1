@@ -17,7 +17,7 @@ $runUrl = if ($env:GITHUB_SERVER_URL -and $env:GITHUB_REPOSITORY -and $env:GITHU
 $manifest = [ordered]@{
     manifest_schema = 1
     product = 'HRM'
-    version = '0.5.0-alpha.1'
+    version = '0.6.0-beta.1'
     build_utc = [DateTime]::UtcNow.ToString('o')
     source_revision = [string]$revision
     github_run = $runUrl
@@ -42,8 +42,12 @@ $manifest = [ordered]@{
         migration_runtime = $true
         enterprise_data_preflight = $true
         approved_chart_total = 568
+        approved_page_16_total = 24
         native_v49_reference_pages = 12
         aggregate_analytics_privacy = $true
+        protected_real_data_validation = $true
+        real_data_backup_restore = $true
+        real_data_idempotent_replay = $true
     }
     artifacts = @(
         [ordered]@{

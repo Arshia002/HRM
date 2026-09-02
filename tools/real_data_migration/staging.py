@@ -31,7 +31,7 @@ def create_staging_db(ds: Dataset, path: Path) -> None:
     con = sqlite3.connect(tmp)
     try:
         con.executescript(SCHEMA)
-        con.execute("INSERT INTO meta VALUES (?,?)", ("schema", "hrm-v0.5.0-alpha.1-staging"))
+        con.execute("INSERT INTO meta VALUES (?,?)", ("schema", "hrm-v0.6.0-beta.1-staging"))
         con.executemany("INSERT INTO persons VALUES (?,?,?,?,?,?,?,?,?)", [
             (p.personnel_no,p.first_name,p.last_name,p.national_id,p.employment_type,p.org_unit,p.location,p.position_no,p.position_title)
             for p in ds.persons

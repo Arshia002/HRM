@@ -69,6 +69,7 @@ def validate_target(
     expected_chart_fixed: int,
     expected_chart_named: int,
     expected_chart_total: int,
+    expected_page_16_total: int = 24,
 ) -> dict[str, int | str]:
     database_path = database_path.resolve()
     validate_database_identity(database_path)
@@ -108,6 +109,18 @@ def validate_target(
         if actual_chart != expected_chart:
             raise ValueError(f"Approved chart mismatch: target={actual_chart}, expected={expected_chart}.")
 
+        page_16 = conn.execute(
+            "SELECT approved_total_posts FROM chart_pages WHERE page_no=16"
+        ).fetchone()
+        if page_16 is None:
+            raise ValueError("Approved chart page 16 is missing from the Enterprise target.")
+        actual_page_16_total = int(page_16[0] or 0)
+        if actual_page_16_total != expected_page_16_total:
+            raise ValueError(
+                "Approved page-16 post count mismatch: "
+                f"target={actual_page_16_total}, expected={expected_page_16_total}."
+            )
+
         unmatched_named = 0
         for position in ds.positions:
             row = conn.execute(
@@ -126,6 +139,7 @@ def validate_target(
         "approved_fixed_posts": actual_chart[0],
         "approved_named_posts": actual_chart[1],
         "approved_total_posts": actual_chart[2],
+        "approved_page_16_total": actual_page_16_total,
         "matched_named_assignments": len(ds.positions),
         "integrity": detail,
     }
@@ -201,6 +215,7 @@ def apply_to_enterprise(
     expected_chart_fixed: int = 536,
     expected_chart_named: int = 32,
     expected_chart_total: int = 568,
+    expected_page_16_total: int = 24,
     actor_id: str | None = None,
 ) -> dict[str, object]:
     if confirmation != CONFIRMATION:
@@ -214,6 +229,7 @@ def apply_to_enterprise(
         expected_chart_fixed=expected_chart_fixed,
         expected_chart_named=expected_chart_named,
         expected_chart_total=expected_chart_total,
+        expected_page_16_total=expected_page_16_total,
     )
     backup, backup_digest = create_verified_backup(database_path, backup_dir.resolve())
     digest = source_digest(ds)
@@ -252,6 +268,7 @@ def apply_to_enterprise(
             expected_chart_fixed=expected_chart_fixed,
             expected_chart_named=expected_chart_named,
             expected_chart_total=expected_chart_total,
+            expected_page_16_total=expected_page_16_total,
         )
     except Exception:
         restore_verified_backup(database_path, backup, backup_digest)

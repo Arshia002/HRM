@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-fast validation for the HRM Windows packaging contract.
-
-The v0.5 candidate preserves the clean-checkout boundary established by
-alpha.3 and adds a complete native v4.9 page-coverage contract.
-"""
+"""Fail-fast validation for the HRM v0.6 Windows and protected-data contract."""
 from __future__ import annotations
 
 import argparse
@@ -18,7 +14,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.5.0-alpha.1"
+EXPECTED_VERSION = "0.6.0-beta.1"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -39,7 +35,7 @@ def fail(message: str) -> None:
 
 
 # HRM_MANIFEST_CANONICAL_LF_V1
-BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
+BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.enc', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
 
 def canonical_bytes(path: Path) -> bytes:
     # Git clean checkouts normalize text to LF. Windows working trees may
@@ -315,6 +311,88 @@ def validate_public_safe_seed() -> None:
     print("PASS public-safe synthetic seed: 36 demo personnel")
 
 
+def validate_protected_real_data_boundary(paths: list[str]) -> None:
+    data_dir = PROJECT / "ci" / "real-data"
+    bundle = data_dir / "hrm-real-data-v060b1.enc"
+    sidecar = data_dir / "hrm-real-data-v060b1.enc.sha256"
+    allowed = {"README.md", bundle.name, sidecar.name}
+    unexpected = sorted(
+        path.relative_to(data_dir).as_posix()
+        for path in data_dir.rglob("*")
+        if path.is_file() and path.relative_to(data_dir).as_posix() not in allowed
+    )
+    if unexpected:
+        fail(f"Protected real-data boundary contains unexpected files: {unexpected}")
+
+    forbidden_manifest = [
+        relative for relative in paths
+        if relative.startswith("private-data/")
+        or relative.lower().endswith((".key", ".xls", ".xlsx", ".csv"))
+    ]
+    if forbidden_manifest:
+        fail(f"CI overlay contains plaintext/private real-data material: {forbidden_manifest}")
+
+    if bundle.exists() != sidecar.exists():
+        fail("Encrypted real-data bundle and SHA-256 sidecar must exist together")
+    require_bundle = (
+        os.environ.get("HRM_REQUIRE_REAL_DATA_BUNDLE", "").lower() == "true"
+        or os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+    )
+    if require_bundle and not bundle.is_file():
+        fail("Protected CI requires ci/real-data/hrm-real-data-v060b1.enc")
+    if bundle.is_file():
+        fields = sidecar.read_text(encoding="ascii").strip().split()
+        if (
+            len(fields) != 2
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", fields[0])
+            or fields[1] != bundle.name
+        ):
+            fail("Encrypted real-data bundle SHA-256 sidecar format is invalid")
+        expected = fields[0].lower()
+        actual = hashlib.sha256(bundle.read_bytes()).hexdigest()
+        if expected != actual:
+            fail("Encrypted real-data bundle SHA-256 sidecar mismatch")
+        for required in (
+            "ci/real-data/hrm-real-data-v060b1.enc",
+            "ci/real-data/hrm-real-data-v060b1.enc.sha256",
+        ):
+            if required not in paths:
+                fail(f"Encrypted real-data input exists but is absent from package manifest: {required}")
+
+    package = json.loads(PACKAGE_MANIFEST.read_text(encoding="utf-8"))
+    if package.get("contains_plaintext_real_data") is not False:
+        fail("Package manifest must explicitly deny plaintext real data")
+    if package.get("contains_encrypted_real_data_bundle") is not bundle.is_file():
+        fail("Package manifest encrypted real-data presence flag is incorrect")
+    if package.get("real_data_artifact_policy") != "aggregate-only":
+        fail("Package manifest real-data artifact policy must be aggregate-only")
+
+    workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
+    for marker in (
+        "environment: real-data-validation",
+        "HRM_REAL_DATA_KEY: ${{ secrets.HRM_REAL_DATA_KEY }}",
+        "ci\\validate_v060b1_real_data.py",
+        "real-data-validation-summary.json",
+        "HRM-0.6.0-beta.1-Tested-Setup",
+    ):
+        if marker not in workflow:
+            fail(f"Protected real-data workflow marker is missing: {marker!r}")
+    if re.search(r"(?mi)^\s+ci[/\\]real-data[/\\].*$", workflow):
+        fail("Encrypted bundle must never be uploaded as a GitHub artifact")
+
+    push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
+    for marker in (
+        "PREPARE-REAL-DATA-V060B1.cmd",
+        "APPLY-V060B1.cmd",
+        "git check-ignore -q private-data\\hrm-v060b1-fernet.key",
+        "validate_package_contract.py --require-git-tracked",
+        "ci\\stage_v060b1_overlay.py",
+    ):
+        if marker not in push:
+            fail(f"Guarded push real-data marker is missing: {marker!r}")
+    print("PASS authenticated encrypted-input and aggregate-only artifact boundary")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -337,6 +415,7 @@ def main() -> int:
         paths = validate_package_manifest_paths()
         validate_git_tracking(paths, require_tracking)
         validate_public_safe_seed()
+        validate_protected_real_data_boundary(paths)
     except Exception as exc:
         print(f"PACKAGE CONTRACT ERROR: {exc}", file=sys.stderr)
         return 1

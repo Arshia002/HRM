@@ -11,6 +11,12 @@ def _ref(kind: str, value: str) -> str:
     return f"{kind}:{digest}"
 
 
+def _is_named_position_type(value: str) -> bool:
+    """Recognize approved named-position variants such as «بانام ایثار»."""
+    compact = key(value).replace(" ", "")
+    return compact.startswith("بانام")
+
+
 def reconcile(
     ds: Dataset,
     expected_fixed: int | None = None,
@@ -68,8 +74,8 @@ def reconcile(
             ds.issues.append(Issue("warning", "PERSON_MULTIPLE_POSITIONS", f"Person resolves to {len(pos_set)} distinct positions; requires review.", origin, _ref("person", person_no)))
 
     if expected_fixed is not None or expected_named is not None:
-        fixed = sum(1 for p in ds.positions if p.position_type.strip() not in {"بانام", "با نام"})
-        named = sum(1 for p in ds.positions if p.position_type.strip() in {"بانام", "با نام"})
+        named = sum(1 for position in ds.positions if _is_named_position_type(position.position_type))
+        fixed = len(ds.positions) - named
         if expected_fixed is not None and fixed != expected_fixed:
             ds.issues.append(Issue("error", "FIXED_POSITION_COUNT_MISMATCH", f"Fixed positions: imported={fixed}, expected={expected_fixed}."))
         if expected_named is not None and named != expected_named:

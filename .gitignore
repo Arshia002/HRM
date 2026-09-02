@@ -20,6 +20,8 @@ data/export/
 *.xlsx
 *.xls
 *.csv
+*.key
+ci/real-data/decrypted/
 
 ci-contract-validation.log
 migration-validation.log

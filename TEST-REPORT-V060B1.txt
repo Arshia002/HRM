@@ -1,0 +1,30 @@
+HRM v0.6.0-beta.1 - Verification Scope
+=======================================
+
+Immutable baseline
+------------------
+- Tag: v0.5.0-alpha.1
+- Commit: 8e3eb3baecb46d2a0f964322584e668a6e926ce2
+- Full native v4.9 UI and proven Windows acceptance path are preserved.
+
+Pre-delivery source gates
+-------------------------
+- Exact dependency pins and clean source-path import.
+- Full Unit/Integration/UI/Migration regression: 114/114 PASS locally.
+- Focused Enterprise migration regression: 28/28 PASS.
+- Authenticated bundle round trip, wrong-key and tamper rejection.
+- Exact-scale synthetic 1356-person/568-post Reconcile/Staging/Backup/Apply/Rollback/Replay: PASS.
+- Package manifest hashes and clean-ZIP revalidation.
+- No plaintext workbook, key, private database, cache or local environment.
+
+Protected GitHub gates after user preparation
+----------------------------------------------
+- Exact real dataset: 1356 personnel.
+- Approved chart: 536 fixed + 32 named = 568; page 16 = 24.
+- Zero reconciliation errors and healthy private staging database.
+- Verified backup, apply, byte-for-byte rollback and deterministic replay.
+- Aggregate-only logs and summary.
+- Four frozen executables and complete Windows install/upgrade/uninstall test.
+
+No claim of real-data PASS is valid until GitHub Actions processes the user-
+prepared encrypted bundle and produces HRM-0.6.0-beta.1-Tested-Setup.

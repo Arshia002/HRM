@@ -1,18 +1,19 @@
-# راهنمای CI — HRM v0.5.0-alpha.1
+# راهنمای CI — HRM v0.6.0-beta.1
 
-این Build رابط Native کامل v4.9 را روی Baseline سبز `0.4.0-alpha.3` ادغام می‌کند.
+این Build رابط Native کامل v4.9 را روی Baseline تگ‌شده `v0.5.0-alpha.1` حفظ و مسیر تست کنترل‌شده دیتای واقعی را اضافه می‌کند.
 
 ## روش اعمال
 
 1. ZIP را در Root همان Repository استخراج کنید.
-2. فقط `PUSH-TO-GITHUB.cmd` را اجرا کنید.
-3. اسکریپت Branch `feat/full-v49-ui-v050a1` را می‌سازد یا انتخاب می‌کند.
-4. `APPLY-V050A1.cmd`، Regression کامل و clean-index gate اجباری اجرا می‌شوند.
-5. Artifact سبز: `HRM-0.5.0-alpha.1-Tested-Setup`.
-6. Artifact قرمز: `HRM-0.5.0-alpha.1-Failure-Logs`.
+2. چهار فایل تأییدشده را فقط در پوشه‌ای خارج از Repository قرار دهید.
+3. `PREPARE-REAL-DATA-V060B1.cmd` را با مسیر آن پوشه اجرا کنید.
+4. با `CONFIGURE-REAL-DATA-SECRET-V060B1.cmd` کلید را در Environment Secret تنظیم کنید.
+5. `PUSH-TO-GITHUB.cmd` را اجرا کنید؛ Branch هدف `feat/organizational-pilot-v060b1` است.
+6. Artifact سبز: `HRM-0.6.0-beta.1-Tested-Setup`.
+7. Artifact قرمز: `HRM-0.6.0-beta.1-Failure-Logs`.
 
 ## Windows acceptance path
 
-Package contract -> Source tests -> PyInstaller چهار EXE -> Frozen Qt smoke -> Frozen Native UI smoke -> Frozen Migration smoke -> Frozen Server smoke -> Inno Setup -> Clean Install -> `HRMCentralService` -> LocalService + SID/ACL -> TLS -> Desktop Shortcut -> Random Bootstrap -> Forced Password Change -> Bootstrap invalidation -> Upgrade -> Data Preservation -> Uninstall.
+Package contract -> Source tests -> Protected real-data full cycle -> PyInstaller چهار EXE -> Frozen Qt/UI/Migration/Server smoke -> Inno Setup -> Clean Install -> `HRMCentralService` -> LocalService + SID/ACL -> TLS -> Desktop Shortcut -> Random Bootstrap -> Forced Password Change -> Bootstrap invalidation -> Upgrade -> Data Preservation -> Uninstall.
 
-دیتای واقعی شرکت در این Candidate وجود ندارد.
+Artifactها فقط شواهد تجمیعی دارند. فایل خام، دیتابیس موقت، کلید و خود بسته رمز‌شده Upload نمی‌شوند.

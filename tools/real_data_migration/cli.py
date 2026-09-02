@@ -27,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--expected-chart-fixed", type=int, default=536)
     p.add_argument("--expected-chart-named", type=int, default=32)
     p.add_argument("--expected-chart-total", type=int, default=568)
+    p.add_argument("--expected-page-16-total", type=int, default=24)
     p.add_argument("--actor-id", default="")
     return p
 
@@ -61,6 +62,7 @@ def main(argv=None) -> int:
                 expected_chart_fixed=args.expected_chart_fixed,
                 expected_chart_named=args.expected_chart_named,
                 expected_chart_total=args.expected_chart_total,
+                expected_page_16_total=args.expected_page_16_total,
             )
         except Exception as exc:
             ds.issues.append(Issue("error", "TARGET_PREFLIGHT_FAILED", str(exc)))
@@ -90,6 +92,7 @@ def main(argv=None) -> int:
             expected_chart_fixed=args.expected_chart_fixed,
             expected_chart_named=args.expected_chart_named,
             expected_chart_total=args.expected_chart_total,
+            expected_page_16_total=args.expected_page_16_total,
             actor_id=args.actor_id or None,
         )
         (args.output_dir / "production-apply-summary.json").write_text(
