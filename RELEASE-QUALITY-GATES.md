@@ -1,4 +1,4 @@
-# HRM v0.6.0-beta.1 Release Quality Gates
+# HRM v0.6.0-beta.1 ci.2 Release Quality Gates
 
 This is an executable release contract. Candidate validation, package
 validation, guarded push and GitHub Actions enforce the corresponding controls.
@@ -23,7 +23,8 @@ validation, guarded push and GitHub Actions enforce the corresponding controls.
 - Authenticated encryption before Git; key only in `HRM_REAL_DATA_KEY`.
 - Temporary decryption only; no plaintext cache or artifact.
 - Aggregate-only validation evidence.
-- 1356 personnel and 536 fixed + 32 named = 568 posts.
+- Private sources: 1356 personnel, 590 county/unit enrichments, 185 active named-position assignments and one ignored legacy type-0 row.
+- Enterprise chart (independent of workbook row counts): 536 fixed + 32 named = 568 approved posts.
 - Page-16 approved post count: 24.
 - Zero reconciliation errors.
 - Staging integrity, verified backup, apply, rollback and deterministic replay.

@@ -9,7 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_DIR = ROOT.parent / "release"
 VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-PACKAGE_DIR_NAME = f"HRM-v{VERSION}-CI-Build-Package"
+PACKAGE_REVISION = (ROOT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip()
+PACKAGE_DIR_NAME = f"HRM-v{PACKAGE_REVISION}-CI-Build-Package"
 ARCHIVE = RELEASE_DIR / f"{PACKAGE_DIR_NAME}.zip"
 
 # Only stable source/package inputs may enter the public CI overlay. In
@@ -95,6 +96,7 @@ def write_manifest(files: list[tuple[Path, Path]]) -> Path:
         "manifest_schema": 4,
         "product": "HRM",
         "version": VERSION,
+        "package_revision": PACKAGE_REVISION,
         "purpose": "github-windows-ci-clean-checkout-candidate",
         "contains_plaintext_real_data": False,
         "contains_encrypted_real_data_bundle": any(

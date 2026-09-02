@@ -15,6 +15,7 @@ from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
 EXPECTED_VERSION = "0.6.0-beta.1"
+EXPECTED_PACKAGE_REVISION = "0.6.0-beta.1-ci.2"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -184,6 +185,12 @@ def validate_versions() -> None:
     version = (PROJECT / "VERSION").read_text(encoding="utf-8").strip()
     if version != EXPECTED_VERSION:
         fail(f"VERSION mismatch: expected {EXPECTED_VERSION!r}, got {version!r}")
+    package_revision = (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip()
+    if package_revision != EXPECTED_PACKAGE_REVISION:
+        fail(
+            "CI package revision mismatch: "
+            f"expected {EXPECTED_PACKAGE_REVISION!r}, got {package_revision!r}"
+        )
     checks = {
         "src/sazmanhr/__init__.py": f'__version__ = "{EXPECTED_VERSION}"',
         "build/windows/HRM.iss": f"AppVersion={EXPECTED_VERSION}",
@@ -195,7 +202,7 @@ def validate_versions() -> None:
         text = (PROJECT / relative).read_text(encoding="utf-8")
         if marker not in text:
             fail(f"Version contract missing in {relative}: {marker!r}")
-    print(f"PASS version contract: {EXPECTED_VERSION}")
+    print(f"PASS version contract: {EXPECTED_VERSION} ({EXPECTED_PACKAGE_REVISION})")
 
 
 def load_manifest_items() -> list[dict[str, object]]:
@@ -204,6 +211,11 @@ def load_manifest_items() -> list[dict[str, object]]:
     manifest = json.loads(PACKAGE_MANIFEST.read_text(encoding="utf-8"))
     if manifest.get("version") != EXPECTED_VERSION:
         fail(f"PACKAGE-MANIFEST version mismatch: {manifest.get('version')!r}")
+    if manifest.get("package_revision") != EXPECTED_PACKAGE_REVISION:
+        fail(
+            "PACKAGE-MANIFEST package revision mismatch: "
+            f"{manifest.get('package_revision')!r}"
+        )
     items = manifest.get("files")
     if not isinstance(items, list) or not items:
         fail("PACKAGE-MANIFEST.json has no files list")

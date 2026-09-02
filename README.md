@@ -1,6 +1,10 @@
-# HRM v0.6.0-beta.1 — Protected Organizational Pilot Candidate
+# HRM v0.6.0-beta.1 ci.2 — Protected Organizational Pilot Candidate
 
 این Beta روی Tag تست‌شده `v0.5.0-alpha.1` و Commit `8e3eb3baecb46d2a0f964322584e668a6e926ce2` ساخته شده است. هدف، اعتبارسنجی چهار منبع واقعی سازمان روی Runner ویندوز GitHub پیش از هر نصب داخل سازمان است؛ داده خام وارد Git نمی‌شود و فقط بسته رمز‌شده احرازهویت‌شده Commit می‌شود.
+
+بازانتشار `ci.2` قرارداد دیتای واقعی را اصلاح می‌کند: ۱۸۵ تخصیص فعال
+اکسل مستقل از ظرفیت مصوب ۵۳۶/۳۲/۵۶۸ چارت کنترل می‌شود. Bundle و Secret
+ساخته‌شده برای `ci.1` بدون تغییر قابل استفاده‌اند.
 
 ## تغییرات اصلی
 

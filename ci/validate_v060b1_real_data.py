@@ -36,6 +36,9 @@ from tools.real_data_migration.staging import create_staging_db  # noqa: E402
 @dataclass(frozen=True)
 class RealDataContract:
     personnel: int = 1356
+    county_enrichments: int = 590
+    active_named_positions: int = 185
+    ignored_legacy_type_zero: int = 1
     fixed: int = 536
     named: int = 32
     total: int = 568
@@ -49,15 +52,21 @@ class RealDataValidationError(RuntimeError):
 def official_contract() -> RealDataContract:
     metadata = json.loads((ROOT / "VERSION-V060B1.json").read_text(encoding="utf-8"))
     chart = metadata.get("approved_chart", {})
+    assignments = metadata.get("expected_source_assignments", {})
     values = {
         "personnel": metadata.get("expected_personnel"),
+        "county_enrichments": assignments.get("county_enrichments"),
+        "active_named_positions": assignments.get("active_named_positions"),
+        "ignored_legacy_type_zero": assignments.get("ignored_legacy_type_zero"),
         "fixed": chart.get("fixed"),
         "named": chart.get("named"),
         "total": chart.get("total"),
         "page_16_total": chart.get("page_16_total"),
     }
     expected = {
-        "personnel": 1356, "fixed": 536, "named": 32,
+        "personnel": 1356, "county_enrichments": 590,
+        "active_named_positions": 185, "ignored_legacy_type_zero": 1,
+        "fixed": 536, "named": 32,
         "total": 568, "page_16_total": 24,
     }
     if values != expected:
@@ -145,8 +154,6 @@ def validate_real_data(bundle: Path, key: bytes, output: Path, contract: RealDat
         envelope = decrypt_bundle(bundle, key, input_dir)
         dataset = reconcile(
             load_directory(input_dir),
-            expected_fixed=contract.fixed,
-            expected_named=contract.named,
             expected_personnel=contract.personnel,
         )
         dataset_summary = summary(dataset)
@@ -157,11 +164,34 @@ def validate_real_data(bundle: Path, key: bytes, output: Path, contract: RealDat
                 "Real-data reconciliation failed with protected issue codes: " + ", ".join(error_codes)
             )
 
+        # Source workbook assignments and approved chart capacity are distinct
+        # domains.  The named-position workbook contains 185 active occupant
+        # assignments (plus one retired type-0 row); the Enterprise chart page
+        # independently remains 536 fixed + 32 named = 568 approved posts.
+        source_aggregates = {
+            "personnel": dataset_summary["persons"],
+            "county_enrichments": dataset_summary["enrichment_applied"],
+            "active_named_positions": dataset_summary["positions"],
+            "ignored_legacy_type_zero": dataset_summary["ignored_rows"],
+        }
+        expected_source_aggregates = {
+            "personnel": contract.personnel,
+            "county_enrichments": contract.county_enrichments,
+            "active_named_positions": contract.active_named_positions,
+            "ignored_legacy_type_zero": contract.ignored_legacy_type_zero,
+        }
+        if source_aggregates != expected_source_aggregates:
+            raise RealDataValidationError(
+                "Private-source aggregate contract failed: "
+                f"observed={source_aggregates!r}, expected={expected_source_aggregates!r}"
+            )
+
         staging = temp / "staging.sqlite"
         create_staging_db(dataset, staging)
         staging_result = _staging_counts(staging)
         expected_staging = {
-            "integrity": "ok", "personnel": contract.personnel, "positions": contract.total,
+            "integrity": "ok", "personnel": contract.personnel,
+            "positions": contract.active_named_positions,
         }
         if staging_result != expected_staging:
             raise RealDataValidationError(f"Private staging aggregate contract failed: {staging_result!r}")
@@ -209,6 +239,11 @@ def validate_real_data(bundle: Path, key: bytes, output: Path, contract: RealDat
                 "named_posts": contract.named, "total_posts": contract.total,
                 "page_16_total": contract.page_16_total,
             },
+            "source_contract": {
+                "county_enrichments": contract.county_enrichments,
+                "active_named_positions": contract.active_named_positions,
+                "ignored_legacy_type_zero": contract.ignored_legacy_type_zero,
+            },
             "reconciliation": {**dataset_summary, "issue_codes": dict(sorted(issue_counts.items()))},
             "staging": staging_result,
             "production_shadow": {
@@ -249,6 +284,7 @@ def main() -> int:
     print(json.dumps({
         "status": result["status"], "version": result["version"],
         "approved_contract": result["approved_contract"],
+        "source_contract": result["source_contract"],
         "rollback_verified": production["rollback_verified"],
         "replay_verified": production["replay_verified"],
     }, ensure_ascii=False))

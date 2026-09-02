@@ -47,7 +47,11 @@ def _approved_fixture(root: Path) -> Path:
 
 
 def _approved_scale_fixture(root: Path) -> Path:
-    """Structurally exercise the exact official 1356/568/32 contract."""
+    """Exercise the real topology: 1356 people, 590 enrichments and 185 assignments.
+
+    The approved 536/32/568 chart counts live in the Enterprise target and are
+    intentionally not manufactured as rows in the named-position workbook.
+    """
     source = root / "approved-scale-input"
     source.mkdir()
     header = [
@@ -73,20 +77,18 @@ def _approved_scale_fixture(root: Path) -> Path:
         source / "شهرستان.xlsx",
         [
             ["شماره پرسنلی", "واحد سازمانی"],
-            *([str(number), "ناحیه آزمایشی"] for number in range(1001, 1357)),
+            *([str(number), "ناحیه آزمایشی"] for number in range(767, 1357)),
         ],
     )
     _save_book(
         source / "اکسل پست با نام.xlsx",
         [
             ["شماره پست سازمانی", "عنوان پست", "شماره پرسنلی", "نوع پست"],
-            *(
-                [
-                    f"P{number:04d}", "عنوان آزمایشی", str(number),
-                    "بانام ایثار" if number <= 32 else "ثابت",
-                ]
-                for number in range(1, 569)
-            ),
+            *([
+                f"P{number:04d}", "عنوان آزمایشی", str(number),
+                "بانام ایثار" if number <= 32 else "بانام",
+            ] for number in range(1, 186)),
+            ["P1356", "ردیف قدیمی", "1356", "0"],
         ],
     )
     return source
@@ -128,7 +130,11 @@ class V060B1RealDataCiTests(unittest.TestCase):
             output = root / "summary.json"
             result = validate_real_data(
                 bundle, key_file.read_bytes().strip(), output,
-                RealDataContract(personnel=3, fixed=0, named=1, total=1, page_16_total=24),
+                RealDataContract(
+                    personnel=3, county_enrichments=1, active_named_positions=1,
+                    ignored_legacy_type_zero=0, fixed=0, named=1, total=1,
+                    page_16_total=24,
+                ),
             )
             self.assertEqual(result["staging"]["personnel"], 3)
             self.assertTrue(result["production_shadow"]["rollback_verified"])
@@ -158,10 +164,34 @@ class V060B1RealDataCiTests(unittest.TestCase):
                 bundle, key_file.read_bytes().strip(), root / "summary.json", RealDataContract()
             )
             self.assertEqual(result["approved_contract"]["personnel"], 1356)
-            self.assertEqual(result["staging"]["positions"], 568)
+            self.assertEqual(result["source_contract"]["county_enrichments"], 590)
+            self.assertEqual(result["source_contract"]["active_named_positions"], 185)
+            self.assertEqual(result["source_contract"]["ignored_legacy_type_zero"], 1)
+            self.assertEqual(result["staging"]["positions"], 185)
+            self.assertEqual(result["production_shadow"]["named_position_assignments"], 185)
+            self.assertEqual(result["production_shadow"]["postflight"]["approved_total_posts"], 568)
             self.assertEqual(result["reconciliation"]["errors"], 0)
             self.assertTrue(result["production_shadow"]["rollback_verified"])
             self.assertTrue(result["production_shadow"]["replay_verified"])
+
+    def test_chart_capacity_is_not_compared_to_source_assignment_rows(self):
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            bundle = root / "data.enc"
+            key_file = root / "key.txt"
+            create_encrypted_bundle(_approved_fixture(root), bundle, key_file)
+            result = validate_real_data(
+                bundle, key_file.read_bytes().strip(), root / "summary.json",
+                RealDataContract(
+                    personnel=3, county_enrichments=1, active_named_positions=1,
+                    ignored_legacy_type_zero=0,
+                    fixed=536, named=32, total=568, page_16_total=24,
+                ),
+            )
+            self.assertEqual(result["staging"]["positions"], 1)
+            self.assertEqual(result["approved_contract"]["total_posts"], 568)
+            self.assertNotIn("FIXED_POSITION_COUNT_MISMATCH", result["reconciliation"]["issue_codes"])
+            self.assertNotIn("NAMED_POSITION_COUNT_MISMATCH", result["reconciliation"]["issue_codes"])
 
 
 if __name__ == "__main__":

@@ -5,6 +5,11 @@
   "baseline_tag": "v0.5.0-alpha.1",
   "baseline_commit": "8e3eb3baecb46d2a0f964322584e668a6e926ce2",
   "expected_personnel": 1356,
+  "expected_source_assignments": {
+    "county_enrichments": 590,
+    "active_named_positions": 185,
+    "ignored_legacy_type_zero": 1
+  },
   "approved_chart": {
     "fixed": 536,
     "named": 32,

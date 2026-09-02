@@ -51,7 +51,7 @@ class CiPipelineTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         contract = workflow.index("Validate packaging contract")
         dependencies = workflow.index("Install source gate dependencies")
-        candidate = workflow.index("Validate v0.6.0 beta.1 pilot candidate")
+        candidate = workflow.index("Validate v0.6.0 beta.1 ci.2 pilot candidate")
         real_data = workflow.index("Validate protected real data")
         inno = workflow.index("Install Inno Setup")
         build = workflow.index("Build and unit test")

@@ -89,7 +89,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "feat: add protected real-data CI and pilot gates for v0.6 beta1"
+git commit -m "fix: separate real-data assignments from chart capacity"
 if errorlevel 1 exit /b 1
 
 git push -u origin feat/organizational-pilot-v060b1

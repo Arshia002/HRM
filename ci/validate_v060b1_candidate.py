@@ -55,6 +55,12 @@ def main() -> int:
         fail("v0.6 beta.1 must remain anchored to the tested v0.5 tag")
     if metadata.get("expected_personnel") != 1356:
         fail("approved personnel contract changed")
+    if metadata.get("expected_source_assignments") != {
+        "county_enrichments": 590,
+        "active_named_positions": 185,
+        "ignored_legacy_type_zero": 1,
+    }:
+        fail("approved private-source assignment contract changed")
     if metadata.get("approved_chart") != {"fixed": 536, "named": 32, "total": 568, "page_16_total": 24}:
         fail("approved chart contract changed")
     for relative in (

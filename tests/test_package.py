@@ -252,6 +252,15 @@ class PackageTests(unittest.TestCase):
             parts = Path(item["path"]).parts
             self.assertFalse(forbidden_parts.intersection(parts), item["path"])
 
+    def test_corrected_beta_package_has_distinct_ci_revision(self):
+        self.assertEqual(
+            (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
+            "0.6.0-beta.1-ci.2",
+        )
+        builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
+        self.assertIn("PACKAGE_REVISION", builder)
+        self.assertIn('"package_revision": PACKAGE_REVISION', builder)
+
     def test_release_builder_excludes_mutable_local_test_logs(self):
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn('".log"', builder)
