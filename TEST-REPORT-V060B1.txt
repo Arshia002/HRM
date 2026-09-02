@@ -1,4 +1,4 @@
-HRM v0.6.0-beta.1 ci.2 - Verification Scope
+HRM v0.6.0-beta.1 ci.5 - Verification Scope
 =======================================
 
 Immutable baseline
@@ -10,12 +10,15 @@ Immutable baseline
 Pre-delivery source gates
 -------------------------
 - Exact dependency pins and clean source-path import.
-- Full Unit/Integration/UI/Migration regression: 116/116 PASS locally.
+- Full Unit/Integration/UI/Migration regression: 120/120 PASS locally.
 - Focused Enterprise migration regression: 28/28 PASS.
 - Authenticated bundle round trip, wrong-key and tamper rejection.
 - Exact-scale synthetic 1356-person/590-enrichment/185-active-assignment/1-ignored-row Reconcile/Staging/Backup/Apply/Rollback/Replay: PASS.
 - Approved chart capacity (536/32/568) is validated independently from the 185 private workbook assignment rows: PASS.
 - Regression for FIXED_POSITION_COUNT_MISMATCH/NAMED_POSITION_COUNT_MISMATCH false positives: PASS.
+- Deterministic privacy regression separates visible values from SHA-256 and rejects real visible-field leakage: PASS.
+- Original ZIP manifest is verified before regeneration; mixed ci.4/ci.5 overlays are rejected: PASS.
+- Atomic installer forces same-size/same-time files and validates both source and target: PASS.
 - Package manifest hashes and clean-ZIP revalidation.
 - No plaintext workbook, key, private database, cache or local environment.
 

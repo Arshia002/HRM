@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "0.6.0-beta.1",
-  "package_revision": "0.6.0-beta.1-ci.2",
+  "package_revision": "0.6.0-beta.1-ci.5",
   "purpose": "github-windows-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -17,7 +17,7 @@
     {
       "path": ".github/workflows/windows-build.yml",
       "bytes": 5794,
-      "sha256": "c40e7d77b9232bc19fa8f31953e3cb9e376405fd834d10fc0216047a6fdcc255"
+      "sha256": "c33686d6fd6ecc040e87399bb4890bc51a31b190f5e16d92c2091b612f871304"
     },
     {
       "path": ".gitignore",
@@ -51,8 +51,8 @@
     },
     {
       "path": "APPLY-V060B1.cmd",
-      "bytes": 1059,
-      "sha256": "4c8ad0a1a22ea4b784382768efed9ad0b025832d192d1833e04b077d485afa94"
+      "bytes": 1184,
+      "sha256": "b69bd5c9baefea8276e02a0079fc339d8b9976ee073a54be982acee8084c578f"
     },
     {
       "path": "assets/company-logo-source.png",
@@ -180,9 +180,14 @@
       "sha256": "c2ecb46da04edc2ba6a02c15740a9d0505818b7b5abcb00b2ad45c9c25857ca4"
     },
     {
+      "path": "ci/validate_overlay_integrity.py",
+      "bytes": 3688,
+      "sha256": "e96e7850b5bad02eb5d253551e176ece555e5fa142dead73d1d62e42f933ffd3"
+    },
+    {
       "path": "ci/validate_package_contract.py",
-      "bytes": 20005,
-      "sha256": "a4308faf1575a9c200fdb832fea07b1b807aabdba14e4f43412091d04c501f92"
+      "bytes": 21150,
+      "sha256": "cb9d9e13628a8c2fec90b6aee306685c15c69d0f0ddbcf5dfcf07181558b0706"
     },
     {
       "path": "ci/validate_v040a1_migration.py",
@@ -206,8 +211,8 @@
     },
     {
       "path": "ci/validate_v060b1_candidate.py",
-      "bytes": 4178,
-      "sha256": "1a915a1afc3d78a726d516eceb520cd9422447deeba363c34aab96a0d2d66e6e"
+      "bytes": 4260,
+      "sha256": "1f6fbd0067595e35c88ea809462e299dea619757f4169d6da4b1f28ab49d05ba"
     },
     {
       "path": "ci/validate_v060b1_real_data.py",
@@ -221,18 +226,18 @@
     },
     {
       "path": "CI-LOCAL-VALIDATION.md",
-      "bytes": 2015,
-      "sha256": "291c30d93e750341ec0812fe48e6bcffcd8086503f0358f06f743cb6060034a7"
+      "bytes": 2178,
+      "sha256": "5bf6cd7da8317c0d51442590217968b431c4bc6acfe6f79ced1429c72c1932ef"
     },
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 18,
-      "sha256": "d3c3f11ed024be451b2dda2771d066b8696bbace28057e174c08a3443afb686b"
+      "sha256": "78bbdc1377c84e964ae32d1ab35c93c4f9f557fdea9f880d52c8144af5caa3ac"
     },
     {
       "path": "CI-README-FA.md",
-      "bytes": 1408,
-      "sha256": "2b1c1274704560861b3465b4cdce111b2ecc49a3ced7fec6273cd9b53dc367cf"
+      "bytes": 1475,
+      "sha256": "f2ceb0a1dc08d706f5cecbea70833edde5adb06e39fbed22efc70292fe26bde6"
     },
     {
       "path": "CONFIGURE-REAL-DATA-SECRET-V060B1.cmd",
@@ -295,6 +300,16 @@
       "sha256": "2f7f79b96bf27f33bd3eb7c13a5fc79be2de059be04ab0b5b75005e8032def0c"
     },
     {
+      "path": "docs/ROOT-CAUSE-V060B1-MIXED-OVERLAY.md",
+      "bytes": 1427,
+      "sha256": "d8e3c94208dd018fb70f1f7e128f83c3deee4db554090a93700743669f22022f"
+    },
+    {
+      "path": "docs/ROOT-CAUSE-V060B1-PRIVACY-HASH-FLAKE.md",
+      "bytes": 1261,
+      "sha256": "443cbe61546350169fcc7587602b9f7f7ea4b231c9714319f37aebdb8790a66b"
+    },
+    {
       "path": "docs/ROOT-CAUSE-V060B1-REAL-DATA-COUNTS.md",
       "bytes": 1980,
       "sha256": "f9d68bacf7f627c27470fc85ccfab9c301f3758832e45ec6530082712117ede4"
@@ -325,6 +340,11 @@
       "sha256": "fc45602403d8075cfba74149911814aeb919f83d0e4c0fa45a62719046dc9af9"
     },
     {
+      "path": "INSTALL-OVERLAY-V060B1.cmd",
+      "bytes": 2433,
+      "sha256": "ea63976f9575414e01e5b5490879e55b3addfc5dbcf7b9fba6c7a2847db77b8d"
+    },
+    {
       "path": "LICENSE.txt",
       "bytes": 290,
       "sha256": "26e4cf37f041d888ff8b9790d0253223a967478e11e5f8495f900aa50f56b7d4"
@@ -336,8 +356,8 @@
     },
     {
       "path": "PUSH-TO-GITHUB.cmd",
-      "bytes": 3283,
-      "sha256": "c10b336c67decbbbd99d361f5601e2c85c9172adba5657b58a034cc9692a62cc"
+      "bytes": 3322,
+      "sha256": "8bddcfa0b95e7051f7c742f1cefe15dcff16c318719fd7bbf0b6da62ce56b323"
     },
     {
       "path": "pyproject.toml",
@@ -366,18 +386,18 @@
     },
     {
       "path": "README-V060B1.txt",
-      "bytes": 943,
-      "sha256": "858f80c167f972385957d668ad2585e3646f8b99e0b96ebdd8458a93ec0feac9"
+      "bytes": 1062,
+      "sha256": "e3eef4837822f27587a9b67d1065d0d2c46443e3cce113acde598e636c855ff0"
     },
     {
       "path": "README.md",
-      "bytes": 2916,
-      "sha256": "73a3a682e3eac33c4963886ed74ece39046934bc8e902be88893f9c60656f71f"
+      "bytes": 3498,
+      "sha256": "221336b1352ce2f12755ef1e20030d99bb57f4e0782ff0a93e70cea3c099ded3"
     },
     {
       "path": "RELEASE-QUALITY-GATES.md",
       "bytes": 1666,
-      "sha256": "777bf168aac6321f278ea2aa07f0027a3f64fc88f491bb49685e3e02b6a095fb"
+      "sha256": "879b85072a950325816c5e98f74043835ad4664ea3969f6681d23456402591d2"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -536,8 +556,8 @@
     },
     {
       "path": "TEST-REPORT-V060B1.txt",
-      "bytes": 1654,
-      "sha256": "7c45a328c9508add04f5377e5c55a82dd772899bc66e3e6530459b09f4baacd9"
+      "bytes": 1971,
+      "sha256": "f2e520fb81008082d64d57036bf6592d427a393f70049b1d8c7eacb6a41bae98"
     },
     {
       "path": "TEST-REPORT.md",
@@ -557,7 +577,7 @@
     {
       "path": "tests/test_ci_pipeline.py",
       "bytes": 5309,
-      "sha256": "89e337e0d967c8b0c2e63967637e5abb6e859bd5456b20ecf06f18e900680679"
+      "sha256": "3dfbcffa8324c19aa0039e25712b395d449ba6089bad1dcd49466a22c2dbb6a8"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -576,8 +596,8 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 19200,
-      "sha256": "e8217527088351157776e0e40c645cff420ea0faf0a6cca312e119b5a6fc8170"
+      "bytes": 21465,
+      "sha256": "dfafef2b48654bab7ecf158c834cd0cfa359f1f19c8d1855385b7451db026a1e"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -626,8 +646,8 @@
     },
     {
       "path": "tests/test_v060b1_real_data_ci.py",
-      "bytes": 9441,
-      "sha256": "ac2f4968c7ad96cacc2d7225dd423472c5cc87b775b213b09996f7eea94238a6"
+      "bytes": 11281,
+      "sha256": "1b424d0920d0609398d844e232eb7262064008aecf5aedf3ad087029f1000715"
     },
     {
       "path": "tests/test_windows_service_control.py",
@@ -636,8 +656,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 6793,
-      "sha256": "59438fb332abe12488da6a2d7409744cae338d55d2568096dfc13130b9673d75"
+      "bytes": 6827,
+      "sha256": "33468a1ae701671aca525f016285d213a47e14a9e4570db55852cd9afe97cac1"
     },
     {
       "path": "tools/collect-diagnostics.cmd",

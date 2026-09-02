@@ -4,7 +4,7 @@
 
 ## روش اعمال
 
-1. ZIP را در Root همان Repository استخراج کنید.
+1. ZIP را در یک پوشه جدا استخراج و `INSTALL-OVERLAY-V060B1.cmd` را با مسیر Repository اجرا کنید.
 2. چهار فایل تأییدشده را فقط در پوشه‌ای خارج از Repository قرار دهید.
 3. `PREPARE-REAL-DATA-V060B1.cmd` را با مسیر آن پوشه اجرا کنید.
 4. با `CONFIGURE-REAL-DATA-SECRET-V060B1.cmd` کلید را در Environment Secret تنظیم کنید.

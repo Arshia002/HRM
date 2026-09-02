@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +11,32 @@ from openpyxl import Workbook
 
 from ci.real_data_bundle import BundleError, create_encrypted_bundle, decrypt_bundle
 from ci.validate_v060b1_real_data import RealDataContract, validate_real_data
+
+
+def _visible_text_values(value: object, *, field_name: str = ""):
+    """Yield report text that can carry PII, excluding cryptographic digests."""
+    if isinstance(value, dict):
+        for name, item in value.items():
+            if name.endswith("_sha256"):
+                continue
+            yield from _visible_text_values(item, field_name=name)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _visible_text_values(item, field_name=field_name)
+    elif isinstance(value, str):
+        yield value
+
+
+def _sha256_values(value: object):
+    if isinstance(value, dict):
+        for name, item in value.items():
+            if name.endswith("_sha256") and isinstance(item, str):
+                yield item
+            else:
+                yield from _sha256_values(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _sha256_values(item)
 
 
 def _save_book(path: Path, rows: list[list[str]]) -> None:
@@ -140,11 +167,27 @@ class V060B1RealDataCiTests(unittest.TestCase):
             self.assertTrue(result["production_shadow"]["rollback_verified"])
             self.assertTrue(result["production_shadow"]["replay_verified"])
             serialized = output.read_text(encoding="utf-8")
-            for private_value in ("آرش", "بهار", "پویان", "111", "222", "333", "P1"):
-                self.assertNotIn(private_value, serialized)
             payload = json.loads(serialized)
+            visible_report_text = "\n".join(_visible_text_values(payload))
+            for private_value in ("آرش", "بهار", "پویان", "111", "222", "333", "P1"):
+                self.assertNotIn(private_value, visible_report_text)
+            digests = list(_sha256_values(payload))
+            self.assertGreaterEqual(len(digests), 3)
+            self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}", digest) for digest in digests))
             self.assertFalse(payload["privacy"]["raw_identifiers"])
             self.assertFalse(payload["privacy"]["plaintext_artifact"])
+
+    def test_privacy_scan_does_not_treat_digest_coincidence_as_pii(self):
+        digest_with_short_private_number = "a" * 20 + "111" + "b" * 41
+        safe_payload = {
+            "status": "pass",
+            "encrypted_bundle_sha256": digest_with_short_private_number,
+        }
+        self.assertNotIn("111", "\n".join(_visible_text_values(safe_payload)))
+        self.assertEqual(list(_sha256_values(safe_payload)), [digest_with_short_private_number])
+
+        leaked_payload = {**safe_payload, "message": "raw national identifier 111 leaked"}
+        self.assertIn("111", "\n".join(_visible_text_values(leaked_payload)))
 
     def test_prepare_refuses_incomplete_approved_profile_set(self):
         with tempfile.TemporaryDirectory() as temp_name:

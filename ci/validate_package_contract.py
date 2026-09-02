@@ -15,7 +15,7 @@ from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
 EXPECTED_VERSION = "0.6.0-beta.1"
-EXPECTED_PACKAGE_REVISION = "0.6.0-beta.1-ci.2"
+EXPECTED_PACKAGE_REVISION = "0.6.0-beta.1-ci.5"
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -402,6 +402,23 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
     ):
         if marker not in push:
             fail(f"Guarded push real-data marker is missing: {marker!r}")
+    if "git switch" in push.lower():
+        fail("Guarded push must not change branches after overlay installation")
+    if "git branch --show-current" not in push:
+        fail("Guarded push must verify the pilot branch before validation")
+    installer = (PROJECT / "INSTALL-OVERLAY-V060B1.cmd").read_text(encoding="utf-8")
+    for marker in ("/IS /IT", "branch --show-current", "validate_overlay_integrity.py"):
+        if marker.lower() not in installer.lower():
+            fail(f"Atomic overlay installer marker is missing: {marker!r}")
+    if installer.lower().count("validate_overlay_integrity.py") < 2:
+        fail("Overlay installer must validate both source and installed target")
+    apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
+    overlay_marker = "ci\\validate_overlay_integrity.py"
+    regeneration_marker = "tools\\build_release.py"
+    if overlay_marker not in apply:
+        fail("Extracted-overlay integrity gate is missing from APPLY-V060B1.cmd")
+    if apply.index(overlay_marker) > apply.index(regeneration_marker):
+        fail("Extracted-overlay integrity must run before manifest regeneration")
     print("PASS authenticated encrypted-input and aggregate-only artifact boundary")
 
 

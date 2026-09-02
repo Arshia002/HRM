@@ -35,14 +35,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git show-ref --verify --quiet refs/heads/feat/organizational-pilot-v060b1
-if errorlevel 1 (
-  git switch -c feat/organizational-pilot-v060b1
-) else (
-  git switch feat/organizational-pilot-v060b1
-)
-if errorlevel 1 (
-  echo ERROR: could not select the organizational pilot feature branch.
+for /f "delims=" %%B in ('git branch --show-current') do set "HRM_CURRENT_BRANCH=%%B"
+if /I not "%HRM_CURRENT_BRANCH%"=="feat/organizational-pilot-v060b1" (
+  echo ERROR: guarded push requires feat/organizational-pilot-v060b1 before validation.
+  echo Run INSTALL-OVERLAY-V060B1.cmd from the extracted ci.5 package first.
   exit /b 1
 )
 git merge-base --is-ancestor 8e3eb3baecb46d2a0f964322584e668a6e926ce2 HEAD
@@ -89,7 +85,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "fix: separate real-data assignments from chart capacity"
+git commit -m "fix: make beta1 CI validation deterministic and overlay-safe"
 if errorlevel 1 exit /b 1
 
 git push -u origin feat/organizational-pilot-v060b1

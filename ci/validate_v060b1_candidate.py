@@ -66,7 +66,9 @@ def main() -> int:
     for relative in (
         "RELEASE-QUALITY-GATES.md", "ci/real_data_bundle.py",
         "ci/prepare_real_data_bundle.py", "ci/validate_v060b1_real_data.py",
+        "ci/validate_overlay_integrity.py",
         "ci/stage_v060b1_overlay.py",
+        "INSTALL-OVERLAY-V060B1.cmd",
         "PREPARE-REAL-DATA-V060B1.cmd", "CONFIGURE-REAL-DATA-SECRET-V060B1.cmd",
     ):
         if not (ROOT / relative).is_file():

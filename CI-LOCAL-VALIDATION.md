@@ -1,10 +1,10 @@
-# HRM v0.6.0-beta.1 ci.2 — Local Validation
+# HRM v0.6.0-beta.1 ci.5 — Local Validation
 
 Date: 2026-09-02
 
 Before delivery of the protected organizational pilot candidate:
 
-- Full source Unit/Integration/UI/Migration suite: **116/116 PASS locally; must repeat from a clean ZIP**
+- Full source Unit/Integration/UI/Migration suite: **120/120 PASS locally; must repeat from a clean ZIP**
 - Focused Enterprise migration suite: **28/28 PASS**
 - Fresh isolated dependency installation: **PASS with the exact GitHub pins**
 - Exact clean-runner pins (`cryptography`, `openpyxl`, `xlrd`): **static parity PASS; runtime install must repeat on Windows**
@@ -24,6 +24,8 @@ Before delivery of the protected organizational pilot candidate:
 - Authenticated encrypted-bundle round trip, wrong-key and tamper rejection: **PASS**
 - Exact-scale synthetic 1356-person/590-enrichment/185-assignment/1-ignored-row apply/rollback/replay: **PASS**
 - Separation of 185 source assignments from 536/32/568 approved chart capacity: **PASS**
+- Deterministic privacy scan with deliberate `111` inside SHA-256 regression: **PASS**
+- Pre-regeneration overlay integrity and mixed-revision rejection: **PASS**
 - Real-data artifact privacy boundary: **PASS** (aggregate-only)
 
 The exact private-source 1356/590/185/1 contract and independent 536/32/568 chart contract must pass on GitHub `windows-2022` with the encrypted four-source bundle. Local synthetic validation intentionally does not claim that the private source content has passed.

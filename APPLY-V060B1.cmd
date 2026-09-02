@@ -7,6 +7,9 @@ where git.exe >nul 2>&1 || (echo FAIL: git not found.& exit /b 1)
 where python.exe >nul 2>&1 || (echo FAIL: python not found.& exit /b 1)
 git rev-parse --is-inside-work-tree >nul 2>&1 || (echo FAIL: run from the HRM Git repository root.& exit /b 1)
 
+echo Validating extracted overlay integrity before any regeneration...
+python ci\validate_overlay_integrity.py || exit /b 1
+
 set "HRM_GATE_PYTHON=%CD%\.venv\Scripts\python.exe"
 if not exist "%HRM_GATE_PYTHON%" (
   echo Creating isolated source-gate environment...

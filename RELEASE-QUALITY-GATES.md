@@ -1,4 +1,4 @@
-# HRM v0.6.0-beta.1 ci.2 Release Quality Gates
+# HRM v0.6.0-beta.1 ci.5 Release Quality Gates
 
 This is an executable release contract. Candidate validation, package
 validation, guarded push and GitHub Actions enforce the corresponding controls.

@@ -6,8 +6,12 @@ Baseline: v0.5.0-alpha.1 / 8e3eb3baecb46d2a0f964322584e668a6e926ce2
 This package adds the protected real-data validation gate. It does not contain
 the four private source workbooks or their encryption key.
 
-Required order from the repository root:
+Required order:
 
+  From the separately extracted ci.5 package folder:
+  INSTALL-OVERLAY-V060B1.cmd "C:\path\to\HRM-repository"
+
+  Then from the repository root:
   PREPARE-REAL-DATA-V060B1.cmd "C:\HRM-Private-Input"
   CONFIGURE-REAL-DATA-SECRET-V060B1.cmd
   PUSH-TO-GITHUB.cmd

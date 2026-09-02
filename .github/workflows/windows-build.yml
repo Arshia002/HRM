@@ -51,7 +51,7 @@ jobs:
           & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.6.0 beta.1 ci.2 pilot candidate
+      - name: Validate v0.6.0 beta.1 ci.5 pilot candidate
         shell: pwsh
         run: |
           & python .\ci\validate_v060b1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log

@@ -5,6 +5,7 @@ import json
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -255,11 +256,43 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "0.6.0-beta.1-ci.2",
+            "0.6.0-beta.1-ci.5",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
         self.assertIn('"package_revision": PACKAGE_REVISION', builder)
+
+    def test_overlay_integrity_gate_precedes_manifest_regeneration(self):
+        apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
+        verify = apply.index("ci\\validate_overlay_integrity.py")
+        regenerate = apply.index("tools\\build_release.py")
+        self.assertLess(verify, regenerate)
+
+    def test_overlay_integrity_rejects_a_mixed_revision_payload(self):
+        from ci.validate_overlay_integrity import OverlayIntegrityError, verify_overlay
+
+        with tempfile.TemporaryDirectory() as temp_name:
+            root = Path(temp_name)
+            payload = root / "payload.txt"
+            payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
+            raw = payload.read_bytes()
+            (root / "CI-PACKAGE-VERSION").write_text(
+                "0.6.0-beta.1-ci.5\n", encoding="utf-8", newline="\n"
+            )
+            manifest = {
+                "package_revision": "0.6.0-beta.1-ci.5",
+                "files": [{
+                    "path": "payload.txt", "bytes": len(raw),
+                    "sha256": hashlib.sha256(raw).hexdigest(),
+                }],
+            }
+            (root / "PACKAGE-MANIFEST.json").write_text(
+                json.dumps(manifest), encoding="utf-8", newline="\n"
+            )
+            self.assertEqual(verify_overlay(root), 1)
+            payload.write_text("stale ci.4 payload\n", encoding="utf-8", newline="\n")
+            with self.assertRaisesRegex(OverlayIntegrityError, "byte count mismatch"):
+                verify_overlay(root)
 
     def test_release_builder_excludes_mutable_local_test_logs(self):
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
@@ -297,6 +330,18 @@ class PackageTests(unittest.TestCase):
         self.assertIn("local v0.6.0-beta.1 gates failed. Nothing will be committed or pushed", push)
         self.assertIn(".venv\\Scripts\\python.exe", push)
         self.assertNotIn("git add -A", push)
+        self.assertNotIn("git switch", push.lower())
+        self.assertIn("git branch --show-current", push)
+
+    def test_ci5_installer_forces_complete_overlay_before_push(self):
+        installer = (PROJECT / "INSTALL-OVERLAY-V060B1.cmd").read_text(encoding="utf-8")
+        self.assertIn("/IS /IT", installer)
+        self.assertIn("feat/organizational-pilot-v060b1", installer)
+        first_verify = installer.index("validate_overlay_integrity.py")
+        copy = installer.index('robocopy "%HRM_OVERLAY_SOURCE%"')
+        second_verify = installer.index("validate_overlay_integrity.py", first_verify + 1)
+        self.assertLess(first_verify, copy)
+        self.assertLess(copy, second_verify)
 
     def test_guarded_stage_is_manifest_limited(self):
         stage = (PROJECT / "ci" / "stage_v060b1_overlay.py").read_text(encoding="utf-8")
