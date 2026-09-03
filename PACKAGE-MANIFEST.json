@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "0.7.0-rc.1",
-  "package_revision": "0.7.0-rc.1-ci.3",
+  "package_revision": "0.7.0-rc.1-ci.4",
   "purpose": "github-windows-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -16,8 +16,8 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 7996,
-      "sha256": "23af64ad8e0c347176aed17a56ba4b0afddb7b787396970db398d89674e8dcb0"
+      "bytes": 7881,
+      "sha256": "36bba1afdd5309819c4ee8f8efe8f3fa233d1a71c98b60e88689dd5d5a1b0988"
     },
     {
       "path": ".gitignore",
@@ -215,6 +215,11 @@
       "sha256": "65536ed536df90cedf99480b193f47231030696c91053d9b34aef9e8864fcb91"
     },
     {
+      "path": "ci/validate_rc_hardening.py",
+      "bytes": 2041,
+      "sha256": "a8b66d98472b75366876ca6213d4ef828b8d80df63a4539ebb2ccaed4e21c48e"
+    },
+    {
       "path": "ci/validate_v040a1_migration.py",
       "bytes": 1798,
       "sha256": "108b39be4a84b0b2de27672b112b648cd170ee5abf905e34fe3bcabda7a320fc"
@@ -246,8 +251,8 @@
     },
     {
       "path": "ci/validate_v070rc1_candidate.py",
-      "bytes": 4518,
-      "sha256": "b5a6f806fc53864a8868b2ea098f73fb290abd5cb36c5bd93ca5879c766e6f4e"
+      "bytes": 4557,
+      "sha256": "b56f991534fa763d29936052ea0669c258bac60f7a31a8c3524f2d52c603c0db"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
@@ -262,7 +267,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "4fb39387205d6f7d40fa8531ee80fc29fb04ec2048ae0854e725535a4fb62214"
+      "sha256": "fbc9ea80abb3516f2274d653a0e076cc6977fa514b4dad52416a5390de0bce9d"
     },
     {
       "path": "CI-README-FA.md",
@@ -343,6 +348,11 @@
       "path": "docs/ROOT-CAUSE-V060B1-REAL-DATA-COUNTS.md",
       "bytes": 1980,
       "sha256": "f9d68bacf7f627c27470fc85ccfab9c301f3758832e45ec6530082712117ede4"
+    },
+    {
+      "path": "docs/ROOT-CAUSE-V070RC1-CI3-HARDENING-IMPORT.md",
+      "bytes": 1183,
+      "sha256": "93b1a99beaa22f65a75ef7d106b492132f35c980843dba3d53d4419ff0af351c"
     },
     {
       "path": "docs/security-fa.md",
@@ -437,7 +447,7 @@
     {
       "path": "RELEASE-QUALITY-GATES.md",
       "bytes": 1453,
-      "sha256": "4a70b6b7e1c9191fafbc7e1348e2e926ca6077b46638e0c1bb23993df747fe20"
+      "sha256": "b3d13bf3d4b3517912f40e27ab6f6e3a86e930b732ef509bc4c070694a3461b5"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -601,8 +611,8 @@
     },
     {
       "path": "TEST-REPORT-V070RC1.txt",
-      "bytes": 427,
-      "sha256": "efb64c038ae123f8a52920324a61fe6e2fd86a0c8e393e4907d2a28838958c93"
+      "bytes": 530,
+      "sha256": "925be7daf3de252df53b065ab7e368eec1ab3c8f8bc0e10a8acd5cedf67aa5b9"
     },
     {
       "path": "TEST-REPORT.md",
@@ -621,8 +631,8 @@
     },
     {
       "path": "tests/test_ci_pipeline.py",
-      "bytes": 5442,
-      "sha256": "17ad2a4b9c85a65fd57d9a979bb5109ecaa280b23aa03e1e7caa530cf6c48ac7"
+      "bytes": 6245,
+      "sha256": "2e8c52942140e404250ae8f94fada8af70dea72942c736c335516923eee69439"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -642,7 +652,7 @@
     {
       "path": "tests/test_package.py",
       "bytes": 21993,
-      "sha256": "8dbbcc5338bf9a31539477bd9ce96b97e2a9ade56f917c699718ce601aaf69ab"
+      "sha256": "a1f38339f53b758d02f540954e4979a5c78597600130f8d003d299ba68843366"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -667,7 +677,7 @@
     {
       "path": "tests/test_rc_release_identity.py",
       "bytes": 1005,
-      "sha256": "bcdda940be2eac84482e6a55acfad64517bd324c8d1538a231c219e9a6dc1cb9"
+      "sha256": "a48c111f7a6ff68b8a0abd75c6daf0d883252cde4a4c5c88c895c4c7f3582236"
     },
     {
       "path": "tests/test_repository.py",
@@ -842,7 +852,7 @@
     {
       "path": "VERSION-V070RC1.json",
       "bytes": 1125,
-      "sha256": "dc1f56e4426d5f15fecfbb76fe4615a4e09cad131118e90b526f43113797b8de"
+      "sha256": "eb649785cc73b6fae3d573002f2c7836c977fac023478b2a9692ffc751798d5c"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "product": "HRM",
   "version": "0.7.0-rc.1",
-  "package_revision": "0.7.0-rc.1-ci.3",
+  "package_revision": "0.7.0-rc.1-ci.4",
   "candidate_kind": "organizational-pilot-release-hardening",
   "baseline_tag": "v0.6.0-beta.1",
   "baseline_commit": "a8b93c981603c58d0edaf3d999e088c7a674aa1b",

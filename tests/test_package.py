@@ -256,7 +256,7 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "0.7.0-rc.1-ci.3",
+            "0.7.0-rc.1-ci.4",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
@@ -277,10 +277,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "0.7.0-rc.1-ci.3\n", encoding="utf-8", newline="\n"
+                "0.7.0-rc.1-ci.4\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "0.7.0-rc.1-ci.3",
+                "package_revision": "0.7.0-rc.1-ci.4",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),

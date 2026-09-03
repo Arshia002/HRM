@@ -53,7 +53,7 @@ jobs:
           & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v0.7.0 rc.1 ci.2 pilot candidate
+      - name: Validate v0.7.0 rc.1 ci.4 pilot candidate
         shell: pwsh
         run: |
           & python .\ci\validate_v070rc1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
@@ -62,7 +62,7 @@ jobs:
       - name: Validate RC network, DR and diagnostics hardening
         shell: pwsh
         run: |
-          & python -m unittest tests.test_rc_release_identity tests.test_rc_network_resilience tests.test_rc_disaster_recovery tests.test_rc_diagnostics_privacy -v 2>&1 | Tee-Object -FilePath .\rc-hardening.log
+          & python .\ci\validate_rc_hardening.py 2>&1 | Tee-Object -FilePath .\rc-hardening.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Validate protected real data

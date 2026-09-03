@@ -3,3 +3,5 @@ HRM v0.7.0-rc.1 ci.2 - Intended CI Verification Scope
 This package must not be called tested until GitHub Windows Actions is green.
 Local/package validation covers manifest integrity, RC source contracts and portable unit/integration tests.
 GitHub remains authoritative for Windows-2022 build, frozen binaries, Inno Setup, clean install, LocalService/ACL/TLS, real-data validation, beta-to-RC installer upgrade and uninstall.
+
+ci.4 correction: isolated GitHub RC hardening runner supplies repository root + src on clean runners.

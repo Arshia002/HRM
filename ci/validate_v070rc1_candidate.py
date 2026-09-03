@@ -46,8 +46,8 @@ def main() -> int:
         fail("source-gate dependencies are not ready: " + "; ".join(errors))
 
     metadata = identity.metadata
-    if identity.version != "0.7.0-rc.1" or identity.package_revision != "0.7.0-rc.1-ci.3":
-        fail("RC identity is not the approved ci.3 release identity")
+    if identity.version != "0.7.0-rc.1" or identity.package_revision != "0.7.0-rc.1-ci.4":
+        fail("RC identity is not the approved ci.4 release identity")
     if identity.baseline_tag != "v0.6.0-beta.1" or identity.baseline_commit != "a8b93c981603c58d0edaf3d999e088c7a674aa1b":
         fail("RC must remain anchored to the tested beta tag/commit")
     if metadata.get("expected_personnel") != 1356:
@@ -68,6 +68,7 @@ def main() -> int:
         "ci/validate_v060b1_real_data.py",
         "ci/validate_overlay_integrity.py",
         "ci/install_verified_overlay.py",
+        "ci/validate_rc_hardening.py",
         "ci/stage_v070rc1_overlay.py",
         "INSTALL-OVERLAY-V070RC1.cmd",
         "build/windows/smoke-upgrade-from-beta.ps1",
