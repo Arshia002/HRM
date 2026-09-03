@@ -93,11 +93,19 @@ def restore_database(database_path: Path, backup_path: Path) -> Path:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     safety = database_path.with_name(f"{database_path.stem}-before-restore-{stamp}.sqlite")
     if database_path.exists():
-        with (
-            contextlib.closing(sqlite3.connect(database_path)) as current,
-            contextlib.closing(sqlite3.connect(safety)) as safe_copy,
-        ):
-            current.backup(safe_copy)
+        current_ok, _ = sqlite_integrity(database_path)
+        if current_ok:
+            with (
+                contextlib.closing(sqlite3.connect(database_path)) as current,
+                contextlib.closing(sqlite3.connect(safety)) as safe_copy,
+            ):
+                current.backup(safe_copy)
+        else:
+            # Disaster recovery must still be possible when the primary file is
+            # not a readable SQLite database. Preserve the damaged bytes for
+            # forensic/support analysis, then replace them with the verified
+            # backup instead of asking SQLite to read the corrupt primary.
+            shutil.copy2(database_path, safety)
     staged = database_path.with_suffix(".restore-staged")
     shutil.copy2(backup_path, staged)
     ok, detail = sqlite_integrity(staged)

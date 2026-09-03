@@ -1,40 +1,13 @@
-# HRM v0.6.0-beta.1 ci.5 Release Quality Gates
+# HRM v0.7.0-rc.1 ci.2 Release Quality Gates
 
-This is an executable release contract. Candidate validation, package
-validation, guarded push and GitHub Actions enforce the corresponding controls.
-
-## Immutable baseline
-
-- Base tag: `v0.5.0-alpha.1`
-- Base commit: `8e3eb3baecb46d2a0f964322584e668a6e926ce2`
-- No organizational installation before a green GitHub Tested Setup artifact.
-
-## Source and package
-
-- Exact dependency pins and wheel-only installation.
-- Full regression, migration and packaging contracts.
-- Clean-checkout and clean-ZIP revalidation.
-- SHA-256 manifest for every source payload file.
-- No caches, local environments, raw workbooks, keys or plaintext databases.
-
-## Protected real data
-
-- Exactly four approved source profiles.
-- Authenticated encryption before Git; key only in `HRM_REAL_DATA_KEY`.
-- Temporary decryption only; no plaintext cache or artifact.
-- Aggregate-only validation evidence.
-- Private sources: 1356 personnel, 590 county/unit enrichments, 185 active named-position assignments and one ignored legacy type-0 row.
-- Enterprise chart (independent of workbook row counts): 536 fixed + 32 named = 568 approved posts.
-- Page-16 approved post count: 24.
-- Zero reconciliation errors.
-- Staging integrity, verified backup, apply, rollback and deterministic replay.
-
-## Windows acceptance
-
-- Four frozen executables and full native UI smoke.
-- Clean install, TLS, LocalService, Service SID and ACL.
-- Bootstrap login and forced password change.
-- In-place upgrade with data preservation.
-- Silent uninstall and durable diagnostics.
-
-Any failed or missing gate blocks commit, push, artifact acceptance and pilot deployment.
+1. Immutable baseline: `v0.6.0-beta.1` / `a8b93c981603c58d0edaf3d999e088c7a674aa1b`.
+2. Exact RC identity: application `0.7.0-rc.1`, package `0.7.0-rc.1-ci.3`, branch `feat/organizational-pilot-v070rc1`.
+3. Package manifest SHA-256/byte integrity before overlay copy and again after install.
+4. Full regression suite plus RC-focused TLS concurrency, disconnect/reconnect, DR and diagnostics privacy tests.
+5. Protected real-data validation reuses the already-approved v060b1 encrypted bundle and `HRM_REAL_DATA_KEY`; plaintext never enters Git or artifacts.
+6. Real-data contract stays fixed: 1356 personnel, 590 enrichments, 185 active named assignments, 1 ignored legacy row; approved chart 536+32=568, page 16=24.
+7. Windows build must create HRM.exe, HRMServer.exe, HRMService.exe and HRMMigration.exe, then compile HRM-Setup-x64.exe.
+8. Clean Windows install must prove TLS, LocalService, Service SID ACL, bootstrap login, forced password change, same-version in-place upgrade and uninstall preservation.
+9. A second acceptance sequence must build the immutable beta tag and prove actual `v0.6.0-beta.1 -> v0.7.0-rc.1` Installer upgrade with data and credential preservation.
+10. Diagnostics must exclude the database, FIRST_LOGIN, passwords, raw client IPs, raw HTTP detail and exception traces.
+11. No tag or merge to main until the full GitHub run is green and its tested artifact hash is recorded.

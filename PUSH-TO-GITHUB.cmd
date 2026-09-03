@@ -2,13 +2,19 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-echo ============================================================
-echo   HRM v0.6.0-beta.1 - protected real-data guarded push
-echo ============================================================
-echo.
-
 where git.exe >nul 2>&1 || (echo ERROR: git.exe not found.& exit /b 1)
 where python.exe >nul 2>&1 || (echo ERROR: python.exe not found.& exit /b 1)
+
+for /f "delims=" %%V in ('python ci\release_identity.py --print version') do set "HRM_VERSION=%%V"
+for /f "delims=" %%R in ('python ci\release_identity.py --print package_revision') do set "HRM_PACKAGE_REVISION=%%R"
+for /f "delims=" %%B in ('python ci\release_identity.py --print branch') do set "HRM_PILOT_BRANCH=%%B"
+for /f "delims=" %%C in ('python ci\release_identity.py --print baseline_commit') do set "HRM_BASELINE_COMMIT=%%C"
+
+echo ============================================================
+echo   HRM %HRM_VERSION% - guarded organizational-pilot RC push
+echo   Package: %HRM_PACKAGE_REVISION%
+echo ============================================================
+echo.
 
 git rev-parse --is-inside-work-tree >nul 2>&1 || (echo ERROR: run this from the HRM Git repository root.& exit /b 1)
 git diff --cached --quiet
@@ -17,7 +23,8 @@ if errorlevel 1 (
   exit /b 1
 )
 if not exist "ci\real-data\hrm-real-data-v060b1.enc" (
-  echo ERROR: encrypted real-data bundle is missing. Run PREPARE-REAL-DATA-V060B1.cmd first.
+  echo ERROR: the tested encrypted v060b1 real-data bundle is missing.
+  echo Restore it from the tested beta branch/tag; do NOT create a new plaintext artifact.
   exit /b 1
 )
 if not exist "ci\real-data\hrm-real-data-v060b1.enc.sha256" (
@@ -25,7 +32,8 @@ if not exist "ci\real-data\hrm-real-data-v060b1.enc.sha256" (
   exit /b 1
 )
 if not exist "private-data\hrm-v060b1-fernet.key" (
-  echo ERROR: local private key is missing. Nothing will be pushed.
+  echo ERROR: the existing beta Fernet key is missing from private-data.
+  echo Copy the SAME protected key from the clean beta workspace. Do not regenerate it.
   exit /b 1
 )
 
@@ -36,21 +44,20 @@ if errorlevel 1 (
 )
 
 for /f "delims=" %%B in ('git branch --show-current') do set "HRM_CURRENT_BRANCH=%%B"
-if /I not "%HRM_CURRENT_BRANCH%"=="feat/organizational-pilot-v060b1" (
-  echo ERROR: guarded push requires feat/organizational-pilot-v060b1 before validation.
-  echo Run INSTALL-OVERLAY-V060B1.cmd from the extracted ci.5 package first.
+if /I not "%HRM_CURRENT_BRANCH%"=="%HRM_PILOT_BRANCH%" (
+  echo ERROR: guarded push requires %HRM_PILOT_BRANCH% before validation.
   exit /b 1
 )
-git merge-base --is-ancestor 8e3eb3baecb46d2a0f964322584e668a6e926ce2 HEAD
+git merge-base --is-ancestor %HRM_BASELINE_COMMIT% HEAD
 if errorlevel 1 (
-  echo ERROR: current branch is not based on tested tag v0.5.0-alpha.1.
+  echo ERROR: current RC branch is not based on the tested v0.6.0-beta.1 commit.
   exit /b 1
 )
 
-echo Running mandatory v0.6.0-beta.1 isolated local gates before staging...
-call "%~dp0APPLY-V060B1.cmd"
+echo Running mandatory %HRM_VERSION% isolated local gates before staging...
+call "%~dp0APPLY-V070RC1.cmd"
 if errorlevel 1 (
-  echo ERROR: local v0.6.0-beta.1 gates failed. Nothing will be committed or pushed.
+  echo ERROR: local %HRM_VERSION% gates failed. Nothing will be committed or pushed.
   exit /b 1
 )
 
@@ -60,9 +67,9 @@ if not exist "%HRM_GATE_PYTHON%" (
   exit /b 1
 )
 
-"%HRM_GATE_PYTHON%" ci\stage_v060b1_overlay.py
+"%HRM_GATE_PYTHON%" ci\stage_v070rc1_overlay.py
 if errorlevel 1 (
-  echo ERROR: protected overlay staging failed. Nothing will be committed or pushed.
+  echo ERROR: protected RC overlay staging failed. Nothing will be committed or pushed.
   exit /b 1
 )
 
@@ -85,13 +92,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "fix: make beta1 CI validation deterministic and overlay-safe"
+git commit -m "feat: harden organizational pilot release candidate v0.7.0-rc.1"
 if errorlevel 1 exit /b 1
 
-git push -u origin feat/organizational-pilot-v060b1
+git push -u origin %HRM_PILOT_BRANCH%
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: v0.6.0-beta.1 was pushed. Watch the real-data-validation Environment job.
-echo If Environment reviewers are configured, approve the pending deployment in GitHub.
+echo PASS: %HRM_VERSION% was pushed. GitHub must pass RC, real-data, Windows install, and beta-to-RC upgrade gates.
 exit /b 0

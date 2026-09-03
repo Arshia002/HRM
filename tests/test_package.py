@@ -50,13 +50,13 @@ class PackageTests(unittest.TestCase):
     def test_isolated_local_gate_environment_is_never_packaged(self):
         gitignore = (PROJECT / ".gitignore").read_text(encoding="utf-8")
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
-        apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
         self.assertIn(".venv/", gitignore)
         self.assertIn('".venv"', builder)
         self.assertIn("python -m venv .venv", apply)
         self.assertIn("--only-binary=:all: -r ci\\requirements-source-gates.txt", apply)
-        self.assertIn("ci\\validate_v060b1_candidate.py", apply)
+        self.assertIn("ci\\validate_v070rc1_candidate.py", apply)
         self.assertFalse(any(".venv" in Path(item["path"]).parts for item in manifest["files"]))
 
     def test_native_client_has_no_browser_engine(self):
@@ -229,7 +229,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.6.0-beta.1'", lowered)
+        self.assertIn("version -ne '0.7.0-rc.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -256,14 +256,14 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "0.6.0-beta.1-ci.5",
+            "0.7.0-rc.1-ci.3",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
         self.assertIn('"package_revision": PACKAGE_REVISION', builder)
 
     def test_overlay_integrity_gate_precedes_manifest_regeneration(self):
-        apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
         verify = apply.index("ci\\validate_overlay_integrity.py")
         regenerate = apply.index("tools\\build_release.py")
         self.assertLess(verify, regenerate)
@@ -277,10 +277,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "0.6.0-beta.1-ci.5\n", encoding="utf-8", newline="\n"
+                "0.7.0-rc.1-ci.3\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "0.6.0-beta.1-ci.5",
+                "package_revision": "0.7.0-rc.1-ci.3",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -320,31 +320,40 @@ class PackageTests(unittest.TestCase):
 
     def test_guarded_push_runs_v060_gates_before_commit(self):
         push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
-        gate = push.index('call "%~dp0APPLY-V060B1.cmd"')
-        stage = push.index("ci\\stage_v060b1_overlay.py")
+        gate = push.index('call "%~dp0APPLY-V070RC1.cmd"')
+        stage = push.index("ci\\stage_v070rc1_overlay.py")
         commit = push.index("git commit -m")
-        remote = push.index("git push -u origin feat/organizational-pilot-v060b1")
+        remote = push.index("git push -u origin %HRM_PILOT_BRANCH%")
         self.assertLess(gate, stage)
         self.assertLess(stage, commit)
         self.assertLess(commit, remote)
-        self.assertIn("local v0.6.0-beta.1 gates failed. Nothing will be committed or pushed", push)
+        self.assertIn("local %HRM_VERSION% gates failed. Nothing will be committed or pushed", push)
         self.assertIn(".venv\\Scripts\\python.exe", push)
         self.assertNotIn("git add -A", push)
         self.assertNotIn("git switch", push.lower())
         self.assertIn("git branch --show-current", push)
 
-    def test_ci5_installer_forces_complete_overlay_before_push(self):
-        installer = (PROJECT / "INSTALL-OVERLAY-V060B1.cmd").read_text(encoding="utf-8")
-        self.assertIn("/IS /IT", installer)
-        self.assertIn("feat/organizational-pilot-v060b1", installer)
+    def test_rc_installer_forces_manifest_driven_complete_overlay_before_push(self):
+        installer = (PROJECT / "INSTALL-OVERLAY-V070RC1.cmd").read_text(encoding="utf-8")
+        self.assertIn("release_identity.py\" --print branch", installer)
+        self.assertIn("%HRM_PILOT_BRANCH%", installer)
+        self.assertIn("install_verified_overlay.py", installer)
+        self.assertNotIn("robocopy", installer.lower())
         first_verify = installer.index("validate_overlay_integrity.py")
-        copy = installer.index('robocopy "%HRM_OVERLAY_SOURCE%"')
+        copy = installer.index("install_verified_overlay.py")
         second_verify = installer.index("validate_overlay_integrity.py", first_verify + 1)
         self.assertLess(first_verify, copy)
         self.assertLess(copy, second_verify)
 
+    def test_manifest_installer_overwrites_payload_independent_of_metadata(self):
+        source = (PROJECT / "ci" / "install_verified_overlay.py").read_text(encoding="utf-8")
+        self.assertIn("shutil.copyfile", source)
+        self.assertIn("sha256_file", source)
+        self.assertIn("PACKAGE-MANIFEST.json", source)
+        self.assertIn("Installed payload verification failed", source)
+
     def test_guarded_stage_is_manifest_limited(self):
-        stage = (PROJECT / "ci" / "stage_v060b1_overlay.py").read_text(encoding="utf-8")
+        stage = (PROJECT / "ci" / "stage_v070rc1_overlay.py").read_text(encoding="utf-8")
         self.assertIn('"PACKAGE-MANIFEST.json", "SHA256SUMS.txt"', stage)
         self.assertIn('staged - set(paths)', stage)
         self.assertIn('"git", "add", "--"', stage)

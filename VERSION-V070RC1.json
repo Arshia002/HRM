@@ -1,0 +1,38 @@
+{
+  "product": "HRM",
+  "version": "0.7.0-rc.1",
+  "package_revision": "0.7.0-rc.1-ci.3",
+  "candidate_kind": "organizational-pilot-release-hardening",
+  "baseline_tag": "v0.6.0-beta.1",
+  "baseline_commit": "a8b93c981603c58d0edaf3d999e088c7a674aa1b",
+  "pilot_branch": "feat/organizational-pilot-v070rc1",
+  "expected_personnel": 1356,
+  "expected_source_assignments": {
+    "county_enrichments": 590,
+    "active_named_positions": 185,
+    "ignored_legacy_type_zero": 1
+  },
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  },
+  "real_data_ci": {
+    "bundle_generation": "v060b1",
+    "bundle": "ci/real-data/hrm-real-data-v060b1.enc",
+    "key_file": "private-data/hrm-v060b1-fernet.key",
+    "secret": "HRM_REAL_DATA_KEY",
+    "environment": "real-data-validation",
+    "artifact_policy": "aggregate-only"
+  },
+  "rc_gates": [
+    "six-client-tls-concurrency",
+    "disconnect-reconnect",
+    "tls-mismatch-rejection",
+    "secondary-destination-backup-restore",
+    "corrupt-backup-rejection",
+    "privacy-safe-diagnostics",
+    "beta-to-rc-installer-upgrade"
+  ]
+}

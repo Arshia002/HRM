@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-fast validation for the HRM v0.6 Windows and protected-data contract."""
+"""Fail-fast validation for the current HRM RC Windows and protected-data contract."""
 from __future__ import annotations
 
 import argparse
@@ -14,8 +14,13 @@ import sys
 from pathlib import Path, PurePosixPath
 
 PROJECT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.6.0-beta.1"
-EXPECTED_PACKAGE_REVISION = "0.6.0-beta.1-ci.5"
+if str(PROJECT) not in sys.path:
+    sys.path.insert(0, str(PROJECT))
+from ci.release_identity import load_identity
+
+IDENTITY = load_identity()
+EXPECTED_VERSION = IDENTITY.version
+EXPECTED_PACKAGE_REVISION = IDENTITY.package_revision
 EXPECTED_EXES = {
     "client.spec": "HRM",
     "server.spec": "HRMServer",
@@ -385,7 +390,7 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         "HRM_REAL_DATA_KEY: ${{ secrets.HRM_REAL_DATA_KEY }}",
         "ci\\validate_v060b1_real_data.py",
         "real-data-validation-summary.json",
-        "HRM-0.6.0-beta.1-Tested-Setup",
+        f"HRM-{EXPECTED_VERSION}-Tested-Setup",
     ):
         if marker not in workflow:
             fail(f"Protected real-data workflow marker is missing: {marker!r}")
@@ -394,11 +399,10 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
 
     push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
     for marker in (
-        "PREPARE-REAL-DATA-V060B1.cmd",
-        "APPLY-V060B1.cmd",
+        "APPLY-V070RC1.cmd",
         "git check-ignore -q private-data\\hrm-v060b1-fernet.key",
         "validate_package_contract.py --require-git-tracked",
-        "ci\\stage_v060b1_overlay.py",
+        "ci\\stage_v070rc1_overlay.py",
     ):
         if marker not in push:
             fail(f"Guarded push real-data marker is missing: {marker!r}")
@@ -406,20 +410,35 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         fail("Guarded push must not change branches after overlay installation")
     if "git branch --show-current" not in push:
         fail("Guarded push must verify the pilot branch before validation")
-    installer = (PROJECT / "INSTALL-OVERLAY-V060B1.cmd").read_text(encoding="utf-8")
-    for marker in ("/IS /IT", "branch --show-current", "validate_overlay_integrity.py"):
+    installer = (PROJECT / "INSTALL-OVERLAY-V070RC1.cmd").read_text(encoding="utf-8")
+    for marker in ("branch --show-current", "validate_overlay_integrity.py", "install_verified_overlay.py", "--source", "--target"):
         if marker.lower() not in installer.lower():
             fail(f"Atomic overlay installer marker is missing: {marker!r}")
     if installer.lower().count("validate_overlay_integrity.py") < 2:
         fail("Overlay installer must validate both source and installed target")
-    apply = (PROJECT / "APPLY-V060B1.cmd").read_text(encoding="utf-8")
+    if "robocopy" in installer.lower():
+        fail("RC overlay installer must not rely on robocopy timestamp/size heuristics")
+    manifest_installer = (PROJECT / "ci" / "install_verified_overlay.py").read_text(encoding="utf-8")
+    for marker in ("manifest-driven overlay copied and verified", "shutil.copyfile", "sha256_file", "PACKAGE-MANIFEST.json"):
+        if marker not in manifest_installer:
+            fail(f"Manifest-driven overlay installer marker is missing: {marker!r}")
+    apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
     overlay_marker = "ci\\validate_overlay_integrity.py"
     regeneration_marker = "tools\\build_release.py"
     if overlay_marker not in apply:
-        fail("Extracted-overlay integrity gate is missing from APPLY-V060B1.cmd")
+        fail("Extracted-overlay integrity gate is missing from APPLY-V070RC1.cmd")
     if apply.index(overlay_marker) > apply.index(regeneration_marker):
         fail("Extracted-overlay integrity must run before manifest regeneration")
-    print("PASS authenticated encrypted-input and aggregate-only artifact boundary")
+
+    diagnostics = (PROJECT / "tools" / "collect-diagnostics.ps1").read_text(encoding="utf-8")
+    for forbidden in ("$x.client", "$x.detail", "$x.exception", "FIRST_LOGIN", "hrm.sqlite"):
+        if forbidden in diagnostics:
+            fail(f"Privacy-safe diagnostics contains forbidden raw field/path marker: {forbidden}")
+    workflow_lower = workflow.lower()
+    for marker in ("smoke-upgrade-from-beta.ps1", "v0.6.0-beta.1", "beta-to-rc-upgrade.log"):
+        if marker.lower() not in workflow_lower:
+            fail(f"Real beta-to-RC upgrade gate marker is missing: {marker!r}")
+    print("PASS authenticated encrypted-input, aggregate-only artifact, diagnostics privacy and beta-upgrade boundary")
 
 
 def parse_args() -> argparse.Namespace:

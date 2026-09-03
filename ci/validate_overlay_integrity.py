@@ -15,9 +15,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from ci.validate_package_contract import canonical_bytes, sha256_file  # noqa: E402
+from ci.release_identity import load_identity  # noqa: E402
 
 
-EXPECTED_PACKAGE_REVISION = "0.6.0-beta.1-ci.5"
+def expected_package_revision() -> str:
+    return load_identity().package_revision
 
 
 class OverlayIntegrityError(RuntimeError):
@@ -35,9 +37,10 @@ def verify_overlay(root: Path) -> int:
         raise OverlayIntegrityError("PACKAGE-MANIFEST.json is unreadable or invalid.") from exc
 
     revision = manifest.get("package_revision")
-    if revision != EXPECTED_PACKAGE_REVISION:
+    expected_revision = expected_package_revision()
+    if revision != expected_revision:
         raise OverlayIntegrityError(
-            f"Package revision mismatch: expected {EXPECTED_PACKAGE_REVISION}, got {revision!r}."
+            f"Package revision mismatch: expected {expected_revision}, got {revision!r}."
         )
     revision_file = root / "CI-PACKAGE-VERSION"
     if not revision_file.is_file() or revision_file.read_text(encoding="utf-8").strip() != revision:
@@ -79,7 +82,7 @@ def main() -> int:
         print(f"OVERLAY INTEGRITY ERROR: {exc}", file=sys.stderr)
         return 1
     print(
-        f"PASS: extracted {EXPECTED_PACKAGE_REVISION} overlay integrity verified "
+        f"PASS: extracted {expected_package_revision()} overlay integrity verified "
         f"before manifest regeneration ({count} files)."
     )
     return 0

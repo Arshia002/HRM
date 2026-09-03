@@ -8,7 +8,7 @@
 [Setup]
 AppId={{4F82A3C7-1D55-4B80-9F21-6B3D4E7A1600}
 AppName=HRM
-AppVersion=0.6.0-beta.1
+AppVersion=0.7.0-rc.1
 AppPublisher=HRM
 DefaultDirName={autopf}\HRM
 DefaultGroupName=HRM
@@ -48,6 +48,7 @@ Source: "{#DistDir}\HRMMigration.exe"; DestDir: "{app}\Server"; Components: serv
 Source: "{#ProjectRoot}\docs\deployment-guide-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\windows-test-checklist-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\tools\collect-diagnostics.cmd"; DestDir: "{app}\Tools"; Flags: ignoreversion
+Source: "{#ProjectRoot}\tools\collect-diagnostics.ps1"; DestDir: "{app}\Tools"; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\V040A2-ENTERPRISE-DATA-INTEGRATION.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 

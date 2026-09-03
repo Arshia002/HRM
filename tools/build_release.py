@@ -40,6 +40,8 @@ ROOT_FILES = {
     "CONFIGURE-REAL-DATA-SECRET-V060B1.cmd",
     "PREPARE-REAL-DATA-V060B1.cmd", "README-V060B1.txt",
     "RELEASE-QUALITY-GATES.md", "TEST-REPORT-V060B1.txt", "VERSION-V060B1.json",
+    "APPLY-V070RC1.cmd", "INSTALL-OVERLAY-V070RC1.cmd", "README-V070RC1.txt",
+    "TEST-REPORT-V070RC1.txt", "VERSION-V070RC1.json",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
 

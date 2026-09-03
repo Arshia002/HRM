@@ -1,13 +1,13 @@
 {
   "manifest_schema": 4,
   "product": "HRM",
-  "version": "0.6.0-beta.1",
-  "package_revision": "0.6.0-beta.1-ci.5",
+  "version": "0.7.0-rc.1",
+  "package_revision": "0.7.0-rc.1-ci.3",
   "purpose": "github-windows-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
   "real_data_artifact_policy": "aggregate-only",
-  "expected_windows_artifact": "HRM-0.6.0-beta.1-Tested-Setup",
+  "expected_windows_artifact": "HRM-0.7.0-rc.1-Tested-Setup",
   "files": [
     {
       "path": ".gitattributes",
@@ -16,8 +16,8 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 5794,
-      "sha256": "c33686d6fd6ecc040e87399bb4890bc51a31b190f5e16d92c2091b612f871304"
+      "bytes": 7996,
+      "sha256": "23af64ad8e0c347176aed17a56ba4b0afddb7b787396970db398d89674e8dcb0"
     },
     {
       "path": ".gitignore",
@@ -55,6 +55,11 @@
       "sha256": "b69bd5c9baefea8276e02a0079fc339d8b9976ee073a54be982acee8084c578f"
     },
     {
+      "path": "APPLY-V070RC1.cmd",
+      "bytes": 1186,
+      "sha256": "7e284a04b648f7d2d865053d846fabee9df4b9c9e1f8f5b901243bc09b1a4072"
+    },
+    {
       "path": "assets/company-logo-source.png",
       "bytes": 5631,
       "sha256": "6d843235971ae857de20ddcd0f7d99cbdfef3b7009e2ca4b9c0fd85e115278f4"
@@ -71,8 +76,8 @@
     },
     {
       "path": "build/windows/build_windows.py",
-      "bytes": 13523,
-      "sha256": "9391f75987310a5cbd366dd216e9ac4e777f30389bf2efeeae63585d5097f2ea"
+      "bytes": 13529,
+      "sha256": "46128a9b05ee04b905c25df3ece52cb4207cb12f95d5c4230d335e33febd74cd"
     },
     {
       "path": "build/windows/client.spec",
@@ -101,8 +106,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 17633,
-      "sha256": "b906087ed5edfdc6319aa11efe5ab7f1727ccfdfaa8320ebc0758f4e424fa05a"
+      "bytes": 17732,
+      "sha256": "73d811e50e11917f636503bfd8b90c36843b73ce8759a6189e89c9ab8e29b2fd"
     },
     {
       "path": "build/windows/migration.spec",
@@ -126,8 +131,13 @@
     },
     {
       "path": "build/windows/smoke-install.ps1",
-      "bytes": 15258,
-      "sha256": "2110c6e020295fa5744e1bec27ea9fe7eac19e9120dc1955b1c38da6611284d8"
+      "bytes": 15256,
+      "sha256": "314a26568c851cd2d07c894a67ab34e50d2b2d69eda8a2ad5e3efaccaf0cfca1"
+    },
+    {
+      "path": "build/windows/smoke-upgrade-from-beta.ps1",
+      "bytes": 2682,
+      "sha256": "4f21aeb0307e39d724a09fa7e6835c6cdc7d54017f7a02732422444a4ef0cc97"
     },
     {
       "path": "BUILD-SETUP.cmd",
@@ -143,6 +153,11 @@
       "path": "ci/apply_v040a1.py",
       "bytes": 1248,
       "sha256": "10a15c17e94cac327ccd20901bc3ae526d7a5376e376881514f38d3f3eda95ed"
+    },
+    {
+      "path": "ci/install_verified_overlay.py",
+      "bytes": 4485,
+      "sha256": "d5a84fc6c22fe95f951c122463a3ac36137b8914d61fb7172db9d7aec55a978e"
     },
     {
       "path": "ci/prepare_real_data_bundle.py",
@@ -170,6 +185,11 @@
       "sha256": "74a311e094e5bf9079f3dd35f8b3db0be7ffbe97662767af47b51d29726dc79b"
     },
     {
+      "path": "ci/release_identity.py",
+      "bytes": 2679,
+      "sha256": "e8ae4115cefaa2258703dc8760d9beeb0daf06c8290188e890e60578b64c8c6b"
+    },
+    {
       "path": "ci/requirements-source-gates.txt",
       "bytes": 49,
       "sha256": "7abd52f932f9cc702742945b23c3af70c49f90b955624f72077ad2f745eb3996"
@@ -180,14 +200,19 @@
       "sha256": "c2ecb46da04edc2ba6a02c15740a9d0505818b7b5abcb00b2ad45c9c25857ca4"
     },
     {
+      "path": "ci/stage_v070rc1_overlay.py",
+      "bytes": 2499,
+      "sha256": "c2ecb46da04edc2ba6a02c15740a9d0505818b7b5abcb00b2ad45c9c25857ca4"
+    },
+    {
       "path": "ci/validate_overlay_integrity.py",
-      "bytes": 3688,
-      "sha256": "e96e7850b5bad02eb5d253551e176ece555e5fa142dead73d1d62e42f933ffd3"
+      "bytes": 3822,
+      "sha256": "0c07b910883c07f5e78fa6d40fb4f0191af414be3373a6b4420ad8cc217536e0"
     },
     {
       "path": "ci/validate_package_contract.py",
-      "bytes": 21150,
-      "sha256": "cb9d9e13628a8c2fec90b6aee306685c15c69d0f0ddbcf5dfcf07181558b0706"
+      "bytes": 22433,
+      "sha256": "65536ed536df90cedf99480b193f47231030696c91053d9b34aef9e8864fcb91"
     },
     {
       "path": "ci/validate_v040a1_migration.py",
@@ -216,13 +241,18 @@
     },
     {
       "path": "ci/validate_v060b1_real_data.py",
-      "bytes": 13545,
-      "sha256": "fb0a6842282f58610bd6b647ea7f3a309f8e2c99f5a2098263084d25ece10b6c"
+      "bytes": 13543,
+      "sha256": "3c10957ff60df321a6ab59cb742d2a32d24c71132d66c2086665727a47c3d040"
+    },
+    {
+      "path": "ci/validate_v070rc1_candidate.py",
+      "bytes": 4518,
+      "sha256": "b5a6f806fc53864a8868b2ea098f73fb290abd5cb36c5bd93ca5879c766e6f4e"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
-      "bytes": 2288,
-      "sha256": "d3207ab10ff4a5fa800d49f761d2af115403c4f5d34f0e57aeef129c8ae6829b"
+      "bytes": 2286,
+      "sha256": "fd6207dd8283129bc29548764c18909f5124d7d17fda6cd8be1fcc9960b108c6"
     },
     {
       "path": "CI-LOCAL-VALIDATION.md",
@@ -231,8 +261,8 @@
     },
     {
       "path": "CI-PACKAGE-VERSION",
-      "bytes": 18,
-      "sha256": "78bbdc1377c84e964ae32d1ab35c93c4f9f557fdea9f880d52c8144af5caa3ac"
+      "bytes": 16,
+      "sha256": "4fb39387205d6f7d40fa8531ee80fc29fb04ec2048ae0854e725535a4fb62214"
     },
     {
       "path": "CI-README-FA.md",
@@ -345,6 +375,11 @@
       "sha256": "ea63976f9575414e01e5b5490879e55b3addfc5dbcf7b9fba6c7a2847db77b8d"
     },
     {
+      "path": "INSTALL-OVERLAY-V070RC1.cmd",
+      "bytes": 2699,
+      "sha256": "854877ab11c07ef7c8b0f9f9189238b456b0d58cc3d7884eb507fab981f2e94e"
+    },
+    {
       "path": "LICENSE.txt",
       "bytes": 290,
       "sha256": "26e4cf37f041d888ff8b9790d0253223a967478e11e5f8495f900aa50f56b7d4"
@@ -356,13 +391,13 @@
     },
     {
       "path": "PUSH-TO-GITHUB.cmd",
-      "bytes": 3322,
-      "sha256": "8bddcfa0b95e7051f7c742f1cefe15dcff16c318719fd7bbf0b6da62ce56b323"
+      "bytes": 3784,
+      "sha256": "c688e2e2cf1eba0533baa3acbfc5932770456e77b74a0c5c7e85aa6dc9267cbb"
     },
     {
       "path": "pyproject.toml",
-      "bytes": 560,
-      "sha256": "fc6f11786e8483fdafb81f04afdbdc200232c4fcc238cffd701c00011cc7cf8e"
+      "bytes": 561,
+      "sha256": "e64502a83bc9ea9bbe9e190ab5dbe534b5da4a26f3e5f1f5c38f192b43270168"
     },
     {
       "path": "README-V040A1.txt",
@@ -390,14 +425,19 @@
       "sha256": "e3eef4837822f27587a9b67d1065d0d2c46443e3cce113acde598e636c855ff0"
     },
     {
+      "path": "README-V070RC1.txt",
+      "bytes": 847,
+      "sha256": "f007f00b461b153918f44b71dd34b9570e120659b4429d5825efb09f18a5483c"
+    },
+    {
       "path": "README.md",
       "bytes": 3498,
       "sha256": "221336b1352ce2f12755ef1e20030d99bb57f4e0782ff0a93e70cea3c099ded3"
     },
     {
       "path": "RELEASE-QUALITY-GATES.md",
-      "bytes": 1666,
-      "sha256": "879b85072a950325816c5e98f74043835ad4664ea3969f6681d23456402591d2"
+      "bytes": 1453,
+      "sha256": "4a70b6b7e1c9191fafbc7e1348e2e926ca6077b46638e0c1bb23993df747fe20"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -446,8 +486,8 @@
     },
     {
       "path": "src/sazmanhr/__init__.py",
-      "bytes": 67,
-      "sha256": "89ec3b34b75dc2f70239620e6a2e777c421ec0a82531d8fcd50c6d3d8abd0f18"
+      "bytes": 65,
+      "sha256": "0bed983c68c9071f21b1e653d511380a1ccd3747d18b6abed0fa4678a7c7093c"
     },
     {
       "path": "src/sazmanhr/__main__.py",
@@ -491,8 +531,8 @@
     },
     {
       "path": "src/sazmanhr/operations.py",
-      "bytes": 5730,
-      "sha256": "e7c5e7347912449447029967ae6e29cd343d827a46d1c9bfcae3fd3cccaa65b2"
+      "bytes": 6200,
+      "sha256": "153793495b05b1a140a89d95e789cdea1986dbb0db23ddc7de47f6d4cc42c2c0"
     },
     {
       "path": "src/sazmanhr/security.py",
@@ -502,7 +542,7 @@
     {
       "path": "src/sazmanhr/server.py",
       "bytes": 25334,
-      "sha256": "1d4e50d009bb6d370ed28cc4fd6fd2ccdebfa303729e4b06c6864ef0f984dd07"
+      "sha256": "dd4053380b8425a475c163e5fa025f345e3542ef7a329492d6013c4530d4767c"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -560,6 +600,11 @@
       "sha256": "f2e520fb81008082d64d57036bf6592d427a393f70049b1d8c7eacb6a41bae98"
     },
     {
+      "path": "TEST-REPORT-V070RC1.txt",
+      "bytes": 427,
+      "sha256": "efb64c038ae123f8a52920324a61fe6e2fd86a0c8e393e4907d2a28838958c93"
+    },
+    {
       "path": "TEST-REPORT.md",
       "bytes": 1106,
       "sha256": "8d353c3f8fb68eea0c69e4648d6abedab3b19ba2d451b7363cc40eb05eb72a52"
@@ -576,8 +621,8 @@
     },
     {
       "path": "tests/test_ci_pipeline.py",
-      "bytes": 5309,
-      "sha256": "3dfbcffa8324c19aa0039e25712b395d449ba6089bad1dcd49466a22c2dbb6a8"
+      "bytes": 5442,
+      "sha256": "17ad2a4b9c85a65fd57d9a979bb5109ecaa280b23aa03e1e7caa530cf6c48ac7"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -596,13 +641,33 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 21465,
-      "sha256": "dfafef2b48654bab7ecf158c834cd0cfa359f1f19c8d1855385b7451db026a1e"
+      "bytes": 21993,
+      "sha256": "8dbbcc5338bf9a31539477bd9ce96b97e2a9ade56f917c699718ce601aaf69ab"
     },
     {
       "path": "tests/test_provisioning.py",
       "bytes": 3086,
       "sha256": "6170a070b27c0a3b5c9bcf7c4e1e07c61f7b1bf51481f30e833fac51a51f4aaf"
+    },
+    {
+      "path": "tests/test_rc_diagnostics_privacy.py",
+      "bytes": 783,
+      "sha256": "065461e077825e9f2b6c1d00b012181f599decb7af96cfe0e6a1995782d67a44"
+    },
+    {
+      "path": "tests/test_rc_disaster_recovery.py",
+      "bytes": 1336,
+      "sha256": "cfc258148a70040ea167ad5c03a6ad6b472a7b91935bf0e913f4f8cc561a385b"
+    },
+    {
+      "path": "tests/test_rc_network_resilience.py",
+      "bytes": 3246,
+      "sha256": "42f8951548eaa2954bb732ef854a6779fd16253a28d0c57877eb560fb11b6bbb"
+    },
+    {
+      "path": "tests/test_rc_release_identity.py",
+      "bytes": 1005,
+      "sha256": "bcdda940be2eac84482e6a55acfad64517bd324c8d1538a231c219e9a6dc1cb9"
     },
     {
       "path": "tests/test_repository.py",
@@ -656,13 +721,18 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 6827,
-      "sha256": "33468a1ae701671aca525f016285d213a47e14a9e4570db55852cd9afe97cac1"
+      "bytes": 6960,
+      "sha256": "70ee06c047c386f0d23b1de17bc3435ee2ec60c47052b2840174239b7ffe34a0"
     },
     {
       "path": "tools/collect-diagnostics.cmd",
-      "bytes": 1821,
-      "sha256": "ab7dcd3934900c15de9e05d4f7f9632941b493189017f3bd98711b94533a8a14"
+      "bytes": 272,
+      "sha256": "b7db158621aa91e971c173153d19acec376cd188823ef875e6a975d69e143926"
+    },
+    {
+      "path": "tools/collect-diagnostics.ps1",
+      "bytes": 2320,
+      "sha256": "370f57341159db644c64f001b098dae9c74f58b0f1360bcaf2a499dbd5152a8c"
     },
     {
       "path": "tools/create_demo_seed.py",
@@ -681,8 +751,8 @@
     },
     {
       "path": "tools/real_data_migration/__init__.py",
-      "bytes": 242,
-      "sha256": "a95c92899285c226d35f813f569bb55e9711d9c038055973915a2e07a8967b38"
+      "bytes": 238,
+      "sha256": "fbf2322c73fcf7790e86c4132b39cc04296c95be4c9aa46570ac56d91dea0875"
     },
     {
       "path": "tools/real_data_migration/__main__.py",
@@ -736,13 +806,13 @@
     },
     {
       "path": "tools/real_data_migration/staging.py",
-      "bytes": 2001,
-      "sha256": "26432200d29e56aa99a198e88643f9117de179e31e9f15a3112fc30ad8198fb1"
+      "bytes": 1999,
+      "sha256": "12cbdb74a4460ef2a2b2223241775f66138550f575a343a45de95d5e116391a5"
     },
     {
       "path": "VERSION",
-      "bytes": 13,
-      "sha256": "440946e77939e4144930d1e5be7dee3e90193be1c09ce6ab7e311fe6a26a6ab3"
+      "bytes": 11,
+      "sha256": "2dac057191c5c9c867a7cd36ce5c118c9bd6389ac6357a5ea87f5e8af74901b4"
     },
     {
       "path": "VERSION-V040A1.json",
@@ -768,6 +838,11 @@
       "path": "VERSION-V060B1.json",
       "bytes": 716,
       "sha256": "6de21e7ae6face07687ee0666aca621203ecc770b025c78f1103a57125bf3695"
+    },
+    {
+      "path": "VERSION-V070RC1.json",
+      "bytes": 1125,
+      "sha256": "dc1f56e4426d5f15fecfbb76fe4615a4e09cad131118e90b526f43113797b8de"
     }
   ]
 }
