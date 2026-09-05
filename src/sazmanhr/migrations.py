@@ -173,6 +173,33 @@ CREATE TABLE IF NOT EXISTS import_batches (
   created_at TEXT NOT NULL
 );
 """),
+    Migration(7, "personnel_movement_history_and_hr_roles", r"""
+CREATE TABLE IF NOT EXISTS personnel_movements (
+  id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL REFERENCES personnel(id) ON DELETE CASCADE,
+  movement_type TEXT NOT NULL,
+  effective_date TEXT NOT NULL,
+  order_no TEXT NOT NULL DEFAULT '',
+  order_date TEXT NOT NULL DEFAULT '',
+  reason TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  from_assignment_id TEXT,
+  to_assignment_id TEXT,
+  before_json TEXT NOT NULL DEFAULT '{}',
+  after_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  created_by TEXT REFERENCES users(id),
+  reversed_at TEXT,
+  reversed_by TEXT REFERENCES users(id),
+  reversal_reason TEXT NOT NULL DEFAULT '',
+  row_version INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_personnel_movements_person
+  ON personnel_movements(person_id, effective_date, created_at);
+CREATE INDEX IF NOT EXISTS idx_personnel_movements_order
+  ON personnel_movements(order_no, order_date);
+DELETE FROM role_permissions WHERE role='admin';
+"""),
 )
 
 

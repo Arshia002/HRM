@@ -11,7 +11,7 @@ for /f "delims=" %%B in ('python ci\release_identity.py --print branch') do set 
 for /f "delims=" %%C in ('python ci\release_identity.py --print baseline_commit') do set "HRM_BASELINE_COMMIT=%%C"
 
 echo ============================================================
-echo   HRM %HRM_VERSION% - guarded organizational-pilot RC push
+echo   HRM %HRM_VERSION% - guarded production-history / Linux-web RC push
 echo   Package: %HRM_PACKAGE_REVISION%
 echo ============================================================
 echo.
@@ -50,12 +50,12 @@ if /I not "%HRM_CURRENT_BRANCH%"=="%HRM_PILOT_BRANCH%" (
 )
 git merge-base --is-ancestor %HRM_BASELINE_COMMIT% HEAD
 if errorlevel 1 (
-  echo ERROR: current RC branch is not based on the tested v0.6.0-beta.1 commit.
+  echo ERROR: current RC branch is not based on the tested v0.7.0-rc.1 source revision.
   exit /b 1
 )
 
 echo Running mandatory %HRM_VERSION% isolated local gates before staging...
-call "%~dp0APPLY-V070RC1.cmd"
+call "%~dp0APPLY-V080RC1.cmd"
 if errorlevel 1 (
   echo ERROR: local %HRM_VERSION% gates failed. Nothing will be committed or pushed.
   exit /b 1
@@ -67,7 +67,7 @@ if not exist "%HRM_GATE_PYTHON%" (
   exit /b 1
 )
 
-"%HRM_GATE_PYTHON%" ci\stage_v070rc1_overlay.py
+"%HRM_GATE_PYTHON%" ci\stage_v080rc1_overlay.py
 if errorlevel 1 (
   echo ERROR: protected RC overlay staging failed. Nothing will be committed or pushed.
   exit /b 1
@@ -92,12 +92,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "feat: harden organizational pilot release candidate v0.7.0-rc.1"
+git commit -m "feat: add personnel movement history and Linux web test v0.8.0-rc.1"
 if errorlevel 1 exit /b 1
 
 git push -u origin %HRM_PILOT_BRANCH%
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: %HRM_VERSION% was pushed. GitHub must pass RC, real-data, Windows install, and beta-to-RC upgrade gates.
+echo PASS: %HRM_VERSION% was pushed. GitHub must pass movement, Linux web, real-data, Windows install, and v0.7-to-v0.8 upgrade gates.
 exit /b 0

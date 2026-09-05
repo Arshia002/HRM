@@ -230,7 +230,7 @@ def validate_real_data(bundle: Path, key: bytes, output: Path, contract: RealDat
         result: dict[str, object] = {
             "summary_schema": 1,
             "product": "HRM",
-            "version": "0.7.0-rc.1",
+            "version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
             "status": "pass",
             "privacy": {"aggregate_only": True, "raw_identifiers": False, "plaintext_artifact": False},
             "provenance": envelope,

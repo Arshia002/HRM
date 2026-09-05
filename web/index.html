@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HRM کرمانشاه — Linux Web Test</title>
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div><strong>HRM</strong><span>شرکت توزیع نیروی برق استان کرمانشاه</span></div>
+  <div class="badge">Linux Web Test · NOT FOR PRODUCTION</div>
+</header>
+<main>
+  <section id="loginView" class="card narrow">
+    <h1>ورود به سامانه</h1>
+    <p class="muted">این رابط وب فقط برای تست Linux است و از همان API و دیتابیس هسته HRM استفاده می‌کند.</p>
+    <form id="loginForm">
+      <label>نام کاربری<input id="username" autocomplete="username" required></label>
+      <label>رمز عبور<input id="password" type="password" autocomplete="current-password" required></label>
+      <label>کد MFA (در صورت فعال بودن)<input id="otp" inputmode="numeric" autocomplete="one-time-code"></label>
+      <button>ورود</button>
+    </form>
+    <form id="passwordForm" class="hidden">
+      <h2>تغییر رمز اجباری</h2>
+      <label>رمز فعلی<input id="currentPassword" type="password" required></label>
+      <label>رمز جدید<input id="newPassword" type="password" required></label>
+      <button>ثبت رمز جدید</button>
+    </form>
+    <div id="loginError" class="error"></div>
+  </section>
+
+  <section id="appView" class="hidden">
+    <nav class="tabs">
+      <button data-tab="dashboard" class="active">داشبورد</button>
+      <button data-tab="personnel">پرسنل</button>
+      <button data-tab="audit">ممیزی</button>
+      <button data-tab="users">کاربران</button>
+      <button id="backupBtn">پشتیبان‌گیری</button>
+      <button id="logoutBtn">خروج</button>
+    </nav>
+
+    <section id="dashboard" class="tab active">
+      <div id="identity" class="card"></div>
+      <div id="stats" class="stats"></div>
+    </section>
+
+    <section id="personnel" class="tab">
+      <div class="card toolbar">
+        <input id="search" placeholder="جستجو نام، شماره پرسنلی، واحد یا پست">
+        <button id="searchBtn">جستجو</button>
+      </div>
+      <div class="split">
+        <div class="card list-card">
+          <table><thead><tr><th>شماره</th><th>نام</th><th>واحد</th><th>پست</th><th>وضعیت</th></tr></thead><tbody id="personnelRows"></tbody></table>
+        </div>
+        <div id="personDetail" class="card detail"><p class="muted">یک نفر را انتخاب کنید.</p></div>
+      </div>
+    </section>
+
+    <section id="audit" class="tab"><div class="card"><h2>ممیزی</h2><div id="auditRows"></div></div></section>
+    <section id="users" class="tab"><div class="card"><h2>کاربران</h2><div id="userRows"></div></div></section>
+  </section>
+</main>
+<template id="movementTemplate">
+  <section class="movement-box">
+    <h3>ثبت جابه‌جایی / تغییر سازمانی</h3>
+    <form id="movementForm" class="grid-form">
+      <label>نوع تغییر<select name="movement_type" required>
+        <option value="transfer">انتقال</option><option value="position_change">تغییر پست</option>
+        <option value="unit_change">تغییر واحد</option><option value="location_change">تغییر محل خدمت</option>
+        <option value="appointment">انتصاب</option><option value="acting">سرپرستی</option>
+        <option value="retirement">بازنشستگی</option><option value="service_exit">خروج از خدمت</option>
+        <option value="service_return">بازگشت به خدمت</option><option value="correction">اصلاح</option><option value="other">سایر</option>
+      </select></label>
+      <label>تاریخ اجرا<input name="effective_date" required placeholder="1405/07/01"></label>
+      <label>واحد جدید<input name="organizational_unit"></label>
+      <label>کد پست<input name="position_code"></label>
+      <label>عنوان پست<input name="position_title"></label>
+      <label>محل خدمت<input name="actual_location"></label>
+      <label>وضعیت<input name="status"></label>
+      <label>شماره حکم<input name="order_no"></label>
+      <label>تاریخ حکم<input name="order_date"></label>
+      <label class="wide">علت<input name="reason"></label>
+      <label class="wide">توضیحات<textarea name="note"></textarea></label>
+      <button class="wide">ثبت تغییر با حفظ سابقه</button>
+    </form>
+  </section>
+</template>
+<script src="/web/app.js"></script>
+</body>
+</html>

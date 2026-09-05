@@ -1,0 +1,14 @@
+services:
+  hrm-web-test:
+    build:
+      context: ../..
+      dockerfile: deploy/linux-web-test/Dockerfile
+    environment:
+      SAZMANHR_INITIAL_PASSWORD: ${HRM_INITIAL_PASSWORD:?Run ./start.sh first}
+    ports:
+      - "127.0.0.1:${HRM_WEB_PORT:-8080}:8080"
+    volumes:
+      - hrm-web-test-data:/data
+    restart: unless-stopped
+volumes:
+  hrm-web-test-data:

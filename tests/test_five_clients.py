@@ -37,7 +37,7 @@ class FiveClientNetworkTests(unittest.TestCase):
                 def update(args):
                     index, client = args
                     detail = client.request("GET", f"/api/personnel/{people[index]['id']}")
-                    detail["actual_location"] = f"مکان مدیر {index + 1}"
+                    detail["activity_area"] = f"آزمون همزمانی مدیر {index + 1}"
                     return client.request("POST", "/api/personnel", detail)
 
                 with ThreadPoolExecutor(max_workers=5) as pool:

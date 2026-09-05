@@ -61,6 +61,8 @@ PERMISSION_LABELS = {
     "backup": "تهیه نسخه پشتیبان",
     "restore": "بازیابی نسخه پشتیبان",
     "manage_workflows": "مدیریت گردش کار",
+    "manage_movements": "ثبت جابه‌جایی‌های پرسنلی",
+    "reverse_movements": "ابطال آخرین جابه‌جایی پرسنلی",
     "view_monitoring": "مشاهده سلامت سیستم",
     "manage_security": "مدیریت امنیت و MFA",
 }

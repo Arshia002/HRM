@@ -23,7 +23,7 @@ class RcNetworkResilienceTests(unittest.TestCase):
                 for i,c in enumerate(clients): c.login(f'rc.admin.{i}',password)
                 people=clients[0].request('GET','/api/personnel',query={'limit':6})['items']
                 def work(pair):
-                    i,c=pair; d=c.request('GET',f"/api/personnel/{people[i]['id']}"); d['actual_location']=f'RC-TLS-{i}'; return c.request('POST','/api/personnel',d)
+                    i,c=pair; d=c.request('GET',f"/api/personnel/{people[i]['id']}"); d['activity_area']=f'RC-TLS-{i}'; return c.request('POST','/api/personnel',d)
                 with ThreadPoolExecutor(max_workers=6) as pool: out=list(pool.map(work,enumerate(clients)))
                 self.assertEqual(len(out),6)
             finally:

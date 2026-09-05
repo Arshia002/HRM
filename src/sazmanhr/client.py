@@ -88,6 +88,15 @@ PERSON_FIELDS = (
     ("company", "شرکت"), ("chart_page_no", "صفحه چارت"), ("chart_node_id", "گره چارت"),
 )
 
+MOVEMENT_FIELDS = {"organizational_unit", "position_code", "position_title", "status", "actual_location"}
+MOVEMENT_TYPES = (
+    ("appointment", "انتصاب"), ("transfer", "انتقال"), ("position_change", "تغییر پست"),
+    ("unit_change", "تغییر واحد"), ("location_change", "تغییر محل خدمت"), ("acting", "سرپرستی"),
+    ("retirement", "بازنشستگی"), ("service_exit", "خروج از خدمت"),
+    ("service_return", "بازگشت به خدمت"), ("correction", "اصلاح حکم"), ("other", "سایر"),
+)
+MOVEMENT_LABELS = dict(MOVEMENT_TYPES)
+
 
 def error(parent: QWidget, message: str) -> None:
     QMessageBox.critical(parent, "خطای HRM", message)
@@ -411,8 +420,15 @@ class PersonDialog(QDialog):
         self.setWindowTitle("ویرایش پرسنل" if person else "پرسنل جدید")
         self.setMinimumWidth(620)
         form = QFormLayout(self)
+        if self.person:
+            notice = QLabel("تغییر واحد، پست، محل خدمت و وضعیت از «ثبت جابه‌جایی» انجام می‌شود تا سابقه حفظ شود.")
+            notice.setWordWrap(True); notice.setObjectName("muted")
+            form.addRow(notice)
         for key, title in PERSON_FIELDS:
             field = QLineEdit(str(self.person.get(key, "") or ""))
+            if self.person and key in MOVEMENT_FIELDS:
+                field.setReadOnly(True)
+                field.setToolTip("این مقدار فقط از گردش‌کار جابه‌جایی پرسنلی تغییر می‌کند.")
             self.inputs[key] = field
             form.addRow(title + ":", field)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -428,8 +444,61 @@ class PersonDialog(QDialog):
         return value
 
 
-class PersonnelProfileDialog(QDialog):
+class PersonnelMovementDialog(QDialog):
     def __init__(self, person: dict[str, Any], parent=None):
+        super().__init__(parent)
+        self.person = person
+        self.setWindowTitle("ثبت جابه‌جایی پرسنلی")
+        self.setMinimumWidth(650)
+        form = QFormLayout(self)
+        self.kind = QComboBox()
+        for key, title in MOVEMENT_TYPES:
+            self.kind.addItem(title, key)
+        self.effective_date = QLineEdit(); self.effective_date.setPlaceholderText("مثال: 1405/07/01")
+        self.unit = QLineEdit(str(person.get("organizational_unit", "") or ""))
+        self.position_code = QLineEdit(str(person.get("position_code", "") or ""))
+        self.position_title = QLineEdit(str(person.get("position_title", "") or ""))
+        self.location = QLineEdit(str(person.get("actual_location", "") or ""))
+        self.status = QLineEdit(str(person.get("status", "") or ""))
+        self.order_no = QLineEdit(); self.order_date = QLineEdit(); self.order_date.setPlaceholderText("مثال: 1405/06/25")
+        self.reason = QLineEdit(); self.note = QTextEdit(); self.note.setMaximumHeight(90)
+        for title, widget in (
+            ("نوع تغییر:", self.kind), ("تاریخ اجرا:", self.effective_date), ("واحد مقصد:", self.unit),
+            ("کد پست مقصد:", self.position_code), ("عنوان پست مقصد:", self.position_title),
+            ("محل خدمت:", self.location), ("وضعیت:", self.status), ("شماره حکم:", self.order_no),
+            ("تاریخ حکم:", self.order_date), ("علت:", self.reason), ("توضیحات:", self.note),
+        ):
+            form.addRow(title, widget)
+        warning = QLabel("ثبت این فرم، Assignment فعلی را می‌بندد و سابقه جدید ایجاد می‌کند؛ سابقه قبلی حذف نمی‌شود.")
+        warning.setWordWrap(True); warning.setObjectName("muted"); form.addRow(warning)
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self._accept_checked); buttons.rejected.connect(self.reject); form.addRow(buttons)
+
+    def _accept_checked(self) -> None:
+        if not self.effective_date.text().strip():
+            QMessageBox.warning(self, "تاریخ اجرا", "تاریخ اجرای جابه‌جایی الزامی است.")
+            return
+        self.accept()
+
+    def payload(self) -> dict[str, Any]:
+        return {
+            "movement_type": str(self.kind.currentData()),
+            "effective_date": self.effective_date.text().strip(),
+            "organizational_unit": self.unit.text().strip(),
+            "position_code": self.position_code.text().strip(),
+            "position_title": self.position_title.text().strip(),
+            "actual_location": self.location.text().strip(),
+            "status": self.status.text().strip(),
+            "order_no": self.order_no.text().strip(),
+            "order_date": self.order_date.text().strip(),
+            "reason": self.reason.text().strip(),
+            "note": self.note.toPlainText().strip(),
+            "row_version": int(self.person.get("row_version", 0)),
+        }
+
+
+class PersonnelProfileDialog(QDialog):
+    def __init__(self, person: dict[str, Any], movements: list[dict[str, Any]] | None = None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("پروفایل پرسنلی")
         self.setMinimumSize(720, 560)
@@ -451,6 +520,25 @@ class PersonnelProfileDialog(QDialog):
             form.addRow("پست نرمال‌شده:", QLabel(str(assignment.get("normalized_position_title", "") or "—")))
             form.addRow("کد پست نرمال‌شده:", QLabel(str(assignment.get("normalized_position_code", "") or "—")))
         outer.addWidget(card)
+        history_title = QLabel("سوابق جابه‌جایی سازمانی"); history_title.setObjectName("sectionTitle")
+        outer.addWidget(history_title)
+        history = QTableWidget(0, 6)
+        history.setHorizontalHeaderLabels(["تاریخ اجرا", "نوع", "واحد/پست قبل", "واحد/پست بعد", "شماره حکم", "وضعیت"])
+        history.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        history.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        items = movements or []
+        history.setRowCount(len(items))
+        for row_no, movement in enumerate(items):
+            before = (movement.get("before") or {}).get("person") or {}
+            after = (movement.get("after") or {}).get("person") or {}
+            values = (
+                movement.get("effective_date", ""), MOVEMENT_LABELS.get(str(movement.get("movement_type", "")), movement.get("movement_type", "")),
+                f"{before.get('organizational_unit', '')} / {before.get('position_title', '')}",
+                f"{after.get('organizational_unit', '')} / {after.get('position_title', '')}",
+                movement.get("order_no", ""), "ابطال‌شده" if movement.get("is_reversed") else "فعال",
+            )
+            for col, value in enumerate(values): history.setItem(row_no, col, QTableWidgetItem(str(value or "—")))
+        outer.addWidget(history, 1)
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
         buttons.rejected.connect(self.reject); buttons.accepted.connect(self.accept)
         outer.addWidget(buttons)
@@ -480,8 +568,16 @@ class PersonnelPage(Page):
         reset_btn = QPushButton("پاک‌کردن فیلترها"); reset_btn.setProperty("secondary", True); reset_btn.clicked.connect(self.reset_filters); filters.addWidget(reset_btn, 1, 3)
         self.layout.addLayout(filters)
         bar = QHBoxLayout()
-        for title, slot, secondary in (("پروفایل", self.profile, True), ("افزودن", self.add, False),
-                                        ("ویرایش", self.edit, True), ("حذف", self.delete, True)):
+        actions = [("پروفایل", self.profile, True, "read")]
+        if "edit_personnel" in self.window.permissions:
+            actions.extend([("افزودن", self.add, False, "edit_personnel"), ("ویرایش اطلاعات", self.edit, True, "edit_personnel")])
+        if "manage_movements" in self.window.permissions:
+            actions.append(("ثبت جابه‌جایی", self.movement, False, "manage_movements"))
+        if "reverse_movements" in self.window.permissions:
+            actions.append(("ابطال آخرین جابه‌جایی", self.reverse_movement, True, "reverse_movements"))
+        if "delete_personnel" in self.window.permissions:
+            actions.append(("حذف واقعی", self.delete, True, "delete_personnel"))
+        for title, slot, secondary, _permission in actions:
             button = QPushButton(title); button.setProperty("secondary", secondary); button.clicked.connect(slot); bar.addWidget(button)
         bar.addStretch(); self.count_label = QLabel(""); self.count_label.setObjectName("muted"); bar.addWidget(self.count_label)
         self.layout.addLayout(bar)
@@ -536,7 +632,35 @@ class PersonnelPage(Page):
         selected = self.selected()
         if not selected: return
         detail = self.call("GET", f"/api/personnel/{selected['id']}")
-        if detail: PersonnelProfileDialog(detail, self).exec()
+        history = self.call("GET", f"/api/personnel/{selected['id']}/movements") if detail else None
+        if detail: PersonnelProfileDialog(detail, (history or {}).get("items", []), self).exec()
+
+    def movement(self) -> None:
+        selected = self.selected()
+        if not selected: return
+        detail = self.call("GET", f"/api/personnel/{selected['id']}")
+        if not detail: return
+        dialog = PersonnelMovementDialog(detail, self)
+        if dialog.exec() == QDialog.Accepted and self.call("POST", f"/api/personnel/{selected['id']}/movements", dialog.payload()):
+            self.refresh()
+
+    def reverse_movement(self) -> None:
+        selected = self.selected()
+        if not selected: return
+        history = self.call("GET", f"/api/personnel/{selected['id']}/movements")
+        items = [item for item in (history or {}).get("items", []) if not item.get("is_reversed")]
+        if not items:
+            QMessageBox.information(self, "ابطال جابه‌جایی", "جابه‌جایی فعال برای ابطال وجود ندارد.")
+            return
+        movement = items[0]
+        dialog = QDialog(self); dialog.setWindowTitle("ابطال آخرین جابه‌جایی")
+        form = QFormLayout(dialog); reason = QTextEdit(); reason.setMaximumHeight(100)
+        form.addRow("علت ابطال:", reason)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject); form.addRow(buttons)
+        if dialog.exec() != QDialog.Accepted or not reason.toPlainText().strip(): return
+        if QMessageBox.question(self, "تأیید ابطال", "آخرین جابه‌جایی ابطال و وضعیت قبلی بازیابی شود؟") != QMessageBox.Yes: return
+        if self.call("POST", f"/api/movements/{movement['id']}/reverse", {"reason": reason.toPlainText().strip()}): self.refresh()
 
     def add(self) -> None:
         dialog = PersonDialog(parent=self)
@@ -856,11 +980,10 @@ class MainWindow(QMainWindow):
     ROLE_PERMISSIONS = {
         "owner": {"read", "edit_personnel", "delete_personnel", "edit_chart", "edit_dashboard",
                   "view_audit", "manage_users", "backup", "restore", "manage_workflows",
-                  "view_monitoring", "manage_security"},
-        "admin": {"read", "edit_personnel", "delete_personnel", "edit_chart", "edit_dashboard",
-                  "view_audit", "manage_users", "backup", "manage_workflows", "view_monitoring",
-                  "manage_security"},
-        "editor": {"read", "edit_personnel", "edit_chart", "edit_dashboard", "manage_workflows"},
+                  "manage_movements", "reverse_movements", "view_monitoring", "manage_security"},
+        "admin": {"read", "edit_personnel", "edit_dashboard", "view_audit", "backup",
+                  "manage_workflows", "manage_movements", "view_monitoring"},
+        "editor": {"read", "edit_personnel", "manage_workflows", "manage_movements"},
         "viewer": {"read"},
     }
 

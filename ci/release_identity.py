@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single release-identity contract for the current HRM RC overlay."""
+"""Single release-identity contract for the current HRM production-history RC overlay."""
 from __future__ import annotations
 
 import argparse
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-METADATA_FILE = ROOT / "VERSION-V070RC1.json"
+METADATA_FILE = ROOT / "VERSION-V080RC1.json"
 
 
 @dataclass(frozen=True)
@@ -33,9 +33,9 @@ def load_identity() -> ReleaseIdentity:
     if not all((version, package_revision, branch, baseline_tag, baseline_commit)):
         raise RuntimeError("RC release identity metadata is incomplete.")
     if (ROOT / "VERSION").read_text(encoding="utf-8").strip() != version:
-        raise RuntimeError("VERSION does not match VERSION-V070RC1.json")
+        raise RuntimeError("VERSION does not match VERSION-V080RC1.json")
     if (ROOT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip() != package_revision:
-        raise RuntimeError("CI-PACKAGE-VERSION does not match VERSION-V070RC1.json")
+        raise RuntimeError("CI-PACKAGE-VERSION does not match VERSION-V080RC1.json")
     return ReleaseIdentity(
         version=version,
         package_revision=package_revision,

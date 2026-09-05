@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from ci.validate_v070rc1_candidate import dependency_errors, pinned_requirements
+from ci.validate_v080rc1_candidate import dependency_errors, pinned_requirements
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -18,9 +18,9 @@ class CiPipelineTests(unittest.TestCase):
         manifest = (PROJECT / "ci" / "write-ci-manifest.ps1").read_text(encoding="utf-8")
 
         self.assertIn("feat/native-v49-shell", workflow)
-        self.assertIn("HRM-0.7.0-rc.1-Tested-Setup", workflow)
-        self.assertIn("HRM-0.7.0-rc.1-Failure-Logs", workflow)
-        self.assertIn("feat/organizational-pilot-v070rc1", workflow)
+        self.assertIn("HRM-0.8.0-rc.1-Tested-Setup", workflow)
+        self.assertIn("HRM-0.8.0-rc.1-Failure-Logs", workflow)
+        self.assertIn("feat/production-history-web-v080rc1", workflow)
         self.assertIn("write-ci-manifest.ps1", workflow)
         self.assertIn("Validate packaging contract", workflow)
         self.assertIn("validate_package_contract.py", workflow)
@@ -32,7 +32,7 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("validate_v060b1_real_data.py", workflow)
         self.assertIn("real-data-validation-summary.json", workflow)
         self.assertIn("fetch-depth: 0", workflow)
-        self.assertIn("git worktree add --detach $baseline v0.6.0-beta.1", workflow)
+        self.assertIn("git worktree add --detach $baseline 2a1a7f7b71b3a01c9f459f17d13d9dc348f45fb2", workflow)
 
         self.assertIn("Random bootstrap password was not found", smoke)
         self.assertIn("FIRST_LOGIN.txt", smoke)
@@ -53,7 +53,7 @@ class CiPipelineTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         contract = workflow.index("Validate packaging contract")
         dependencies = workflow.index("Install source gate dependencies")
-        candidate = workflow.index("Validate v0.7.0 rc.1 ci.4 pilot candidate")
+        candidate = workflow.index("Validate v0.8.0 rc.1 ci.1 production candidate")
         hardening = workflow.index("Validate RC network, DR and diagnostics hardening")
         real_data = workflow.index("Validate protected real data")
         inno = workflow.index("Install Inno Setup")
@@ -68,6 +68,8 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("cache-dependency-path", workflow)
         self.assertGreaterEqual(workflow.count("source-gate-dependencies.log"), 3)
         self.assertIn("validate_rc_hardening.py", workflow)
+        self.assertIn("linux-web-test:", workflow)
+        self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
 
     def test_source_dependency_pins_match_build_and_report_missing_modules(self):
         source = pinned_requirements(PROJECT / "ci" / "requirements-source-gates.txt")
@@ -87,7 +89,7 @@ class CiPipelineTests(unittest.TestCase):
 
     def test_v060_validator_is_directly_executable(self):
         result = subprocess.run(
-            [sys.executable, str(PROJECT / "ci" / "validate_v070rc1_candidate.py"), "--dependency-self-check"],
+            [sys.executable, str(PROJECT / "ci" / "validate_v080rc1_candidate.py"), "--dependency-self-check"],
             cwd=PROJECT,
             text=True,
             capture_output=True,
@@ -100,7 +102,7 @@ class CiPipelineTests(unittest.TestCase):
         environment = os.environ.copy()
         environment.pop("PYTHONPATH", None)
         result = subprocess.run(
-            [sys.executable, str(PROJECT / "ci" / "validate_v070rc1_candidate.py"), "--source-path-self-check"],
+            [sys.executable, str(PROJECT / "ci" / "validate_v080rc1_candidate.py"), "--source-path-self-check"],
             cwd=PROJECT,
             env=environment,
             text=True,

@@ -163,14 +163,19 @@ PERMISSION_DESCRIPTIONS = {
     "backup": "تهیه پشتیبان",
     "restore": "بازیابی پشتیبان",
     "manage_workflows": "مدیریت گردش کار",
+    "manage_movements": "ثبت جابه‌جایی‌های پرسنلی",
+    "reverse_movements": "ابطال آخرین جابه‌جایی پرسنلی",
     "view_monitoring": "مشاهده پایش سامانه",
     "manage_security": "تنظیمات امنیت و MFA",
 }
 
 PERMISSIONS = {
+    # owner = Super Admin: security, users, restore and destructive operations.
     "owner": set(PERMISSION_DESCRIPTIONS),
-    "admin": set(PERMISSION_DESCRIPTIONS) - {"restore"},
-    "editor": {"read", "edit_personnel", "edit_chart", "edit_dashboard", "manage_workflows"},
+    # admin = HR Admin: full daily HR work without security/restore/hard-delete powers.
+    "admin": {"read", "edit_personnel", "edit_dashboard", "view_audit", "backup",
+              "manage_workflows", "manage_movements", "view_monitoring"},
+    "editor": {"read", "edit_personnel", "manage_workflows", "manage_movements"},
     "viewer": {"read"},
 }
 
@@ -308,15 +313,14 @@ class Repository:
                 (assignment_id, row["id"], position_id, 1, "", "", 1, now, None),
             )
 
-    def _sync_person_projection(self, conn: sqlite3.Connection, person_id: str, values: dict[str, str],
-                                actor_id: str | None, now: str) -> None:
+    def _ensure_position_projection(self, conn: sqlite3.Connection, values: dict[str, str],
+                                    actor_id: str | None, now: str) -> str | None:
         unit_title = values.get("organizational_unit", "").strip()
         position_code = values.get("position_code", "").strip()
         position_title = values.get("position_title", "").strip()
         location = values.get("actual_location", "").strip()
         if not position_code and not position_title:
-            conn.execute("DELETE FROM personnel_assignments WHERE person_id=? AND is_primary=1 AND end_date=''", (person_id,))
-            return
+            return None
         unit_id = None
         if unit_title:
             unit_id = self._projection_id("unit", unit_title)
@@ -339,6 +343,18 @@ class Repository:
                  location=excluded.location,status='active',updated_at=excluded.updated_at,updated_by=excluded.updated_by""",
             (position_id, stored_code, position_title or stored_code, unit_id, "", location, "active", 1, now, actor_id),
         )
+        return position_id
+
+    def _sync_person_projection(self, conn: sqlite3.Connection, person_id: str, values: dict[str, str],
+                                actor_id: str | None, now: str, *, effective_date: str = "",
+                                assignment_id: str | None = None) -> tuple[str | None, str | None]:
+        """Synchronize current projection while preserving every prior assignment.
+
+        ``end_date`` is an effective boundary: the former assignment ceased to
+        be current when the replacement became effective.  It is intentionally
+        stored as supplied text because deployments may use Jalali dates.
+        """
+        position_id = self._ensure_position_projection(conn, values, actor_id, now)
         current = conn.execute(
             "SELECT id,position_id FROM personnel_assignments WHERE person_id=? AND is_primary=1 AND end_date=''",
             (person_id,),
@@ -346,16 +362,24 @@ class Repository:
         if current and current["position_id"] == position_id:
             conn.execute("UPDATE personnel_assignments SET updated_at=?,updated_by=? WHERE id=?",
                          (now, actor_id, current["id"]))
-            return
+            return str(current["id"]), str(current["id"])
+        boundary = effective_date.strip() or now[:10]
+        from_id = str(current["id"]) if current else None
         if current:
-            conn.execute("DELETE FROM personnel_assignments WHERE id=?", (current["id"],))
-        assignment_id = self._projection_id("assignment", person_id)
+            conn.execute(
+                "UPDATE personnel_assignments SET end_date=?,row_version=row_version+1,updated_at=?,updated_by=? WHERE id=?",
+                (boundary, now, actor_id, current["id"]),
+            )
+        if position_id is None:
+            return from_id, None
+        new_id = assignment_id or self._projection_id("assignment", f"{person_id}|{secrets.token_hex(12)}")
         conn.execute(
-            """INSERT OR REPLACE INTO personnel_assignments
+            """INSERT INTO personnel_assignments
                (id,person_id,position_id,is_primary,start_date,end_date,row_version,updated_at,updated_by)
                VALUES(?,?,?,?,?,?,?,?,?)""",
-            (assignment_id, person_id, position_id, 1, "", "", 1, now, actor_id),
+            (new_id, person_id, position_id, 1, boundary if effective_date else "", "", 1, now, actor_id),
         )
+        return from_id, new_id
 
     @contextlib.contextmanager
     def write(self) -> Iterator[sqlite3.Connection]:
@@ -1100,6 +1124,165 @@ class Repository:
             self._sync_person_projection(conn, person_id, values, actor_id, now)
             self._record(conn, actor_id, action, "personnel", person_id, before, after, new_version)
         return self.get_person(person_id) or after
+
+    MOVEMENT_TYPES = {
+        "appointment", "transfer", "position_change", "unit_change", "location_change",
+        "acting", "retirement", "service_exit", "service_return", "correction", "other",
+    }
+
+    def _current_assignment_snapshot(self, conn: sqlite3.Connection, person_id: str) -> dict[str, Any] | None:
+        row = conn.execute(
+            """SELECT a.id AS assignment_id,a.start_date,a.end_date,p.id AS position_id,p.code AS position_code,
+                      p.title AS position_title,p.location AS position_location,
+                      u.id AS unit_id,u.code AS unit_code,u.title AS unit_title
+               FROM personnel_assignments a
+               JOIN positions p ON p.id=a.position_id
+               LEFT JOIN organizational_units u ON u.id=p.unit_id
+               WHERE a.person_id=? AND a.is_primary=1 AND a.end_date='' LIMIT 1""",
+            (person_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def list_personnel_movements(self, person_id: str) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """SELECT id,person_id,movement_type,effective_date,order_no,order_date,reason,note,
+                          from_assignment_id,to_assignment_id,before_json,after_json,created_at,created_by,
+                          reversed_at,reversed_by,reversal_reason,row_version
+                   FROM personnel_movements WHERE person_id=?
+                   ORDER BY effective_date DESC,created_at DESC,id DESC""",
+                (person_id,),
+            ).fetchall()
+        result=[]
+        for row in rows:
+            item=dict(row)
+            item["before"] = json.loads(item.pop("before_json") or "{}")
+            item["after"] = json.loads(item.pop("after_json") or "{}")
+            item["is_reversed"] = bool(item.get("reversed_at"))
+            result.append(item)
+        return result
+
+    def register_personnel_movement(self, person_id: str, payload: dict[str, Any], actor_id: str) -> dict[str, Any]:
+        movement_type = str(payload.get("movement_type", "")).strip()
+        if movement_type not in self.MOVEMENT_TYPES:
+            raise ValueError("نوع جابه‌جایی معتبر نیست.")
+        effective_date = str(payload.get("effective_date", "")).strip()
+        if not effective_date:
+            raise ValueError("تاریخ اجرای جابه‌جایی الزامی است.")
+        movement_id = str(payload.get("id") or secrets.token_hex(16))
+        now = utc_now()
+        with self.write() as conn:
+            row = conn.execute("SELECT * FROM personnel WHERE id=?", (person_id,)).fetchone()
+            if not row:
+                raise ValueError("پرسنل پیدا نشد.")
+            expected = int(payload.get("row_version", 0))
+            if expected != int(row["row_version"]):
+                raise ConflictError("پرونده پرسنل تغییر کرده است؛ جابه‌جایی ثبت نشد.")
+            before_person = dict(row)
+            before_assignment = self._current_assignment_snapshot(conn, person_id)
+            values = {
+                "organizational_unit": str(payload.get("organizational_unit", row["organizational_unit"])).strip(),
+                "position_code": str(payload.get("position_code", row["position_code"])).strip(),
+                "position_title": str(payload.get("position_title", row["position_title"])).strip(),
+                "actual_location": str(payload.get("actual_location", row["actual_location"])).strip(),
+            }
+            status = str(payload.get("status", row["status"])).strip()
+            if movement_type in {"retirement", "service_exit"} and "position_code" not in payload and "position_title" not in payload:
+                values["position_code"] = ""
+                values["position_title"] = ""
+            new_version = expected + 1
+            conn.execute(
+                """UPDATE personnel SET organizational_unit=?,position_code=?,position_title=?,actual_location=?,status=?,
+                          row_version=?,updated_at=?,updated_by=? WHERE id=? AND row_version=?""",
+                (values["organizational_unit"], values["position_code"], values["position_title"],
+                 values["actual_location"], status, new_version, now, actor_id, person_id, expected),
+            )
+            desired_assignment_id = self._projection_id("assignment", f"{person_id}|movement|{movement_id}")
+            from_id, to_id = self._sync_person_projection(
+                conn, person_id, values, actor_id, now, effective_date=effective_date,
+                assignment_id=desired_assignment_id,
+            )
+            after_assignment = self._current_assignment_snapshot(conn, person_id)
+            before = {
+                "person": {k: before_person.get(k) for k in (
+                    "organizational_unit", "position_code", "position_title", "actual_location", "status", "row_version")},
+                "assignment": before_assignment,
+            }
+            after = {
+                "person": {**values, "status": status, "row_version": new_version},
+                "assignment": after_assignment,
+            }
+            conn.execute(
+                """INSERT INTO personnel_movements
+                   (id,person_id,movement_type,effective_date,order_no,order_date,reason,note,
+                    from_assignment_id,to_assignment_id,before_json,after_json,created_at,created_by,row_version)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
+                (movement_id, person_id, movement_type, effective_date,
+                 str(payload.get("order_no", "")).strip(), str(payload.get("order_date", "")).strip(),
+                 str(payload.get("reason", "")).strip(), str(payload.get("note", "")).strip(),
+                 from_id, to_id, canonical(before), canonical(after), now, actor_id),
+            )
+            self._record(conn, actor_id, "movement", "personnel_movement", movement_id, before, after, 1)
+            self._record(conn, actor_id, "movement_update", "personnel", person_id, before_person,
+                         {**after["person"], "id": person_id}, new_version)
+        return {"movement": self.list_personnel_movements(person_id)[0], "person": self.get_person(person_id)}
+
+    def reverse_personnel_movement(self, movement_id: str, reason: str, actor_id: str) -> dict[str, Any]:
+        reason = reason.strip()
+        if not reason:
+            raise ValueError("علت ابطال جابه‌جایی الزامی است.")
+        now = utc_now()
+        with self.write() as conn:
+            movement = conn.execute("SELECT * FROM personnel_movements WHERE id=?", (movement_id,)).fetchone()
+            if not movement:
+                raise ValueError("جابه‌جایی پیدا نشد.")
+            if movement["reversed_at"]:
+                raise ValueError("این جابه‌جایی قبلاً ابطال شده است.")
+            newer = conn.execute(
+                """SELECT 1 FROM personnel_movements WHERE person_id=? AND reversed_at IS NULL
+                   AND (created_at>? OR (created_at=? AND id>?)) LIMIT 1""",
+                (movement["person_id"], movement["created_at"], movement["created_at"], movement_id),
+            ).fetchone()
+            if newer:
+                raise ConflictError("فقط آخرین جابه‌جایی فعال قابل ابطال است.")
+            person = conn.execute("SELECT * FROM personnel WHERE id=?", (movement["person_id"],)).fetchone()
+            if not person:
+                raise ValueError("پرونده پرسنل پیدا نشد.")
+            before = json.loads(movement["before_json"] or "{}")
+            before_person = before.get("person", {}) if isinstance(before, dict) else {}
+            to_id = movement["to_assignment_id"]
+            from_id = movement["from_assignment_id"]
+            if to_id:
+                conn.execute(
+                    "UPDATE personnel_assignments SET end_date=?,row_version=row_version+1,updated_at=?,updated_by=? WHERE id=? AND end_date=''",
+                    (now[:10], now, actor_id, to_id),
+                )
+            if from_id:
+                conn.execute(
+                    "UPDATE personnel_assignments SET end_date='',row_version=row_version+1,updated_at=?,updated_by=? WHERE id=?",
+                    (now, actor_id, from_id),
+                )
+            new_version = int(person["row_version"]) + 1
+            conn.execute(
+                """UPDATE personnel SET organizational_unit=?,position_code=?,position_title=?,actual_location=?,status=?,
+                          row_version=?,updated_at=?,updated_by=? WHERE id=?""",
+                (str(before_person.get("organizational_unit", "")), str(before_person.get("position_code", "")),
+                 str(before_person.get("position_title", "")), str(before_person.get("actual_location", "")),
+                 str(before_person.get("status", "")), new_version, now, actor_id, movement["person_id"]),
+            )
+            conn.execute(
+                """UPDATE personnel_movements SET reversed_at=?,reversed_by=?,reversal_reason=?,row_version=row_version+1
+                   WHERE id=?""",
+                (now, actor_id, reason, movement_id),
+            )
+            after={"reversed": True, "reason": reason, "person": before_person}
+            self._record(conn, actor_id, "reverse", "personnel_movement", movement_id, dict(movement), after,
+                         int(movement["row_version"]) + 1)
+            self._record(conn, actor_id, "movement_reverse", "personnel", movement["person_id"], dict(person),
+                         {**before_person, "row_version": new_version}, new_version)
+        movements=self.list_personnel_movements(str(movement["person_id"]))
+        current=next(item for item in movements if item["id"]==movement_id)
+        return {"movement": current, "person": self.get_person(str(movement["person_id"]))}
 
     def delete_person(self, person_id: str, expected_version: int, actor_id: str) -> None:
         with self.write() as conn:

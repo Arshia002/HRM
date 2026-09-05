@@ -399,10 +399,10 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
 
     push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
     for marker in (
-        "APPLY-V070RC1.cmd",
+        "APPLY-V080RC1.cmd",
         "git check-ignore -q private-data\\hrm-v060b1-fernet.key",
         "validate_package_contract.py --require-git-tracked",
-        "ci\\stage_v070rc1_overlay.py",
+        "ci\\stage_v080rc1_overlay.py",
     ):
         if marker not in push:
             fail(f"Guarded push real-data marker is missing: {marker!r}")
@@ -410,7 +410,7 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         fail("Guarded push must not change branches after overlay installation")
     if "git branch --show-current" not in push:
         fail("Guarded push must verify the pilot branch before validation")
-    installer = (PROJECT / "INSTALL-OVERLAY-V070RC1.cmd").read_text(encoding="utf-8")
+    installer = (PROJECT / "INSTALL-OVERLAY-V080RC1.cmd").read_text(encoding="utf-8")
     for marker in ("branch --show-current", "validate_overlay_integrity.py", "install_verified_overlay.py", "--source", "--target"):
         if marker.lower() not in installer.lower():
             fail(f"Atomic overlay installer marker is missing: {marker!r}")
@@ -422,11 +422,11 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
     for marker in ("manifest-driven overlay copied and verified", "shutil.copyfile", "sha256_file", "PACKAGE-MANIFEST.json"):
         if marker not in manifest_installer:
             fail(f"Manifest-driven overlay installer marker is missing: {marker!r}")
-    apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
+    apply = (PROJECT / "APPLY-V080RC1.cmd").read_text(encoding="utf-8")
     overlay_marker = "ci\\validate_overlay_integrity.py"
     regeneration_marker = "tools\\build_release.py"
     if overlay_marker not in apply:
-        fail("Extracted-overlay integrity gate is missing from APPLY-V070RC1.cmd")
+        fail("Extracted-overlay integrity gate is missing from APPLY-V080RC1.cmd")
     if apply.index(overlay_marker) > apply.index(regeneration_marker):
         fail("Extracted-overlay integrity must run before manifest regeneration")
 
@@ -435,7 +435,7 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         if forbidden in diagnostics:
             fail(f"Privacy-safe diagnostics contains forbidden raw field/path marker: {forbidden}")
     workflow_lower = workflow.lower()
-    for marker in ("smoke-upgrade-from-beta.ps1", "v0.6.0-beta.1", "beta-to-rc-upgrade.log"):
+    for marker in ("smoke-upgrade-from-rc.ps1", "v0.7.0-rc.1", "v070-to-v080-upgrade.log"):
         if marker.lower() not in workflow_lower:
             fail(f"Real beta-to-RC upgrade gate marker is missing: {marker!r}")
     print("PASS authenticated encrypted-input, aggregate-only artifact, diagnostics privacy and beta-upgrade boundary")

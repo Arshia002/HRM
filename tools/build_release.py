@@ -42,8 +42,9 @@ ROOT_FILES = {
     "RELEASE-QUALITY-GATES.md", "TEST-REPORT-V060B1.txt", "VERSION-V060B1.json",
     "APPLY-V070RC1.cmd", "INSTALL-OVERLAY-V070RC1.cmd", "README-V070RC1.txt",
     "TEST-REPORT-V070RC1.txt", "VERSION-V070RC1.json",
+    "APPLY-V080RC1.cmd", "INSTALL-OVERLAY-V080RC1.cmd", "README-V080RC1.txt", "VERSION-V080RC1.json",
 }
-ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "docs", "scripts", "src", "tests", "tools", "test-evidence"}
+ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "deploy", "docs", "scripts", "src", "tests", "tools", "test-evidence", "web"}
 
 
 # HRM_MANIFEST_CANONICAL_LF_V1
@@ -100,7 +101,7 @@ def write_manifest(files: list[tuple[Path, Path]]) -> Path:
         "product": "HRM",
         "version": VERSION,
         "package_revision": PACKAGE_REVISION,
-        "purpose": "github-windows-ci-clean-checkout-candidate",
+        "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
         "contains_plaintext_real_data": False,
         "contains_encrypted_real_data_bundle": any(
             relative.as_posix() == "ci/real-data/hrm-real-data-v060b1.enc"

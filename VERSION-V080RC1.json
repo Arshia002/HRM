@@ -1,0 +1,42 @@
+{
+  "product": "HRM",
+  "version": "0.8.0-rc.1",
+  "package_revision": "0.8.0-rc.1-ci.1",
+  "candidate_kind": "production-history-and-linux-web-test",
+  "baseline_tag": "tested-v0.7.0-rc.1-source",
+  "baseline_commit": "2a1a7f7b71b3a01c9f459f17d13d9dc348f45fb2",
+  "pilot_branch": "feat/production-history-web-v080rc1",
+  "expected_personnel": 1356,
+  "expected_source_assignments": {
+    "county_enrichments": 590,
+    "active_named_positions": 185,
+    "ignored_legacy_type_zero": 1
+  },
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  },
+  "real_data_ci": {
+    "bundle_generation": "v060b1",
+    "bundle": "ci/real-data/hrm-real-data-v060b1.enc",
+    "key_file": "private-data/hrm-v060b1-fernet.key",
+    "secret": "HRM_REAL_DATA_KEY",
+    "environment": "real-data-validation",
+    "artifact_policy": "aggregate-only"
+  },
+  "production_gates": [
+    "personnel-movement-history",
+    "movement-reversal-latest-only",
+    "super-admin-vs-hr-admin",
+    "linux-web-smoke",
+    "six-client-tls-concurrency",
+    "disconnect-reconnect",
+    "tls-mismatch-rejection",
+    "secondary-destination-backup-restore",
+    "corrupt-backup-rejection",
+    "privacy-safe-diagnostics",
+    "v0.7-to-current-installer-upgrade"
+  ]
+}

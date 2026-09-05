@@ -50,13 +50,13 @@ class PackageTests(unittest.TestCase):
     def test_isolated_local_gate_environment_is_never_packaged(self):
         gitignore = (PROJECT / ".gitignore").read_text(encoding="utf-8")
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
-        apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V080RC1.cmd").read_text(encoding="utf-8")
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
         self.assertIn(".venv/", gitignore)
         self.assertIn('".venv"', builder)
         self.assertIn("python -m venv .venv", apply)
         self.assertIn("--only-binary=:all: -r ci\\requirements-source-gates.txt", apply)
-        self.assertIn("ci\\validate_v070rc1_candidate.py", apply)
+        self.assertIn("ci\\validate_v080rc1_candidate.py", apply)
         self.assertFalse(any(".venv" in Path(item["path"]).parts for item in manifest["files"]))
 
     def test_native_client_has_no_browser_engine(self):
@@ -229,7 +229,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '0.7.0-rc.1'", lowered)
+        self.assertIn("version -ne '0.8.0-rc.1'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -256,14 +256,14 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "0.7.0-rc.1-ci.4",
+            "0.8.0-rc.1-ci.1",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
         self.assertIn('"package_revision": PACKAGE_REVISION', builder)
 
     def test_overlay_integrity_gate_precedes_manifest_regeneration(self):
-        apply = (PROJECT / "APPLY-V070RC1.cmd").read_text(encoding="utf-8")
+        apply = (PROJECT / "APPLY-V080RC1.cmd").read_text(encoding="utf-8")
         verify = apply.index("ci\\validate_overlay_integrity.py")
         regenerate = apply.index("tools\\build_release.py")
         self.assertLess(verify, regenerate)
@@ -277,10 +277,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "0.7.0-rc.1-ci.4\n", encoding="utf-8", newline="\n"
+                "0.8.0-rc.1-ci.1\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "0.7.0-rc.1-ci.4",
+                "package_revision": "0.8.0-rc.1-ci.1",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -320,8 +320,8 @@ class PackageTests(unittest.TestCase):
 
     def test_guarded_push_runs_v060_gates_before_commit(self):
         push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
-        gate = push.index('call "%~dp0APPLY-V070RC1.cmd"')
-        stage = push.index("ci\\stage_v070rc1_overlay.py")
+        gate = push.index('call "%~dp0APPLY-V080RC1.cmd"')
+        stage = push.index("ci\\stage_v080rc1_overlay.py")
         commit = push.index("git commit -m")
         remote = push.index("git push -u origin %HRM_PILOT_BRANCH%")
         self.assertLess(gate, stage)
@@ -334,7 +334,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("git branch --show-current", push)
 
     def test_rc_installer_forces_manifest_driven_complete_overlay_before_push(self):
-        installer = (PROJECT / "INSTALL-OVERLAY-V070RC1.cmd").read_text(encoding="utf-8")
+        installer = (PROJECT / "INSTALL-OVERLAY-V080RC1.cmd").read_text(encoding="utf-8")
         self.assertIn("release_identity.py\" --print branch", installer)
         self.assertIn("%HRM_PILOT_BRANCH%", installer)
         self.assertIn("install_verified_overlay.py", installer)
@@ -353,7 +353,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("Installed payload verification failed", source)
 
     def test_guarded_stage_is_manifest_limited(self):
-        stage = (PROJECT / "ci" / "stage_v070rc1_overlay.py").read_text(encoding="utf-8")
+        stage = (PROJECT / "ci" / "stage_v080rc1_overlay.py").read_text(encoding="utf-8")
         self.assertIn('"PACKAGE-MANIFEST.json", "SHA256SUMS.txt"', stage)
         self.assertIn('staged - set(paths)', stage)
         self.assertIn('"git", "add", "--"', stage)
@@ -392,6 +392,31 @@ class PackageTests(unittest.TestCase):
         self.assertIn('DestName: "hrm-seed.sqlite"', script)
         self.assertIn('Flags: dontcopy noencryption', script)
         self.assertNotIn('DestDir: "{app}\\Server\\data\\seed"', script)
+
+
+    def test_native_windows_personnel_movements_are_exposed_and_direct_org_edit_is_locked(self):
+        client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
+        server = (PROJECT / "src" / "sazmanhr" / "server.py").read_text(encoding="utf-8")
+        permissions = (PROJECT / "src" / "sazmanhr" / "database.py").read_text(encoding="utf-8")
+        self.assertIn("ثبت جابه‌جایی", client)
+        self.assertIn("سوابق جابه‌جایی سازمانی", client)
+        self.assertIn("MOVEMENT_FIELDS", client)
+        self.assertIn('"code": "movement_required"', server)
+        self.assertIn('self.repo.require(user, "reverse_movements")', server)
+        self.assertIn('"reverse_movements": "ابطال آخرین جابه‌جایی پرسنلی"', permissions)
+
+    def test_linux_web_test_is_shared_core_dockerized_and_explicitly_nonproduction(self):
+        dockerfile = (PROJECT / "deploy" / "linux-web-test" / "Dockerfile").read_text(encoding="utf-8")
+        compose = (PROJECT / "deploy" / "linux-web-test" / "docker-compose.yml").read_text(encoding="utf-8")
+        web = (PROJECT / "web" / "index.html").read_text(encoding="utf-8")
+        builder = (PROJECT / "tools" / "build_linux_web_test.py").read_text(encoding="utf-8")
+        workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
+        self.assertIn("NOT FOR PRODUCTION", web)
+        self.assertIn("PYTHONPATH=/app/src", dockerfile)
+        self.assertIn("127.0.0.1:${HRM_WEB_PORT:-8080}:8080", compose)
+        self.assertIn("linux-web-test-not-for-production", builder)
+        self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
+        self.assertIn("HRM-0.8.0-rc.1-Linux-Web-Test", workflow)
 
 
 if __name__ == "__main__":

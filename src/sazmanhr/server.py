@@ -35,12 +35,13 @@ class ApiServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
     def __init__(self, address: tuple[str, int], repository: Repository, logger: logging.Logger | None = None,
-                 tls_enabled: bool = False):
+                 tls_enabled: bool = False, web_root: Path | None = None):
         super().__init__(address, ApiHandler)
         self.repository = repository
         self.logger = logger or logging.getLogger("sazmanhr")
         self.started_monotonic = time.monotonic()
         self.tls_enabled = tls_enabled
+        self.web_root = web_root.resolve() if web_root else None
 
     def handle_error(self, request, client_address) -> None:
         self.logger.warning("connection_closed_before_http", extra={"client": client_address[0]})
@@ -95,6 +96,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
+        if method == "GET" and getattr(self.server, "web_root", None) and (path == "/" or path == "/web" or path.startswith("/web/")):
+            self._web_asset(path)
+            return
         if method == "GET" and path == "/api/health":
             self._json(HTTPStatus.OK, {
                 "status": "ok", "version": __version__, "database": "ready",
@@ -168,6 +172,22 @@ class ApiHandler(BaseHTTPRequestHandler):
                 status=query.get("status", [""])[0], location=query.get("location", [""])[0],
             ))
             return
+        if method == "GET" and path.startswith("/api/personnel/") and path.endswith("/movements"):
+            self.repo.require(user, "read")
+            person_id = path.split("/")[-2]
+            self._json(HTTPStatus.OK, {"items": self.repo.list_personnel_movements(person_id)})
+            return
+        if method == "POST" and path.startswith("/api/personnel/") and path.endswith("/movements"):
+            self.repo.require(user, "manage_movements")
+            person_id = path.split("/")[-2]
+            self._json(HTTPStatus.CREATED, self.repo.register_personnel_movement(person_id, self._body(), user["id"]))
+            return
+        if method == "POST" and path.startswith("/api/movements/") and path.endswith("/reverse"):
+            self.repo.require(user, "reverse_movements")
+            movement_id = path.split("/")[-2]
+            self._json(HTTPStatus.OK, self.repo.reverse_personnel_movement(
+                movement_id, str(self._body().get("reason", "")), user["id"]))
+            return
         if method == "GET" and path.startswith("/api/personnel/"):
             self.repo.require(user, "read")
             person = self.repo.get_person(path.rsplit("/", 1)[1])
@@ -176,7 +196,22 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         if method in {"POST", "PUT"} and path == "/api/personnel":
             self.repo.require(user, "edit_personnel")
-            self._json(HTTPStatus.OK, self.repo.save_person(self._body(), user["id"]))
+            payload = self._body()
+            person_id = str(payload.get("id", "")).strip()
+            if person_id:
+                current = self.repo.get_person(person_id)
+                if current:
+                    movement_fields = ("organizational_unit", "position_code", "position_title", "actual_location", "status")
+                    changed = [field for field in movement_fields
+                               if field in payload and str(payload.get(field, "") or "").strip() != str(current.get(field, "") or "").strip()]
+                    if changed:
+                        self._json(HTTPStatus.CONFLICT, {
+                            "error": "تغییر واحد، پست، محل خدمت یا وضعیت باید از مسیر ثبت جابه‌جایی پرسنلی انجام شود.",
+                            "code": "movement_required",
+                            "fields": changed,
+                        })
+                        return
+            self._json(HTTPStatus.OK, self.repo.save_person(payload, user["id"]))
             return
         if method == "DELETE" and path.startswith("/api/personnel/"):
             self.repo.require(user, "delete_personnel")
@@ -299,6 +334,40 @@ class ApiHandler(BaseHTTPRequestHandler):
 
         self._json(HTTPStatus.NOT_FOUND, {"error": "مسیر سرویس پیدا نشد.", "code": "not_found"})
 
+    def _web_asset(self, path: str) -> None:
+        web_root = getattr(self.server, "web_root", None)
+        if not web_root:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "Web UI disabled", "code": "not_found"})
+            return
+        relative = "index.html" if path in {"/", "/web"} else path[len("/web/"):]
+        if not relative or relative.endswith("/"):
+            relative += "index.html"
+        candidate = (web_root / relative).resolve()
+        try:
+            candidate.relative_to(web_root)
+        except ValueError:
+            self._json(HTTPStatus.NOT_FOUND, {"error": "مسیر نامعتبر است.", "code": "not_found"})
+            return
+        if not candidate.is_file():
+            self._json(HTTPStatus.NOT_FOUND, {"error": "فایل وب پیدا نشد.", "code": "not_found"})
+            return
+        mime = {
+            ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+            ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
+            ".png": "image/png", ".ico": "image/x-icon",
+        }.get(candidate.suffix.lower(), "application/octet-stream")
+        body = candidate.read_bytes()
+        self.send_response(HTTPStatus.OK.value)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'")
+        self.end_headers()
+        self.wfile.write(body)
+
     def _authenticated(self) -> tuple[str, dict[str, Any]]:
         header = self.headers.get("Authorization", "")
         if not header.startswith("Bearer "):
@@ -386,6 +455,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--service-stop-timeout", type=int, default=30)
     parser.add_argument("--service-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
+    parser.add_argument("--web-root", type=Path, help="Serve the optional browser test UI from this directory.")
     return parser
 
 
@@ -469,7 +539,7 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
     if args.init_only:
         return 0
     host, port = args.host or config.host, args.port or config.port
-    server = ApiServer((host, port), repo, logger, tls_enabled=bool(cert))
+    server = ApiServer((host, port), repo, logger, tls_enabled=bool(cert), web_root=args.web_root)
     if cert and key:
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
