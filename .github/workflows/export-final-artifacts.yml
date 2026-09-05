@@ -1,0 +1,71 @@
+name: Export tested v1.0.0-rc.1 artifacts
+
+on:
+  push:
+    branches:
+      - ops/export-v1.0.0-rc1-artifacts
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_RUN_ID: "33958392344"
+      RELEASE_TAG: "v1.0.0-rc.1"
+
+    steps:
+      - name: Download exact tested artifact archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+
+          SOURCE_COMMIT="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}" --jq '.head_sha')"
+          echo "SOURCE_COMMIT=${SOURCE_COMMIT}" >> "$GITHUB_ENV"
+
+          JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts?per_page=100")"
+
+          download_artifact() {
+            local name="$1"
+            local out="$2"
+            local id digest actual
+
+            id="$(printf '%s' "$JSON" | jq -r --arg n "$name" '.artifacts[] | select(.name==$n and .expired==false) | .id' | head -n1)"
+            digest="$(printf '%s' "$JSON" | jq -r --arg n "$name" '.artifacts[] | select(.name==$n and .expired==false) | .digest' | head -n1)"
+
+            test -n "$id"
+            test "$id" != "null"
+            test -n "$digest"
+            test "$digest" != "null"
+
+            curl --fail --location --retry 3               -H "Authorization: Bearer ${GH_TOKEN}"               -H "Accept: application/vnd.github+json"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip"               -o "release-assets/${out}"
+
+            actual="sha256:$(sha256sum "release-assets/${out}" | awk '{print $1}')"
+
+            printf '%s\n' "${name}" "GitHub digest: ${digest}" "Downloaded:    ${actual}"
+            test "$actual" = "$digest"
+          }
+
+          download_artifact "HRM-1.0.0-rc.1-Tested-Setup" "HRM-1.0.0-rc.1-Tested-Setup.zip"
+          download_artifact "HRM-1.0.0-rc.1-Linux-Web-Test" "HRM-1.0.0-rc.1-Linux-Web-Test.zip"
+
+          (cd release-assets && sha256sum *.zip > SHA256SUMS.txt)
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG"               --repo "$GITHUB_REPOSITORY"               --target "$SOURCE_COMMIT"               --prerelease               --title "HRM v1.0.0-rc.1 - Tested Release Candidate"               --notes "Exact artifact archives copied from successful GitHub Actions run ${SOURCE_RUN_ID}. No rebuild was performed."
+          fi
+
+          gh release upload "$RELEASE_TAG"             release-assets/HRM-1.0.0-rc.1-Tested-Setup.zip             release-assets/HRM-1.0.0-rc.1-Linux-Web-Test.zip             release-assets/SHA256SUMS.txt             --repo "$GITHUB_REPOSITORY"             --clobber
