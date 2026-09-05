@@ -1,13 +1,13 @@
 {
   "manifest_schema": 4,
   "product": "HRM",
-  "version": "0.8.0-rc.1",
-  "package_revision": "0.8.0-rc.1-ci.1",
+  "version": "1.0.0-rc.1",
+  "package_revision": "1.0.0-rc.1-ci.2",
   "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
   "real_data_artifact_policy": "aggregate-only",
-  "expected_windows_artifact": "HRM-0.8.0-rc.1-Tested-Setup",
+  "expected_windows_artifact": "HRM-1.0.0-rc.1-Tested-Setup",
   "files": [
     {
       "path": ".gitattributes",
@@ -16,13 +16,13 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 9799,
-      "sha256": "b81c25757fc47c78970e9766b83727861b95eac5e941f653f2b959e9f7ae22f4"
+      "bytes": 10274,
+      "sha256": "d063ddbf5f6c870a8a44a64f53cff95768b7fa7a9f239a16a03d65d1da902203"
     },
     {
       "path": ".gitignore",
-      "bytes": 595,
-      "sha256": "2a03ab9577ad23216c5b01c41b991a699a62d6b84de9c5f6d1aad5f402d749c1"
+      "bytes": 683,
+      "sha256": "5c5c57b3e6c291373d9df39c1c8e5d334a49491d861f6d9098a6d39630e15f9a"
     },
     {
       "path": "APPLY-V030A2.cmd",
@@ -65,6 +65,11 @@
       "sha256": "8c3babe6a2f818e063f60678b6db033faaf7725a46758b07a3c8b5b52e99c0fd"
     },
     {
+      "path": "APPLY-V100RC1.cmd",
+      "bytes": 1182,
+      "sha256": "dc5cf773f08903c83cbf3a6c1e2d54912a77d9b217a2fd2846d86298b67a1b35"
+    },
+    {
       "path": "assets/company-logo-source.png",
       "bytes": 5631,
       "sha256": "6d843235971ae857de20ddcd0f7d99cbdfef3b7009e2ca4b9c0fd85e115278f4"
@@ -81,8 +86,8 @@
     },
     {
       "path": "build/windows/build_windows.py",
-      "bytes": 13527,
-      "sha256": "5857d088d4688b4e9577d279b562e844c7c2b5801b312b42d74e187dec04cf81"
+      "bytes": 13525,
+      "sha256": "dbcbccdb80c67bb6aaad6e0dc44c9ecfe91129ef289ed106cf5d56c06686a2f7"
     },
     {
       "path": "build/windows/client.spec",
@@ -111,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 17732,
-      "sha256": "8a832a3b9b3f6deacdadcb26740b9133317df30653be52fd6a98ca0b644ea74c"
+      "bytes": 18061,
+      "sha256": "faca0b8065bb76df1c95763953c876056774d0731cb4f7ed1537cf10947b4993"
     },
     {
       "path": "build/windows/migration.spec",
@@ -137,7 +142,7 @@
     {
       "path": "build/windows/smoke-install.ps1",
       "bytes": 15256,
-      "sha256": "1402bd7053c0bb00cee11a1f4e91396d097758a573e1859813fbec612ea89844"
+      "sha256": "b990df9a79daf1cb7c1d27fe7add4742d882fb2d453d0780659d052a4a6051a1"
     },
     {
       "path": "build/windows/smoke-upgrade-from-beta.ps1",
@@ -150,19 +155,29 @@
       "sha256": "5c2fc0efdef0df0ff300cc856bd6edce05ff52272a1774c584810c096da82cb0"
     },
     {
+      "path": "build/windows/smoke-upgrade-from-v080.ps1",
+      "bytes": 2705,
+      "sha256": "ca3391aa969ac106e566973ad0e6ff54f341b78f7508b84222d2e11ecf7753ac"
+    },
+    {
       "path": "BUILD-SETUP.cmd",
       "bytes": 4187,
       "sha256": "83b453aa8687e282fb2affc7c7dfe8dad823f26fbdd6ca8ab3831dc00386d0b2"
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 14865,
-      "sha256": "d5eaf2df6994b81d9cf9e0c2729a5950af9c1dd7c0e5ca498ff074655ac9d091"
+      "bytes": 15333,
+      "sha256": "3b51969548e759e8f347e83ed07682f21e5bb09ca9532984e0d819b6636de17f"
     },
     {
       "path": "ci/apply_v040a1.py",
       "bytes": 1248,
       "sha256": "10a15c17e94cac327ccd20901bc3ae526d7a5376e376881514f38d3f3eda95ed"
+    },
+    {
+      "path": "ci/cleanup_v100rc1_repository.py",
+      "bytes": 1093,
+      "sha256": "fcd1315f9d7a791401aadb0d63742b6c7717e6198dca5349c319676290628f66"
     },
     {
       "path": "ci/install_verified_overlay.py",
@@ -196,8 +211,8 @@
     },
     {
       "path": "ci/release_identity.py",
-      "bytes": 2698,
-      "sha256": "8931f491d5aedece6e9dee20cb710d102a133a84f0257b7278487e16ec0ddbaf"
+      "bytes": 2711,
+      "sha256": "d70411463ebec2209b16e098bb8e59081dd5064b8e9eb3c56acbc0f12f02ba1a"
     },
     {
       "path": "ci/requirements-source-gates.txt",
@@ -220,14 +235,19 @@
       "sha256": "c2ecb46da04edc2ba6a02c15740a9d0505818b7b5abcb00b2ad45c9c25857ca4"
     },
     {
+      "path": "ci/stage_v100rc1_overlay.py",
+      "bytes": 3719,
+      "sha256": "1a1bd05e0589aaea5be68c6c9e39b5e8a4fc1acfb32d174631c9bd5e6606dc16"
+    },
+    {
       "path": "ci/validate_overlay_integrity.py",
       "bytes": 3822,
       "sha256": "0c07b910883c07f5e78fa6d40fb4f0191af414be3373a6b4420ad8cc217536e0"
     },
     {
       "path": "ci/validate_package_contract.py",
-      "bytes": 22431,
-      "sha256": "542c2494f95bec22b9d3ed8f457787f2230557dd789118212da45c3b30a42d1d"
+      "bytes": 23379,
+      "sha256": "6f2c0fd518a09891a11162c4af5e2ac30d7b32bf14f4c775257ba2c30712a6e5"
     },
     {
       "path": "ci/validate_rc_hardening.py",
@@ -275,9 +295,14 @@
       "sha256": "b8f3b04a927bc34b610df19474052f437c562889a9b2fa09b71bf6e69c54be30"
     },
     {
+      "path": "ci/validate_v100rc1_candidate.py",
+      "bytes": 5645,
+      "sha256": "4fd2a59216287861d3d16e6482ea169907d2ff3f8b8674763296cb08f7811be8"
+    },
+    {
       "path": "ci/write-ci-manifest.ps1",
-      "bytes": 2286,
-      "sha256": "1c2decc43b1ecc534d7a64212441131abf41b30e496a3bf0c64ccefce36873e0"
+      "bytes": 2728,
+      "sha256": "ac7896d353087dab137acb7b2eece8fc01655c68e757e0250ec79c76c4a95abb"
     },
     {
       "path": "CI-LOCAL-VALIDATION.md",
@@ -287,7 +312,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "62266b88090f7088ee5e23aa4747ca5c72039fb50a775bb23b3dc690910e717d"
+      "sha256": "252744737b1428a41e96acfc44891ed98a2346a42d078569b2f65fd778b1fc11"
     },
     {
       "path": "CI-README-FA.md",
@@ -337,7 +362,7 @@
     {
       "path": "deploy/linux-web-test/README-FA.md",
       "bytes": 1107,
-      "sha256": "d30b596e7d0a9cf2f40d960ec01ce985414f31c485936977203782aefad8ce14"
+      "sha256": "a2ffe35ef9c610b113eace018895589cbabcbddfec894aa17fddd7c277c35bca"
     },
     {
       "path": "deploy/linux-web-test/start.sh",
@@ -348,6 +373,41 @@
       "path": "deploy/linux-web-test/stop.sh",
       "bytes": 59,
       "sha256": "9550cee4ef5b01b646cf94e281fd0ed35c060fa9cf9b2af068e62d500148238e"
+    },
+    {
+      "path": "docs/#U0627#U0645#U0646#U06cc#U062a.md",
+      "bytes": 2172,
+      "sha256": "9ff225330cbaaea9f07d0e3a9a3aecacb24b831b1e00981e0b6777c380448caf"
+    },
+    {
+      "path": "docs/#U0631#U0627#U0647#U0646#U0645#U0627#U06cc-#U0627#U0633#U062a#U0642#U0631#U0627#U0631.md",
+      "bytes": 4491,
+      "sha256": "8918141d5ea2827d440abc872c27b48d63de38c4e4721c9897a2240a77b07578"
+    },
+    {
+      "path": "docs/#U0631#U0627#U0647#U0646#U0645#U0627#U06cc-#U0633#U0627#U062e#U062a.md",
+      "bytes": 3581,
+      "sha256": "8b7a964aea69b3d31ef5dd21561a856b05f3f92fd1355c17024c3b5f147c3808"
+    },
+    {
+      "path": "docs/#U0645#U0639#U0645#U0627#U0631#U06cc.md",
+      "bytes": 2776,
+      "sha256": "147108f635be0a51f350569d5fdfc83bfd6a2b634b34066a415190ec2138015d"
+    },
+    {
+      "path": "docs/#U0645#U0646#U0634#U0648#U0631-#U0641#U0646#U06cc-#U067e#U0631#U0648#U0698#U0647.md",
+      "bytes": 2707,
+      "sha256": "9394e2c2688d66ac7a790c1cd6d6f650961cefc916180e781c914f2abb4f3cd8"
+    },
+    {
+      "path": "docs/#U0648#U0636#U0639#U06cc#U062a-#U062a#U062d#U0648#U06cc#U0644.md",
+      "bytes": 2419,
+      "sha256": "7cacdb89a650c8fa2d83ffee95062a0cb6a8d2ba263131aeb54c0952f26098fb"
+    },
+    {
+      "path": "docs/#U0686#U06a9#U200c#U0644#U06cc#U0633#U062a-#U062a#U0633#U062a-Windows.md",
+      "bytes": 2724,
+      "sha256": "61bb3cb11f5ba60a2ab0203c072665837d7d2988865848e56bc7d7b3f86d3f5c"
     },
     {
       "path": "docs/API.md",
@@ -371,8 +431,18 @@
     },
     {
       "path": "docs/deployment-guide-fa.md",
-      "bytes": 4531,
-      "sha256": "9348c8755b39303d2bffd62d185c755aa0de7995484c70f4a2b2421f6e34da2e"
+      "bytes": 5787,
+      "sha256": "287ba426039e58ce41e6983e67fd5dfb58bba583c520beaa39e7b36867b854bc"
+    },
+    {
+      "path": "docs/production-deployment-checklist-fa.md",
+      "bytes": 1039,
+      "sha256": "6bdb2fc191dea15d9abf5c90d861aa59096c5f81472a4ee9ecc07f8f712c9b48"
+    },
+    {
+      "path": "docs/production-operations-fa.md",
+      "bytes": 923,
+      "sha256": "f35b7c1dcac7fcdd7b66c08ec272d290693b6f6434edcf90e91dfda73d1cba94"
     },
     {
       "path": "docs/ROOT-CAUSE-V040A2-WINDOWS-SQLITE-LOCK.md",
@@ -425,6 +495,11 @@
       "sha256": "197d30c2da5797aa32c86a12c04069c4f185207bcc42e2fd43d333bbde607808"
     },
     {
+      "path": "docs/V100RC1-FINAL-PRODUCTION-CANDIDATE.md",
+      "bytes": 2419,
+      "sha256": "e5370252a623f307ef58fd76441a2b5c8b4a0e740364ba072ea2f3428a536863"
+    },
+    {
       "path": "docs/windows-test-checklist-fa.md",
       "bytes": 2639,
       "sha256": "0cd7c690c50a40987887654194d1ea984e4278c804b6476cbc48a6df7618212c"
@@ -450,6 +525,11 @@
       "sha256": "ab2350e2aceee4dcc29a8396f76d70337184dd2dbfb9b59817fda69c0b0a9295"
     },
     {
+      "path": "INSTALL-OVERLAY-V100RC1.cmd",
+      "bytes": 2981,
+      "sha256": "2b4660f1d5086d6247a07bcd1c6b9c69568fda8ddaf95c4f2930566c2675409b"
+    },
+    {
       "path": "LICENSE.txt",
       "bytes": 290,
       "sha256": "26e4cf37f041d888ff8b9790d0253223a967478e11e5f8495f900aa50f56b7d4"
@@ -461,8 +541,8 @@
     },
     {
       "path": "PUSH-TO-GITHUB.cmd",
-      "bytes": 3824,
-      "sha256": "8edd8c8c13c9b0837d7b5b2aac3c17a87608f01f11c5a2b1cf928ce22cffd1ca"
+      "bytes": 3826,
+      "sha256": "c32f23e2dc13158128e3f4cff99de9e4e672ed86cb1c81120ce10973a8d4dadf"
     },
     {
       "path": "pyproject.toml",
@@ -505,14 +585,19 @@
       "sha256": "7f55cb15622c05a98af101f36b6bd962443ea1be01766dcdde9f7132cfab04b9"
     },
     {
+      "path": "README-V100RC1.txt",
+      "bytes": 1092,
+      "sha256": "b5a381f14ab959bb7759d3e0dc6839f058cbf30380ecba45887e6e04d400bb10"
+    },
+    {
       "path": "README.md",
       "bytes": 3498,
       "sha256": "221336b1352ce2f12755ef1e20030d99bb57f4e0782ff0a93e70cea3c099ded3"
     },
     {
       "path": "RELEASE-QUALITY-GATES.md",
-      "bytes": 1453,
-      "sha256": "b3d13bf3d4b3517912f40e27ab6f6e3a86e930b732ef509bc4c070694a3461b5"
+      "bytes": 2529,
+      "sha256": "df7c016b0a72af345b801debd136461f37617dc1fcc542b0ff80d1cc77f21362"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -562,7 +647,7 @@
     {
       "path": "src/sazmanhr/__init__.py",
       "bytes": 65,
-      "sha256": "467eb19767bdb04453e177fb47629a29a78832e0be28401f3fe1c95771805388"
+      "sha256": "42fb786db8c677593995c7219465b70fb877f7cb97a2af9c94973ba717dfa76e"
     },
     {
       "path": "src/sazmanhr/__main__.py",
@@ -586,8 +671,8 @@
     },
     {
       "path": "src/sazmanhr/config.py",
-      "bytes": 6231,
-      "sha256": "e89e15d01ef01f5e191e086f1007c83cadce1bff9234bd1592e9dd71aed3c106"
+      "bytes": 6647,
+      "sha256": "d9421e8b91430f37a58dcad7f02f7af9ef36129054e30294f7f1c962916b9829"
     },
     {
       "path": "src/sazmanhr/database.py",
@@ -606,8 +691,8 @@
     },
     {
       "path": "src/sazmanhr/operations.py",
-      "bytes": 6200,
-      "sha256": "153793495b05b1a140a89d95e789cdea1986dbb0db23ddc7de47f6d4cc42c2c0"
+      "bytes": 7624,
+      "sha256": "cfddf75197472546c60196707076814397b33bdb4707ddb19e801649f0743a79"
     },
     {
       "path": "src/sazmanhr/security.py",
@@ -616,8 +701,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 29547,
-      "sha256": "4c726bafa9fc782f93ff59c699d9d04bc9f05a6d45285c198b1d214a6cacdde1"
+      "bytes": 29675,
+      "sha256": "4a0149baf28362da892dbfaf9b11fe71f91cab4586b82ecfcf2958e1bdeeaba3"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -631,8 +716,8 @@
     },
     {
       "path": "src/sazmanhr/windows_service.py",
-      "bytes": 3946,
-      "sha256": "a02636f5b503c97a18054216b282829ce229b3e3f80653be0afb9c66b1897c90"
+      "bytes": 4010,
+      "sha256": "cec5c53b6daedcde48a5dc2e22c001ddb194f758b65fdad47c4570f644e122af"
     },
     {
       "path": "src/sazmanhr/windows_service_control.py",
@@ -696,8 +781,8 @@
     },
     {
       "path": "tests/test_ci_pipeline.py",
-      "bytes": 6414,
-      "sha256": "8253697228173c08852bc0fcfd9d9f03d2afc1d97395558258dbcb972e74a04c"
+      "bytes": 6547,
+      "sha256": "cae96b576c475d95963412fdaec6b1d4a4e3c4c74983d1e31119ea999f5ef3f9"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -716,8 +801,8 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 23784,
-      "sha256": "8b6a8c48127a1fb485c0fe56a0996c2358bc94e37dd55934a244167ca4172b9e"
+      "bytes": 25203,
+      "sha256": "ced5fe6969155e911c5abf2cbbfce6bc707bd6c73a2c3c1b140c78946fa3c262"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -741,8 +826,8 @@
     },
     {
       "path": "tests/test_rc_release_identity.py",
-      "bytes": 1019,
-      "sha256": "23399687410b259ae345a117353baf8d5316ebcebbfba42c68c32e31544d20df"
+      "bytes": 1003,
+      "sha256": "b8b68da7436dca87bc7e0d53840f1f9dd81ffb6198082a5d2f979a2d2e5ab3b8"
     },
     {
       "path": "tests/test_repository.py",
@@ -795,6 +880,11 @@
       "sha256": "c79a24f120a1bb5dbfcfcc8937233eb95ee88573e6a02c22932337ef8bc7f953"
     },
     {
+      "path": "tests/test_v100rc1_operations.py",
+      "bytes": 2603,
+      "sha256": "189a573d30986ef1e90945d12b12f517a4fe884c0f0c4315ef7d3ba5cfaf8352"
+    },
+    {
       "path": "tests/test_windows_service_control.py",
       "bytes": 1981,
       "sha256": "0c41ab28fd27b6af31dd5230ec5f61a89433694f424fcc65fbe5cacb78dbd93d"
@@ -806,8 +896,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "bytes": 7093,
-      "sha256": "75b58ecb28df90971e46d047501e06d28e0e27d9e53af60f43b35b6c46284b32"
+      "bytes": 7195,
+      "sha256": "8e3eeb0ae05444347ee67a372766e349b3ab7c7a397f06312fafc28934e36f3b"
     },
     {
       "path": "tools/collect-diagnostics.cmd",
@@ -816,8 +906,8 @@
     },
     {
       "path": "tools/collect-diagnostics.ps1",
-      "bytes": 2320,
-      "sha256": "370f57341159db644c64f001b098dae9c74f58b0f1360bcaf2a499dbd5152a8c"
+      "bytes": 2482,
+      "sha256": "127583f0ce2eca255613c0b375b6374d75086461e763ea8565c1b2c9745d6fc4"
     },
     {
       "path": "tools/create_demo_seed.py",
@@ -897,7 +987,7 @@
     {
       "path": "VERSION",
       "bytes": 11,
-      "sha256": "c826281d70a09929ae66d93ab1991820610c597c776ba8a52a6bae3cfd9bc611"
+      "sha256": "8e3ccfbe492191dbb919be7b4ef3d93bd88f92b1d99532b25ba19c5ad9f1f722"
     },
     {
       "path": "VERSION-V040A1.json",
@@ -933,6 +1023,11 @@
       "path": "VERSION-V080RC1.json",
       "bytes": 1276,
       "sha256": "0616bd0f72580829bacdba8eddb2bc6a07eb424ad1dcc71c268946a34bf9e51a"
+    },
+    {
+      "path": "VERSION-V100RC1.json",
+      "bytes": 2023,
+      "sha256": "882851fd535b1dc24edc7e7f65b83a94a0ea328707c53d6d2427eb37b154fe70"
     },
     {
       "path": "web/app.js",

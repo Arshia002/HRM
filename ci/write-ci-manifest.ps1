@@ -9,6 +9,9 @@ $outputPath = [IO.Path]::GetFullPath($Output)
 New-Item -ItemType Directory -Force -Path (Split-Path $outputPath) | Out-Null
 
 $hash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$signature = Get-AuthenticodeSignature -FilePath $installerPath
+$signatureStatus = [string]$signature.Status
+$signed = ($signature.Status -eq [System.Management.Automation.SignatureStatus]::Valid)
 $revision = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { (git rev-parse HEAD 2>$null) }
 $runUrl = if ($env:GITHUB_SERVER_URL -and $env:GITHUB_REPOSITORY -and $env:GITHUB_RUN_ID) {
     "$($env:GITHUB_SERVER_URL)/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)"
@@ -17,7 +20,7 @@ $runUrl = if ($env:GITHUB_SERVER_URL -and $env:GITHUB_REPOSITORY -and $env:GITHU
 $manifest = [ordered]@{
     manifest_schema = 1
     product = 'HRM'
-    version = '0.8.0-rc.1'
+    version = '1.0.0-rc.1'
     build_utc = [DateTime]::UtcNow.ToString('o')
     source_revision = [string]$revision
     github_run = $runUrl
@@ -48,6 +51,13 @@ $manifest = [ordered]@{
         protected_real_data_validation = $true
         real_data_backup_restore = $true
         real_data_idempotent_replay = $true
+        personnel_movement_history = $true
+        role_model_2_super_admin_4_hr_admin = $true
+        configurable_secondary_backup = $true
+    }
+    signing = [ordered]@{
+        signed = $signed
+        authenticode_status = $signatureStatus
     }
     artifacts = @(
         [ordered]@{

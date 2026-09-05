@@ -1,0 +1,67 @@
+{
+  "product": "HRM",
+  "version": "1.0.0-rc.1",
+  "package_revision": "1.0.0-rc.1-ci.2",
+  "candidate_kind": "final-production-release-candidate-and-linux-web-test",
+  "baseline_tag": "tested-v0.8.0-rc.1-source",
+  "baseline_commit": "8f1adfa88a1b53db1b075504c58900957e812894",
+  "pilot_branch": "release/v1.0.0-rc.1",
+  "expected_personnel": 1356,
+  "expected_source_assignments": {
+    "county_enrichments": 590,
+    "active_named_positions": 185,
+    "ignored_legacy_type_zero": 1
+  },
+  "approved_chart": {
+    "fixed": 536,
+    "named": 32,
+    "total": 568,
+    "page_16_total": 24
+  },
+  "deployment_profile": {
+    "server_os": "Windows Server 2022",
+    "recommended_cpu_cores": 8,
+    "recommended_ram_gb": 32,
+    "recommended_storage_gb": 1024,
+    "network": "internal-lan-only",
+    "dns": "internal-dns-required-for-production-profile",
+    "internet_dependency": false,
+    "primary_users": 6,
+    "max_concurrent_users": 7,
+    "roles": {
+      "super_admin": 2,
+      "hr_admin": 4
+    }
+  },
+  "backup_policy": {
+    "interval_hours": 24,
+    "local_retention": 30,
+    "secondary_destination_supported": true,
+    "secondary_destination_required_before-production-approval": true
+  },
+  "real_data_ci": {
+    "bundle_generation": "v060b1",
+    "bundle": "ci/real-data/hrm-real-data-v060b1.enc",
+    "key_file": "private-data/hrm-v060b1-fernet.key",
+    "secret": "HRM_REAL_DATA_KEY",
+    "environment": "real-data-validation",
+    "artifact_policy": "aggregate-only"
+  },
+  "production_gates": [
+    "personnel-movement-history",
+    "movement-reversal-latest-only",
+    "super-admin-vs-hr-admin",
+    "daily-local-backup",
+    "configurable-secondary-backup",
+    "linux-web-smoke",
+    "six-client-tls-concurrency",
+    "disconnect-reconnect",
+    "tls-mismatch-rejection",
+    "secondary-destination-backup-restore",
+    "corrupt-backup-rejection",
+    "privacy-safe-diagnostics",
+    "v0.8-to-current-installer-upgrade",
+    "optional-authenticode-signing-pipeline",
+    "repository-hygiene"
+  ]
+}

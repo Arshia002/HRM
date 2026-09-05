@@ -35,3 +35,6 @@ private-data/
 *.migration.sqlite
 normalized-private.json
 # END HRM V040A1 PRIVATE MIGRATION DATA
+
+# Final release hygiene: generated test logs must stay out of Git.
+test-evidence/*.log

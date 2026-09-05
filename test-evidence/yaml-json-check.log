@@ -1,4 +1,0 @@
-YAML workflow parse: PASS
-JSON parse: PASS (2 files)
-SQLite integrity_check: ok; personnel=36
-Public data guard: PASS

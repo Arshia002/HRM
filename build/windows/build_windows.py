@@ -216,7 +216,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         raise BuildFailure("Python 3.11 x64 is required.")
 
     started = time.monotonic()
-    log.write("HRM 0.8.0-rc.1 production-history release-candidate build started.")
+    log.write("HRM 1.0.0-rc.1 final production release-candidate build started.")
     log.write(f"Project: {PROJECT_ROOT}")
     log.write(f"Python: {sys.executable}")
     log.write(f"Windows: {platform.platform()}")

@@ -10,7 +10,7 @@ Get-NetTCPConnection -LocalPort 8765 -ErrorAction SilentlyContinue | Select-Obje
 $configPath = Join-Path $env:ProgramData 'HRM-Kermanshah\server.json'
 if (Test-Path $configPath) {
   $c = Get-Content $configPath -Raw | ConvertFrom-Json
-  [pscustomobject]@{ host=$c.host; port=$c.port; tls_mode=$c.tls_mode; backup_interval_hours=$c.backup_interval_hours; backup_retention=$c.backup_retention; log_level=$c.log_level } |
+  [pscustomobject]@{ host=$c.host; port=$c.port; tls_mode=$c.tls_mode; backup_interval_hours=$c.backup_interval_hours; backup_retention=$c.backup_retention; backup_secondary_configured=[bool](-not [string]::IsNullOrWhiteSpace([string]$c.backup_secondary_dir)); backup_secondary_retention=$c.backup_secondary_retention; log_level=$c.log_level } |
     ConvertTo-Json | Set-Content (Join-Path $Out 'server-config-safe.json') -Encoding UTF8
 }
 

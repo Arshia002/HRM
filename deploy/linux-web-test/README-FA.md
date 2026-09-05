@@ -1,4 +1,4 @@
-# HRM 0.8.0-rc.1 — Linux Web Test
+# HRM 1.0.0-rc.1 — Linux Web Test
 
 این پکیج فقط برای تست Linux/Browser است و **Production نیست**. هسته API، دیتابیس، Audit، RBAC، Migration و Personnel Movement با نسخه Windows مشترک است.
 

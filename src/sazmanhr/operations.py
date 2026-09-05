@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import datetime as dt
 import json
 import logging
@@ -120,10 +121,16 @@ def restore_database(database_path: Path, backup_path: Path) -> Path:
 
 
 class BackupScheduler:
-    def __init__(self, repository: Repository, interval_hours: int = 24, retention: int = 30):
+    def __init__(
+        self, repository: Repository, interval_hours: int = 24, retention: int = 30,
+        secondary_dir: str | Path | None = None, secondary_retention: int = 30,
+    ):
         self.repository = repository
         self.interval_seconds = max(1, interval_hours) * 3600
-        self.retention = retention
+        self.retention = max(3, min(int(retention), 365))
+        raw_secondary = str(secondary_dir or "").strip()
+        self.secondary_dir = Path(raw_secondary).expanduser() if raw_secondary else None
+        self.secondary_retention = max(3, min(int(secondary_retention), 365))
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -138,13 +145,38 @@ class BackupScheduler:
         if self._thread:
             self._thread.join(timeout=10)
 
+    def _copy_to_secondary(self, source: Path) -> Path | None:
+        if self.secondary_dir is None:
+            return None
+        self.secondary_dir.mkdir(parents=True, exist_ok=True)
+        target = self.secondary_dir / source.name
+        staged = self.secondary_dir / f".{source.name}.staged"
+        shutil.copy2(source, staged)
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        staged_hash = hashlib.sha256(staged.read_bytes()).hexdigest()
+        if source_hash != staged_hash:
+            staged.unlink(missing_ok=True)
+            raise RuntimeError("Secondary backup copy verification failed")
+        os.replace(staged, target)
+        secondary_files = sorted(
+            self.secondary_dir.glob("scheduled-*.sqlite"),
+            key=lambda item: item.stat().st_mtime_ns,
+            reverse=True,
+        )
+        for expired in secondary_files[self.secondary_retention:]:
+            expired.unlink(missing_ok=True)
+        return target
+
     def run_once(self) -> Path:
         backup_dir = self.repository.path.parent / "backups"
         stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         target = self.repository.backup(backup_dir / f"scheduled-{stamp}.sqlite", kind="scheduled")
         self.repository.prune_backups(backup_dir, self.retention)
-        self.repository.record_operational("INFO", "backup", "backup_ok", "Scheduled backup completed",
-                                           {"filename": target.name})
+        secondary = self._copy_to_secondary(target)
+        self.repository.record_operational(
+            "INFO", "backup", "backup_ok", "Scheduled backup completed",
+            {"filename": target.name, "secondary_copy": bool(secondary)},
+        )
         return target
 
     def _run(self) -> None:

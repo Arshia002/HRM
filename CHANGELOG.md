@@ -1,3 +1,11 @@
+# HRM v1.0.0-rc.1
+
+- Final production release candidate based on the GitHub-tested v0.8.0-rc.1 source.
+- Added configurable verified secondary scheduled backup for organizational NAS/File Server storage.
+- Added final deployment/operations documentation and repository hygiene cleanup.
+- Added v0.8 -> v1.0 RC real installer upgrade gate and optional Authenticode signing path.
+- Production profile remains 2 Super Admin + 4 HR Admin with mandatory movement history.
+
 # Changelog
 
 ## 0.6.0-beta.1

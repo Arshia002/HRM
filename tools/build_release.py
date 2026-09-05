@@ -43,6 +43,7 @@ ROOT_FILES = {
     "APPLY-V070RC1.cmd", "INSTALL-OVERLAY-V070RC1.cmd", "README-V070RC1.txt",
     "TEST-REPORT-V070RC1.txt", "VERSION-V070RC1.json",
     "APPLY-V080RC1.cmd", "INSTALL-OVERLAY-V080RC1.cmd", "README-V080RC1.txt", "VERSION-V080RC1.json",
+    "APPLY-V100RC1.cmd", "INSTALL-OVERLAY-V100RC1.cmd", "README-V100RC1.txt", "VERSION-V100RC1.json",
 }
 ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "deploy", "docs", "scripts", "src", "tests", "tools", "test-evidence", "web"}
 

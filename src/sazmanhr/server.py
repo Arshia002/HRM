@@ -533,7 +533,7 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
     if temporary:
         print(f"Protected one-time login notice created: {db_path.parent / 'FIRST_LOGIN.txt'}")
     if args.backup_now:
-        scheduler = BackupScheduler(repo, config.backup_interval_hours, config.backup_retention)
+        scheduler = BackupScheduler(repo, config.backup_interval_hours, config.backup_retention, config.backup_secondary_dir, config.backup_secondary_retention)
         print(scheduler.run_once())
         return 0
     if args.init_only:
@@ -545,7 +545,7 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
         context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(cert, key)
         server.socket = context.wrap_socket(server.socket, server_side=True)
-    scheduler = BackupScheduler(repo, config.backup_interval_hours, config.backup_retention)
+    scheduler = BackupScheduler(repo, config.backup_interval_hours, config.backup_retention, config.backup_secondary_dir, config.backup_secondary_retention)
     scheduler.start()
     logger.info("server_listening", extra={"host": host, "port": port, "tls": bool(cert)})
     try:

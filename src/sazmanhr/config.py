@@ -133,6 +133,8 @@ class ServerConfig:
     tls_key: str = ""
     backup_interval_hours: int = 24
     backup_retention: int = 30
+    backup_secondary_dir: str = ""
+    backup_secondary_retention: int = 30
     log_level: str = "INFO"
 
     @classmethod
@@ -154,6 +156,8 @@ class ServerConfig:
             tls_key=str(data.get("tls_key", "")),
             backup_interval_hours=max(1, min(168, int(data.get("backup_interval_hours", 24)))),
             backup_retention=max(3, min(365, int(data.get("backup_retention", 30)))),
+            backup_secondary_dir=str(data.get("backup_secondary_dir", "")).strip(),
+            backup_secondary_retention=max(3, min(365, int(data.get("backup_secondary_retention", 30)))),
             log_level=str(data.get("log_level", "INFO")).upper(),
         )
 
@@ -164,6 +168,9 @@ class ServerConfig:
             "host": self.host, "port": self.port, "tls_mode": self.tls_mode,
             "tls_cert": self.tls_cert, "tls_key": self.tls_key,
             "backup_interval_hours": self.backup_interval_hours,
-            "backup_retention": self.backup_retention, "log_level": self.log_level,
+            "backup_retention": self.backup_retention,
+            "backup_secondary_dir": self.backup_secondary_dir,
+            "backup_secondary_retention": self.backup_secondary_retention,
+            "log_level": self.log_level,
         }, ensure_ascii=False, indent=2), encoding="utf-8")
         return path

@@ -105,7 +105,7 @@ function Wait-HrmHealth {
         Start-Sleep -Milliseconds 500
     }
     if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
-        $health.database -ne 'ready' -or $health.version -ne '0.8.0-rc.1') {
+        $health.database -ne 'ready' -or $health.version -ne '1.0.0-rc.1') {
         $detail = if ($health) { $health | ConvertTo-Json -Compress } else { 'no response' }
         throw "$Stage health check failed: $detail"
     }

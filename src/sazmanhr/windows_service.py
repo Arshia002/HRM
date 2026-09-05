@@ -61,7 +61,7 @@ class SazmanHRService(win32serviceutil.ServiceFramework):
                 context.minimum_version = ssl.TLSVersion.TLSv1_2
                 context.load_cert_chain(cert, key)
                 self.httpd.socket = context.wrap_socket(self.httpd.socket, server_side=True)
-            self.scheduler = BackupScheduler(repository, config.backup_interval_hours, config.backup_retention)
+            self.scheduler = BackupScheduler(repository, config.backup_interval_hours, config.backup_retention, config.backup_secondary_dir, config.backup_secondary_retention)
             self.scheduler.start()
             self.thread = threading.Thread(target=self.httpd.serve_forever, kwargs={"poll_interval": 0.5}, daemon=True)
             self.thread.start()

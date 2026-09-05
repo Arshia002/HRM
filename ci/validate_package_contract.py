@@ -399,10 +399,10 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
 
     push = (PROJECT / "PUSH-TO-GITHUB.cmd").read_text(encoding="utf-8")
     for marker in (
-        "APPLY-V080RC1.cmd",
+        "APPLY-V100RC1.cmd",
         "git check-ignore -q private-data\\hrm-v060b1-fernet.key",
         "validate_package_contract.py --require-git-tracked",
-        "ci\\stage_v080rc1_overlay.py",
+        "ci\\stage_v100rc1_overlay.py",
     ):
         if marker not in push:
             fail(f"Guarded push real-data marker is missing: {marker!r}")
@@ -410,7 +410,7 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         fail("Guarded push must not change branches after overlay installation")
     if "git branch --show-current" not in push:
         fail("Guarded push must verify the pilot branch before validation")
-    installer = (PROJECT / "INSTALL-OVERLAY-V080RC1.cmd").read_text(encoding="utf-8")
+    installer = (PROJECT / "INSTALL-OVERLAY-V100RC1.cmd").read_text(encoding="utf-8")
     for marker in ("branch --show-current", "validate_overlay_integrity.py", "install_verified_overlay.py", "--source", "--target"):
         if marker.lower() not in installer.lower():
             fail(f"Atomic overlay installer marker is missing: {marker!r}")
@@ -422,11 +422,11 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
     for marker in ("manifest-driven overlay copied and verified", "shutil.copyfile", "sha256_file", "PACKAGE-MANIFEST.json"):
         if marker not in manifest_installer:
             fail(f"Manifest-driven overlay installer marker is missing: {marker!r}")
-    apply = (PROJECT / "APPLY-V080RC1.cmd").read_text(encoding="utf-8")
+    apply = (PROJECT / "APPLY-V100RC1.cmd").read_text(encoding="utf-8")
     overlay_marker = "ci\\validate_overlay_integrity.py"
     regeneration_marker = "tools\\build_release.py"
     if overlay_marker not in apply:
-        fail("Extracted-overlay integrity gate is missing from APPLY-V080RC1.cmd")
+        fail("Extracted-overlay integrity gate is missing from APPLY-V100RC1.cmd")
     if apply.index(overlay_marker) > apply.index(regeneration_marker):
         fail("Extracted-overlay integrity must run before manifest regeneration")
 
@@ -435,10 +435,23 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
         if forbidden in diagnostics:
             fail(f"Privacy-safe diagnostics contains forbidden raw field/path marker: {forbidden}")
     workflow_lower = workflow.lower()
-    for marker in ("smoke-upgrade-from-rc.ps1", "v0.7.0-rc.1", "v070-to-v080-upgrade.log"):
+    for marker in ("smoke-upgrade-from-v080.ps1", "v0.8.0-rc.1", "v080-to-v100rc1-upgrade.log"):
         if marker.lower() not in workflow_lower:
-            fail(f"Real beta-to-RC upgrade gate marker is missing: {marker!r}")
-    print("PASS authenticated encrypted-input, aggregate-only artifact, diagnostics privacy and beta-upgrade boundary")
+            fail(f"Real previous-RC-to-final-RC upgrade gate marker is missing: {marker!r}")
+    for marker in ("HRM_CODE_SIGN_THUMBPRINT", "--sign-thumbprint"):
+        if marker not in workflow:
+            fail(f"Optional Authenticode signing pipeline marker is missing: {marker!r}")
+    if "test-evidence/*.log" not in (PROJECT / ".gitignore").read_text(encoding="utf-8"):
+        fail("Generated test evidence logs are not ignored for final release hygiene")
+    for obsolete in (
+        "#Uf02a.iss", "test-evidence/ci-local-unit-tests.log", "test-evidence/linux-unit-tests.log",
+        "test-evidence/unicode-repo-regression-tests.log", "test-evidence/compile-check.log",
+        "test-evidence/unicode-repo-regression-contract.log", "test-evidence/yaml-json-check.log",
+        "test-evidence/unit-tests.log", "test-evidence/contract-validation.log",
+    ):
+        if (PROJECT / obsolete).exists():
+            fail(f"Obsolete tracked/generated release evidence must be removed before final candidate: {obsolete}")
+    print("PASS encrypted-input boundary, diagnostics privacy, v0.8 upgrade, signing readiness and release hygiene")
 
 
 def parse_args() -> argparse.Namespace:
