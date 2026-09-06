@@ -17,7 +17,7 @@ jobs:
   export:
     name: Export exact tested Windows artifact
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -26,49 +26,134 @@ jobs:
       SOURCE_RUN_ID: "34028181860"
       EXPECTED_HEAD_SHA: "c65a221f175bf330346aded46e93b5563a900a5d"
 
+      WINDOWS_JOB_NAME: "build-test"
+
       ARTIFACT_NAME: "HRM-1.0.0-rc.2-Tested-Setup"
       OUTPUT_ZIP: "HRM-1.0.0-rc.2-Tested-Setup.zip"
 
       RELEASE_TAG: "v1.0.0-rc.2-windows-tested"
 
     steps:
-      - name: Verify authoritative tested run
+      - name: Verify authoritative source run identity
         shell: bash
         run: |
           set -euo pipefail
 
           echo "Repository: ${GH_REPO}"
-          echo "Authoritative run: ${SOURCE_RUN_ID}"
-          echo "Expected tested commit: ${EXPECTED_HEAD_SHA}"
+          echo "Source run: ${SOURCE_RUN_ID}"
+          echo "Expected commit: ${EXPECTED_HEAD_SHA}"
 
-          RUN_JSON="$(gh api "repos/${GH_REPO}/actions/runs/${SOURCE_RUN_ID}")"
+          RUN_JSON="$(
+            gh api "repos/${GH_REPO}/actions/runs/${SOURCE_RUN_ID}"
+          )"
 
           RUN_STATUS="$(jq -r '.status' <<<"${RUN_JSON}")"
-          RUN_CONCLUSION="$(jq -r '.conclusion' <<<"${RUN_JSON}")"
+          RUN_CONCLUSION="$(jq -r '.conclusion // ""' <<<"${RUN_JSON}")"
           RUN_HEAD_SHA="$(jq -r '.head_sha' <<<"${RUN_JSON}")"
+          RUN_BRANCH="$(jq -r '.head_branch' <<<"${RUN_JSON}")"
 
           echo "Run status: ${RUN_STATUS}"
-          echo "Run conclusion: ${RUN_CONCLUSION}"
+          echo "Run overall conclusion: ${RUN_CONCLUSION}"
+          echo "Run branch: ${RUN_BRANCH}"
           echo "Run head SHA: ${RUN_HEAD_SHA}"
 
           if [[ "${RUN_STATUS}" != "completed" ]]; then
-            echo "::error::Authoritative run is not completed."
-            exit 1
-          fi
-
-          if [[ "${RUN_CONCLUSION}" != "success" ]]; then
-            echo "::error::Authoritative run did not complete successfully."
+            echo "::error::Source run is not completed."
             exit 1
           fi
 
           if [[ "${RUN_HEAD_SHA}" != "${EXPECTED_HEAD_SHA}" ]]; then
-            echo "::error::Authoritative run commit mismatch."
-            echo "::error::Expected ${EXPECTED_HEAD_SHA}"
-            echo "::error::Actual   ${RUN_HEAD_SHA}"
+            echo "::error::Source run commit mismatch."
+            echo "::error::Expected: ${EXPECTED_HEAD_SHA}"
+            echo "::error::Actual:   ${RUN_HEAD_SHA}"
             exit 1
           fi
 
-          echo "PASS: authoritative Windows tested run identity verified."
+          echo
+          echo "PASS: source run identity verified."
+          echo "NOTE: overall run conclusion is NOT used as the Windows gate."
+          echo "NOTE: Linux Web may fail independently while Windows build-test succeeds."
+
+      - name: Verify authoritative Windows build-test job
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          JOBS_JSON="$(
+            gh api \
+              "repos/${GH_REPO}/actions/runs/${SOURCE_RUN_ID}/jobs?filter=latest&per_page=100"
+          )"
+
+          BUILD_JOB_COUNT="$(
+            jq \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '[.jobs[] | select(.name == $name)] | length' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          echo "Matching Windows jobs: ${BUILD_JOB_COUNT}"
+
+          if [[ "${BUILD_JOB_COUNT}" != "1" ]]; then
+            echo "::error::Expected exactly one job named ${WINDOWS_JOB_NAME}; found ${BUILD_JOB_COUNT}."
+            echo "Jobs present in source run:"
+            jq -r '.jobs[] | [.id, .name, .status, (.conclusion // "")] | @tsv' \
+              <<<"${JOBS_JSON}"
+            exit 1
+          fi
+
+          BUILD_JOB_ID="$(
+            jq -r \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '.jobs[] | select(.name == $name) | .id' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          BUILD_STATUS="$(
+            jq -r \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '.jobs[] | select(.name == $name) | .status' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          BUILD_CONCLUSION="$(
+            jq -r \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '.jobs[] | select(.name == $name) | .conclusion' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          BUILD_STARTED="$(
+            jq -r \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '.jobs[] | select(.name == $name) | .started_at' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          BUILD_COMPLETED="$(
+            jq -r \
+              --arg name "${WINDOWS_JOB_NAME}" \
+              '.jobs[] | select(.name == $name) | .completed_at' \
+              <<<"${JOBS_JSON}"
+          )"
+
+          echo "Windows job ID: ${BUILD_JOB_ID}"
+          echo "Windows job status: ${BUILD_STATUS}"
+          echo "Windows job conclusion: ${BUILD_CONCLUSION}"
+          echo "Windows job started: ${BUILD_STARTED}"
+          echo "Windows job completed: ${BUILD_COMPLETED}"
+
+          if [[ "${BUILD_STATUS}" != "completed" ]]; then
+            echo "::error::Windows build-test job is not completed."
+            exit 1
+          fi
+
+          if [[ "${BUILD_CONCLUSION}" != "success" ]]; then
+            echo "::error::Windows build-test job did not pass."
+            exit 1
+          fi
+
+          echo
+          echo "PASS: authoritative Windows build-test job is SUCCESS."
 
       - name: Locate exact GitHub Actions artifact
         shell: bash
@@ -87,8 +172,13 @@ jobs:
               <<<"${ARTIFACTS_JSON}"
           )"
 
+          echo "Matching artifacts: ${MATCH_COUNT}"
+
           if [[ "${MATCH_COUNT}" != "1" ]]; then
             echo "::error::Expected exactly one artifact named ${ARTIFACT_NAME}; found ${MATCH_COUNT}."
+            echo "Artifacts present:"
+            jq -r '.artifacts[] | [.id, .name, (.size_in_bytes | tostring), (.expired | tostring)] | @tsv' \
+              <<<"${ARTIFACTS_JSON}"
             exit 1
           fi
 
@@ -96,6 +186,13 @@ jobs:
             jq -r \
               --arg name "${ARTIFACT_NAME}" \
               '.artifacts[] | select(.name == $name) | .id' \
+              <<<"${ARTIFACTS_JSON}"
+          )"
+
+          ARTIFACT_SIZE="$(
+            jq -r \
+              --arg name "${ARTIFACT_NAME}" \
+              '.artifacts[] | select(.name == $name) | .size_in_bytes' \
               <<<"${ARTIFACTS_JSON}"
           )"
 
@@ -109,7 +206,7 @@ jobs:
           ARTIFACT_DIGEST="$(
             jq -r \
               --arg name "${ARTIFACT_NAME}" \
-              '.artifacts[] | select(.name == $name) | (.digest // empty)' \
+              '.artifacts[] | select(.name == $name) | (.digest // "")' \
               <<<"${ARTIFACTS_JSON}"
           )"
 
@@ -120,8 +217,18 @@ jobs:
               <<<"${ARTIFACTS_JSON}"
           )"
 
+          echo "Artifact ID: ${ARTIFACT_ID}"
+          echo "Artifact size: ${ARTIFACT_SIZE}"
+          echo "Artifact expired: ${ARTIFACT_EXPIRED}"
+          echo "Artifact digest: ${ARTIFACT_DIGEST}"
+
           if [[ "${ARTIFACT_EXPIRED}" == "true" ]]; then
-            echo "::error::The authoritative Actions artifact has expired."
+            echo "::error::Authoritative Windows artifact has expired."
+            exit 1
+          fi
+
+          if ! [[ "${ARTIFACT_SIZE}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Artifact has an invalid size."
             exit 1
           fi
 
@@ -136,33 +243,29 @@ jobs:
           fi
 
           echo "ARTIFACT_ID=${ARTIFACT_ID}" >> "${GITHUB_ENV}"
+          echo "ARTIFACT_SIZE=${ARTIFACT_SIZE}" >> "${GITHUB_ENV}"
           echo "ARTIFACT_DIGEST=${ARTIFACT_DIGEST}" >> "${GITHUB_ENV}"
           echo "ARCHIVE_URL=${ARCHIVE_URL}" >> "${GITHUB_ENV}"
 
-          echo "Artifact ID: ${ARTIFACT_ID}"
+          echo
+          echo "PASS: exact Windows artifact located."
 
-          if [[ -n "${ARTIFACT_DIGEST}" ]]; then
-            echo "GitHub artifact digest: ${ARTIFACT_DIGEST}"
-          else
-            echo "::warning::GitHub API did not expose an artifact digest."
-          fi
-
-          echo "PASS: exact authoritative artifact located."
-
-      - name: Download exact artifact archive
+      - name: Download exact GitHub artifact archive
         shell: bash
         run: |
           set -euo pipefail
 
-          rm -f "${OUTPUT_ZIP}"
+          rm -f "${OUTPUT_ZIP}" SHA256SUMS.txt
+
+          echo "Downloading authoritative GitHub Actions artifact archive..."
 
           curl \
             --fail \
             --location \
             --silent \
             --show-error \
-            --retry 3 \
-            --retry-delay 2 \
+            --retry 4 \
+            --retry-delay 3 \
             --retry-all-errors \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
@@ -175,28 +278,40 @@ jobs:
             exit 1
           fi
 
-          FILE_TYPE="$(file -b "${OUTPUT_ZIP}")"
-          echo "Downloaded file type: ${FILE_TYPE}"
-
+          echo "Validating ZIP structure..."
           unzip -t "${OUTPUT_ZIP}" >/dev/null
+
+          DOWNLOADED_SIZE="$(
+            stat -c '%s' "${OUTPUT_ZIP}"
+          )"
 
           LOCAL_SHA256="$(
             sha256sum "${OUTPUT_ZIP}" | awk '{print $1}'
           )"
 
-          echo "Downloaded SHA-256: ${LOCAL_SHA256}"
+          echo "Downloaded ZIP size: ${DOWNLOADED_SIZE}"
+          echo "Downloaded ZIP SHA-256: ${LOCAL_SHA256}"
+
+          if [[ "${DOWNLOADED_SIZE}" -le 0 ]]; then
+            echo "::error::Downloaded ZIP has invalid size."
+            exit 1
+          fi
 
           if [[ -n "${ARTIFACT_DIGEST:-}" ]]; then
             EXPECTED_SHA256="${ARTIFACT_DIGEST#sha256:}"
 
+            echo "GitHub artifact SHA-256: ${EXPECTED_SHA256}"
+
             if [[ "${LOCAL_SHA256}" != "${EXPECTED_SHA256}" ]]; then
-              echo "::error::Downloaded archive SHA-256 does not match GitHub artifact digest."
-              echo "::error::Expected ${EXPECTED_SHA256}"
-              echo "::error::Actual   ${LOCAL_SHA256}"
+              echo "::error::Downloaded ZIP SHA-256 does not match GitHub artifact digest."
+              echo "::error::Expected: ${EXPECTED_SHA256}"
+              echo "::error::Actual:   ${LOCAL_SHA256}"
               exit 1
             fi
 
-            echo "PASS: downloaded archive matches GitHub artifact digest."
+            echo "PASS: downloaded ZIP matches GitHub artifact digest."
+          else
+            echo "::warning::GitHub API did not expose artifact digest; ZIP integrity test passed."
           fi
 
           printf '%s  %s\n' \
@@ -205,11 +320,14 @@ jobs:
             > SHA256SUMS.txt
 
           echo "LOCAL_SHA256=${LOCAL_SHA256}" >> "${GITHUB_ENV}"
+          echo "DOWNLOADED_SIZE=${DOWNLOADED_SIZE}" >> "${GITHUB_ENV}"
 
+          echo
           ls -lh "${OUTPUT_ZIP}" SHA256SUMS.txt
+          echo
           cat SHA256SUMS.txt
 
-      - name: Verify existing transfer prerelease
+      - name: Verify existing transfer prerelease and tag
         shell: bash
         run: |
           set -euo pipefail
@@ -220,21 +338,27 @@ jobs:
           )"
 
           RELEASE_ID="$(jq -r '.id' <<<"${RELEASE_JSON}")"
-          IS_DRAFT="$(jq -r '.draft' <<<"${RELEASE_JSON}")"
-          IS_PRERELEASE="$(jq -r '.prerelease' <<<"${RELEASE_JSON}")"
+          RELEASE_TAG_NAME="$(jq -r '.tag_name' <<<"${RELEASE_JSON}")"
+          RELEASE_DRAFT="$(jq -r '.draft' <<<"${RELEASE_JSON}")"
+          RELEASE_PRERELEASE="$(jq -r '.prerelease' <<<"${RELEASE_JSON}")"
 
-          if [[ -z "${RELEASE_ID}" || "${RELEASE_ID}" == "null" ]]; then
-            echo "::error::Transfer release does not exist."
+          echo "Release ID: ${RELEASE_ID}"
+          echo "Release tag: ${RELEASE_TAG_NAME}"
+          echo "Draft: ${RELEASE_DRAFT}"
+          echo "Prerelease: ${RELEASE_PRERELEASE}"
+
+          if [[ "${RELEASE_TAG_NAME}" != "${RELEASE_TAG}" ]]; then
+            echo "::error::Release tag mismatch."
             exit 1
           fi
 
-          if [[ "${IS_DRAFT}" != "false" ]]; then
+          if [[ "${RELEASE_DRAFT}" != "false" ]]; then
             echo "::error::Transfer release unexpectedly has draft=true."
             exit 1
           fi
 
-          if [[ "${IS_PRERELEASE}" != "true" ]]; then
-            echo "::error::Transfer release is not marked as a prerelease."
+          if [[ "${RELEASE_PRERELEASE}" != "true" ]]; then
+            echo "::error::Transfer release is not marked as prerelease."
             exit 1
           fi
 
@@ -246,9 +370,8 @@ jobs:
           TAG_TYPE="$(jq -r '.object.type' <<<"${TAG_JSON}")"
           TAG_SHA="$(jq -r '.object.sha' <<<"${TAG_JSON}")"
 
-          echo "Release ID: ${RELEASE_ID}"
-          echo "Tag type: ${TAG_TYPE}"
-          echo "Tag SHA: ${TAG_SHA}"
+          echo "Tag object type: ${TAG_TYPE}"
+          echo "Tag object SHA: ${TAG_SHA}"
 
           if [[ "${TAG_TYPE}" != "commit" ]]; then
             echo "::error::Transfer tag is not a lightweight commit tag."
@@ -256,34 +379,58 @@ jobs:
           fi
 
           if [[ "${TAG_SHA}" != "${EXPECTED_HEAD_SHA}" ]]; then
-            echo "::error::Transfer tag does not point to the authoritative tested commit."
-            echo "::error::Expected ${EXPECTED_HEAD_SHA}"
-            echo "::error::Actual   ${TAG_SHA}"
+            echo "::error::Transfer tag does not point to authoritative tested commit."
+            echo "::error::Expected: ${EXPECTED_HEAD_SHA}"
+            echo "::error::Actual:   ${TAG_SHA}"
             exit 1
           fi
 
-          echo "PASS: existing prerelease/tag identity verified."
+          echo "RELEASE_ID=${RELEASE_ID}" >> "${GITHUB_ENV}"
 
-      - name: Upload exact tested artifact to prerelease
+          echo
+          echo "PASS: prerelease and tag identity verified."
+
+      - name: Upload exact tested Windows artifact
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Uploading:"
-          echo "  ${OUTPUT_ZIP}"
-          echo "  SHA256SUMS.txt"
-          echo
-          echo "Target release: ${RELEASE_TAG}"
           echo "Repository: ${GH_REPO}"
+          echo "Release: ${RELEASE_TAG}"
+          echo "Artifact: ${OUTPUT_ZIP}"
+          echo "SHA-256: ${LOCAL_SHA256}"
 
-          gh release upload \
-            "${RELEASE_TAG}" \
-            "${OUTPUT_ZIP}" \
-            "SHA256SUMS.txt" \
-            --repo "${GH_REPO}" \
-            --clobber
+          UPLOAD_OK=0
 
-          echo "PASS: upload command completed."
+          for ATTEMPT in 1 2 3; do
+            echo
+            echo "Upload attempt ${ATTEMPT}/3..."
+
+            if gh release upload \
+              "${RELEASE_TAG}" \
+              "${OUTPUT_ZIP}" \
+              "SHA256SUMS.txt" \
+              --repo "${GH_REPO}" \
+              --clobber
+            then
+              UPLOAD_OK=1
+              break
+            fi
+
+            echo "::warning::Upload attempt ${ATTEMPT} failed."
+
+            if [[ "${ATTEMPT}" -lt 3 ]]; then
+              sleep 5
+            fi
+          done
+
+          if [[ "${UPLOAD_OK}" != "1" ]]; then
+            echo "::error::Release asset upload failed after 3 attempts."
+            exit 1
+          fi
+
+          echo
+          echo "PASS: exact tested Windows artifact uploaded."
 
       - name: Verify published release assets
         shell: bash
@@ -294,6 +441,29 @@ jobs:
             gh api \
               "repos/${GH_REPO}/releases/tags/${RELEASE_TAG}"
           )"
+
+          ZIP_COUNT="$(
+            jq \
+              --arg name "${OUTPUT_ZIP}" \
+              '[.assets[] | select(.name == $name)] | length' \
+              <<<"${RELEASE_JSON}"
+          )"
+
+          SHA_COUNT="$(
+            jq \
+              '[.assets[] | select(.name == "SHA256SUMS.txt")] | length' \
+              <<<"${RELEASE_JSON}"
+          )"
+
+          if [[ "${ZIP_COUNT}" != "1" ]]; then
+            echo "::error::Expected exactly one published ZIP asset; found ${ZIP_COUNT}."
+            exit 1
+          fi
+
+          if [[ "${SHA_COUNT}" != "1" ]]; then
+            echo "::error::Expected exactly one SHA256SUMS.txt asset; found ${SHA_COUNT}."
+            exit 1
+          fi
 
           ZIP_STATE="$(
             jq -r \
@@ -321,23 +491,28 @@ jobs:
               <<<"${RELEASE_JSON}"
           )"
 
+          echo "Published ZIP state: ${ZIP_STATE}"
+          echo "Published ZIP size: ${ZIP_SIZE}"
+          echo "Published SHA file state: ${SHA_STATE}"
+          echo "Published SHA file size: ${SHA_SIZE}"
+
           if [[ "${ZIP_STATE}" != "uploaded" ]]; then
-            echo "::error::ZIP release asset is missing or not uploaded."
+            echo "::error::ZIP release asset is not in uploaded state."
             exit 1
           fi
 
-          if [[ -z "${ZIP_SIZE}" || "${ZIP_SIZE}" == "null" || "${ZIP_SIZE}" -le 0 ]]; then
+          if ! [[ "${ZIP_SIZE}" =~ ^[1-9][0-9]*$ ]]; then
             echo "::error::ZIP release asset has invalid size."
             exit 1
           fi
 
           if [[ "${SHA_STATE}" != "uploaded" ]]; then
-            echo "::error::SHA256SUMS.txt release asset is missing or not uploaded."
+            echo "::error::SHA256SUMS.txt is not in uploaded state."
             exit 1
           fi
 
-          if [[ -z "${SHA_SIZE}" || "${SHA_SIZE}" == "null" || "${SHA_SIZE}" -le 0 ]]; then
-            echo "::error::SHA256SUMS.txt release asset has invalid size."
+          if ! [[ "${SHA_SIZE}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::SHA256SUMS.txt has invalid size."
             exit 1
           fi
 
@@ -348,9 +523,16 @@ jobs:
             <<<"${RELEASE_JSON}"
 
           echo
-          echo "Authoritative source run : ${SOURCE_RUN_ID}"
-          echo "Authoritative commit     : ${EXPECTED_HEAD_SHA}"
-          echo "Published archive SHA256 : ${LOCAL_SHA256}"
-
+          echo "============================================================"
+          echo "PASS: exact tested Windows artifact exported without rebuild"
+          echo "============================================================"
+          echo "Source run       : ${SOURCE_RUN_ID}"
+          echo "Windows job      : ${WINDOWS_JOB_NAME}"
+          echo "Tested commit    : ${EXPECTED_HEAD_SHA}"
+          echo "Artifact name    : ${ARTIFACT_NAME}"
+          echo "Published ZIP    : ${OUTPUT_ZIP}"
+          echo "Published SHA256 : ${LOCAL_SHA256}"
+          echo "Release tag      : ${RELEASE_TAG}"
           echo
-          echo "PASS: exact tested Windows artifact exported without rebuild."
+          echo "IMPORTANT: Linux Web is a separate release gate."
+          echo "This transfer prerelease is NOT the final v1.0.0-rc.2 release."
