@@ -1,6 +1,9 @@
 name: Export RC2 Tested Windows Artifact
 
 on:
+  push:
+    branches:
+      - ops/export-v1.0.0-rc2-windows
   workflow_dispatch:
 
 permissions:
