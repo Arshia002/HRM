@@ -1,0 +1,61 @@
+name: Export RC2 Tested Windows Artifact
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download exact tested artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: HRM-1.0.0-rc.2-Tested-Setup
+          path: exported
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: Arshia002/HRM
+          run-id: 34028181860
+
+      - name: Inspect artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          find exported -type f -printf '%p  %s bytes\n'
+
+      - name: Archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd exported
+          zip -r ../HRM-1.0.0-rc.2-Tested-Setup.zip .
+          cd ..
+          sha256sum HRM-1.0.0-rc.2-Tested-Setup.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish temporary prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="v1.0.0-rc.2-windows-tested"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              HRM-1.0.0-rc.2-Tested-Setup.zip \
+              SHA256SUMS.txt \
+              --clobber
+          else
+            gh release create "$TAG" \
+              HRM-1.0.0-rc.2-Tested-Setup.zip \
+              SHA256SUMS.txt \
+              --title "HRM v1.0.0-rc.2 Windows Tested Artifact" \
+              --notes "Exact Windows artifact exported from successful GitHub Actions run 34028181860. No rebuild performed. Linux Web gate is not yet green; this is not the final RC2 release." \
+              --prerelease
+          fi
