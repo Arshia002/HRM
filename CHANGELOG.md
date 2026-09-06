@@ -1,3 +1,8 @@
+## v1.0.0-rc.2-ci.8
+- Fixed Linux Docker runtime dependency parity: the container now installs the same pinned source dependencies (`cryptography`, `openpyxl`, `xlrd`) required by `sazmanhr.server` and monthly import.
+- Added a regression guard that keeps Docker Linux-web requirements byte-for-byte aligned with `ci/requirements-source-gates.txt`.
+- Preserved the exact v4.9 frontend hash lock and all RC2 Windows/real-data/upgrade gates.
+
 ## v1.0.0-rc.2-ci.7
 - Linux CI workflow syntax hotfix: changed the `pip --only-binary=:all:` step from a YAML plain scalar to a block scalar so the trailing colon cannot be parsed as a mapping separator.
 - Preserves the ci.6 Linux dependency fix (`cryptography`, `openpyxl`, `xlrd`) and all exact-v4.9 / Windows / real-data gates unchanged.

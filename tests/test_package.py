@@ -267,7 +267,7 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "1.0.0-rc.2-ci.7",
+            "1.0.0-rc.2-ci.8",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
@@ -288,10 +288,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "1.0.0-rc.2-ci.7\n", encoding="utf-8", newline="\n"
+                "1.0.0-rc.2-ci.8\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "1.0.0-rc.2-ci.7",
+                "package_revision": "1.0.0-rc.2-ci.8",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -445,6 +445,11 @@ class PackageTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         self.assertIn("127.0.0.1", compose)
         self.assertIn("PYTHONPATH=/app/src", dockerfile)
+        docker_requirements = (PROJECT / "deploy" / "linux-web-test" / "requirements.txt").read_text(encoding="utf-8")
+        source_requirements = (PROJECT / "ci" / "requirements-source-gates.txt").read_text(encoding="utf-8")
+        self.assertEqual(docker_requirements, source_requirements)
+        self.assertIn("COPY deploy/linux-web-test/requirements.txt /app/requirements.txt", dockerfile)
+        self.assertIn("--only-binary=:all: -r /app/requirements.txt", dockerfile)
         self.assertIn("127.0.0.1:${HRM_WEB_PORT:-8080}:8080", compose)
         self.assertIn("linux-web-test-not-for-production", builder)
         self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)

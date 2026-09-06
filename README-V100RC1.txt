@@ -1,4 +1,4 @@
-HRM v1.0.0-rc.2-ci.7 — Final Production Release Candidate
+HRM v1.0.0-rc.2-ci.8 — Final Production Release Candidate
 
 Purpose
 -------

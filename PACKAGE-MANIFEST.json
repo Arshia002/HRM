@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "1.0.0-rc.2",
-  "package_revision": "1.0.0-rc.2-ci.7",
+  "package_revision": "1.0.0-rc.2-ci.8",
   "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -166,8 +166,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 17112,
-      "sha256": "90198203cc4985e70e3094e5bdb9d1102f6e2f2ca1032c1b3944ce282905b48f"
+      "bytes": 17553,
+      "sha256": "bcae9ed56a9e5186bf024649725ab655d7e3bd0e60544e98c0704349ddbd6ce2"
     },
     {
       "path": "ci/apply_v040a1.py",
@@ -302,7 +302,7 @@
     {
       "path": "ci/validate_v100rc1_candidate.py",
       "bytes": 5645,
-      "sha256": "9898c31b72d9b22ddcd4ba2eac16044a0565ffbed1677811944fe1c3a1b53117"
+      "sha256": "3de2577f6134a6fe3fc2b8cdf6f1baea723c16e788770a966d63c124e2f66a89"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
@@ -317,7 +317,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "4c198eb95e906a439d148a58607b99d7abdfcbbe8ee4992805dde8d3f045c27c"
+      "sha256": "16a3ac6ae29999fe45d1e0198a345fc41a95838a2d5f9d67521477420a13b56a"
     },
     {
       "path": "CI-README-FA.md",
@@ -356,8 +356,8 @@
     },
     {
       "path": "deploy/linux-web-test/Dockerfile",
-      "bytes": 731,
-      "sha256": "1de9ddd76f04e4569305abf104cb5a0473c0ece773e05d7fb3786437c065107e"
+      "bytes": 821,
+      "sha256": "dbd61d952f035997c2d8323d8759b7d739a1d2c96b04f79cfdee1c2a99efc819"
     },
     {
       "path": "deploy/linux-web-test/healthcheck.py",
@@ -368,6 +368,11 @@
       "path": "deploy/linux-web-test/README-FA.md",
       "bytes": 1107,
       "sha256": "fa8d0d17a2216b4b340fa5a9d282250cc6e8493a4a918f1bef3459d2b7f5451a"
+    },
+    {
+      "path": "deploy/linux-web-test/requirements.txt",
+      "bytes": 49,
+      "sha256": "7abd52f932f9cc702742945b23c3af70c49f90b955624f72077ad2f745eb3996"
     },
     {
       "path": "deploy/linux-web-test/start.sh",
@@ -592,7 +597,7 @@
     {
       "path": "README-V100RC1.txt",
       "bytes": 1092,
-      "sha256": "0df913884bb54859d7c0a11dfbf881210bc48d6e0721acebdab14ea6c7b8eb66"
+      "sha256": "6792760b18ae99862f88916b7ece3ca93a4287cbc525e7af792e35f3fa67af6c"
     },
     {
       "path": "README.md",
@@ -602,7 +607,7 @@
     {
       "path": "RELEASE-QUALITY-GATES.md",
       "bytes": 2529,
-      "sha256": "da6ed9a16d64a67640917a172dd81cece332f94b014a41e02ef7ff8e6cda9309"
+      "sha256": "55d15cdd8615b60bc50f4029ff50e22cf81015102eb37152628a892162780cd9"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -821,8 +826,8 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 26930,
-      "sha256": "8c5af6f28fb2b76e0871b3fc8bfad059b7a77cfd0719382f9e3b6f4c64fb740f"
+      "bytes": 27410,
+      "sha256": "b17bd687d41102ceda16733fedc5ccf0a8d252bdacbf0c363eca5041484feb21"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -847,7 +852,7 @@
     {
       "path": "tests/test_rc_release_identity.py",
       "bytes": 1003,
-      "sha256": "f9936dd6aa553c130290e466fa4f24c4c3bedbef75dd856901c6f89873952283"
+      "sha256": "871fab5689a700dd0843e2120b1d2a87da2c28c1651b461fade1c5eb6b58a834"
     },
     {
       "path": "tests/test_repository.py",
@@ -1062,7 +1067,7 @@
     {
       "path": "VERSION-V100RC1.json",
       "bytes": 2650,
-      "sha256": "2e8487643f4936a7318c3b10636b1a1e19646a7d95229602a715d3ef62a5ffda"
+      "sha256": "52a718cbb5d3d060357f6928d79db2b9b1bfa4b35553e00d0224d57a82795e0c"
     },
     {
       "path": "web/app.js",

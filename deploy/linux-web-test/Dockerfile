@@ -1,7 +1,8 @@
 FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONUTF8=1 PYTHONPATH=/app/src
-RUN python -m pip install --no-cache-dir --disable-pip-version-check cryptography==50.0.1
+COPY deploy/linux-web-test/requirements.txt /app/requirements.txt
+RUN python -m pip install --no-cache-dir --disable-pip-version-check --only-binary=:all: -r /app/requirements.txt
 COPY src /app/src
 COPY web /app/web
 COPY data/seed/sazmanhr-seed.sqlite /app/data/seed/sazmanhr-seed.sqlite
