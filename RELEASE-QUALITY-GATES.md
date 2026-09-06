@@ -1,7 +1,7 @@
 # HRM v1.0.0-rc.2 Release Quality Gates
 
 1. Tested baseline source is commit `8f1adfa88a1b53db1b075504c58900957e812894` (`v0.8.0-rc.1` tested source).
-2. Exact final-candidate identity: application `1.0.0-rc.2`, package `1.0.0-rc.2-ci.5`, branch `release/v1.0.0-rc.2`.
+2. Exact final-candidate identity: application `1.0.0-rc.2`, package `1.0.0-rc.2-ci.6`, branch `release/v1.0.0-rc.2`.
 3. Package manifest SHA-256/byte integrity is checked before overlay copy and again after installation.
 4. Full regression suite, migration suite, six-client pinned-TLS, reconnect, certificate mismatch, disaster recovery and diagnostics privacy must pass.
 5. Protected real-data validation reuses the approved v060b1 encrypted bundle and `HRM_REAL_DATA_KEY`; plaintext/key material never enters GitHub artifacts.

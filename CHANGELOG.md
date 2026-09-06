@@ -1,4 +1,4 @@
-## v1.0.0-rc.2-ci.5
+## v1.0.0-rc.2-ci.6
 - Release gate: preserve the byte-exact v4.9 `web/assets/app.js` while applying `git diff --cached --check` to every other staged path through a SHA-256-locked exemption.
 - رفع نشت handle فایل SQLite در شمارش بسته پشتیبان روی Windows؛ اتصال read-only اکنون به‌صورت صریح بسته می‌شود و پاک‌سازی/Restore با `WinError 32` متوقف نمی‌شود.
 - گیت Windows برای round-trip بسته پشتیبان بدون تغییر در قالب یا داده تقویت شد.
@@ -205,3 +205,4 @@
 ## 0.2.0-alpha.3 CI package revision 2
 - Corrected the pre-push ASCII-path validator to inspect the CI overlay manifest and Inno payload, not unrelated files already present in the repository.
 - Added regression coverage for pre-existing Persian-named documentation.
+- RC2 ci.6: Linux web CI now installs the complete pinned source-gate dependency set before importing the shared server; this prevents clean Ubuntu runners from failing when monthly XLSX support imports openpyxl.

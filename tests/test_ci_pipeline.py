@@ -74,6 +74,9 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
         self.assertIn("grep -F 'id=\"appShell\"'", workflow)
         self.assertNotIn("grep 'Linux Web Test'", workflow)
+        self.assertIn("Install Linux web source dependencies", workflow)
+        self.assertIn("--only-binary=:all: -r ci/requirements-source-gates.txt", workflow)
+        self.assertNotIn("Install Linux web source dependency\n        run: python -m pip install --disable-pip-version-check cryptography==50.0.1", workflow)
 
     def test_source_dependency_pins_match_build_and_report_missing_modules(self):
         source = pinned_requirements(PROJECT / "ci" / "requirements-source-gates.txt")

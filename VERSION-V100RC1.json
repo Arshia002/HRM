@@ -1,7 +1,7 @@
 {
   "product": "HRM",
   "version": "1.0.0-rc.2",
-  "package_revision": "1.0.0-rc.2-ci.5",
+  "package_revision": "1.0.0-rc.2-ci.6",
   "candidate_kind": "v49-exact-ui-enterprise-integration-release-candidate-and-linux-web-test",
   "baseline_tag": "tested-v0.8.0-rc.1-source",
   "baseline_commit": "8f1adfa88a1b53db1b075504c58900957e812894",

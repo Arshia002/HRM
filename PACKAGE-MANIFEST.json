@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "1.0.0-rc.2",
-  "package_revision": "1.0.0-rc.2-ci.5",
+  "package_revision": "1.0.0-rc.2-ci.6",
   "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -16,8 +16,8 @@
     },
     {
       "path": ".github/workflows/windows-build.yml",
-      "bytes": 10276,
-      "sha256": "a723b2988c902597e17e1f49c7af42d09514625738091a6b4ce1651fdcc414fe"
+      "bytes": 10313,
+      "sha256": "d62710cc33727ee9537307e50e2c399ca671d584d2f3db87c1e1f611b7b2382b"
     },
     {
       "path": ".gitignore",
@@ -166,8 +166,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "bytes": 16482,
-      "sha256": "f334032bd6c540dcf85ed435d1d1db86a41791ad76144e737a62bcee1571bc16"
+      "bytes": 16695,
+      "sha256": "c83a7876c725a6e394764ab730cd58946a13532bb0aa9e2954bb6a5499302ed8"
     },
     {
       "path": "ci/apply_v040a1.py",
@@ -302,7 +302,7 @@
     {
       "path": "ci/validate_v100rc1_candidate.py",
       "bytes": 5645,
-      "sha256": "41ca6d06e15966a5d9218dc879b3589f647e2c9fd1544a18dea5b879e8e41843"
+      "sha256": "6de2f3e65ae7da71407b4d27d6f7451f215df121268de22df92ce8b2088f21ca"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
@@ -317,7 +317,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "802ada9b88753a30a15145d1236adec2d3c81deffa8d3b6e2ca72b75d8a22e4c"
+      "sha256": "6c82a017461365d60cfc150fefa9e0f27c38fcb9bbd3555fa08f319023e57223"
     },
     {
       "path": "CI-README-FA.md",
@@ -592,7 +592,7 @@
     {
       "path": "README-V100RC1.txt",
       "bytes": 1092,
-      "sha256": "8d8fa1708fc4be007dae71bb6513f053254fde5abc1e12ae24c227073e2cfde0"
+      "sha256": "ebe1ff02a1ccae3636d30e6237886aff537c7fb006c2c44647ced193b8d7f2c8"
     },
     {
       "path": "README.md",
@@ -602,7 +602,7 @@
     {
       "path": "RELEASE-QUALITY-GATES.md",
       "bytes": 2529,
-      "sha256": "057b5df2b84bbb5610be16547ecce6b1c9f9316218d977e434831bf4a6a66357"
+      "sha256": "e8df998649bf24fe3cffa49a18de2a03fa0f8b43521219b9674188a7bd819def"
     },
     {
       "path": "ROOT-CAUSE-alpha1.md",
@@ -801,8 +801,8 @@
     },
     {
       "path": "tests/test_ci_pipeline.py",
-      "bytes": 6668,
-      "sha256": "543336e48750f0941199491ce9fdb461d891b47623ee381af3e99a9fef7b9202"
+      "bytes": 6991,
+      "sha256": "be4c7f450bc52dfe0b6649db1e3cd0530ae1f1054f039b1ca41091e1f7599be3"
     },
     {
       "path": "tests/test_five_clients.py",
@@ -822,7 +822,7 @@
     {
       "path": "tests/test_package.py",
       "bytes": 26479,
-      "sha256": "f32c45bee70408a3257dd73f874d4054652b41e1765e2bbd891aad894c38b15f"
+      "sha256": "da9617df8c23ca54d61662d19e4b5d3c016b3b751747c6f812d841c5677e5e6c"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -847,7 +847,7 @@
     {
       "path": "tests/test_rc_release_identity.py",
       "bytes": 1003,
-      "sha256": "a89f4be0b72d57577d4742c93b64747808380ddcd2d66bb38f46d852ab0bebe2"
+      "sha256": "8d4cbf9dac492179484df5229aebcf344b3b0ee753bce23df51a7a37712cd543"
     },
     {
       "path": "tests/test_repository.py",
@@ -1062,7 +1062,7 @@
     {
       "path": "VERSION-V100RC1.json",
       "bytes": 2650,
-      "sha256": "9c9b83fd5080c23c64c6a737b936a912ad2857fcfd1fb1db5745d8d66031af93"
+      "sha256": "9011e658e707f9c8a45a523ab8f89f7906142962f2533b0f72f8a27b4f66106c"
     },
     {
       "path": "web/app.js",

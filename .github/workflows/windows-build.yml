@@ -209,8 +209,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.11"
-      - name: Install Linux web source dependency
-        run: python -m pip install --disable-pip-version-check cryptography==50.0.1
+      - name: Install Linux web source dependencies
+        run: python -m pip install --disable-pip-version-check --only-binary=:all: -r ci/requirements-source-gates.txt
       - name: Validate movement history and same-origin web API
         env:
           PYTHONPATH: ${{ github.workspace }}/src
