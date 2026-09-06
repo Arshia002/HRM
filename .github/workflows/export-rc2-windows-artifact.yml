@@ -23,15 +23,13 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: Arshia002/HRM
 
-      SOURCE_RUN_ID: "34028181860"
-      EXPECTED_HEAD_SHA: "c65a221f175bf330346aded46e93b5563a900a5d"
-
-      WINDOWS_JOB_NAME: "build-test"
+      SOURCE_RUN_ID: "34031979071"
+      EXPECTED_HEAD_SHA: "<همان SHA که echo %TESTED_SHA% نشان داد>"
 
       ARTIFACT_NAME: "HRM-1.0.0-rc.2-Tested-Setup"
       OUTPUT_ZIP: "HRM-1.0.0-rc.2-Tested-Setup.zip"
 
-      RELEASE_TAG: "v1.0.0-rc.2-windows-tested"
+      RELEASE_TAG: "v1.0.0-rc.2-tested-artifacts"
 
     steps:
       - name: Verify authoritative source run identity
