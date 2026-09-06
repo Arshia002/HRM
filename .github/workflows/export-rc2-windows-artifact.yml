@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   export:
-    name: Export exact tested Linux artifact
+    name: Export exact tested Windows artifact
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -25,10 +25,10 @@ jobs:
 
       SOURCE_RUN_ID: "34031979071"
       EXPECTED_HEAD_SHA: "1d219e0b6e637865b9b78d4f63c5ae7ea39e79d0"
-      TARGET_JOB_NAME: "linux-web-test"
+      TARGET_JOB_NAME: "build-test"
 
-      ARTIFACT_NAME: "HRM-1.0.0-rc.2-Linux-Web-Test"
-      OUTPUT_ZIP: "HRM-1.0.0-rc.2-Linux-Web-Test.zip"
+      ARTIFACT_NAME: "HRM-1.0.0-rc.2-Tested-Setup"
+      OUTPUT_ZIP: "HRM-1.0.0-rc.2-Tested-Setup.zip"
 
       RELEASE_TAG: "v1.0.0-rc.2-tested-artifacts"
 
@@ -71,9 +71,9 @@ jobs:
           echo
           echo "PASS: source run identity verified."
           echo "NOTE: overall run conclusion is NOT used as the Windows gate."
-          echo "NOTE: Linux Web may fail independently while Linux web test succeeds."
+          echo "NOTE: Linux Web may fail independently while Windows build-test succeeds."
 
-      - name: Verify authoritative Linux web test job
+      - name: Verify authoritative Windows build-test job
         shell: bash
         run: |
           set -euo pipefail
@@ -90,7 +90,7 @@ jobs:
               <<<"${JOBS_JSON}"
           )"
 
-          echo "Matching Linux jobs: ${BUILD_JOB_COUNT}"
+          echo "Matching Windows jobs: ${BUILD_JOB_COUNT}"
 
           if [[ "${BUILD_JOB_COUNT}" != "1" ]]; then
             echo "::error::Expected exactly one job named ${TARGET_JOB_NAME}; found ${BUILD_JOB_COUNT}."
@@ -135,24 +135,24 @@ jobs:
               <<<"${JOBS_JSON}"
           )"
 
-          echo "Linux job ID: ${BUILD_JOB_ID}"
-          echo "Linux job status: ${BUILD_STATUS}"
-          echo "Linux job conclusion: ${BUILD_CONCLUSION}"
-          echo "Linux job started: ${BUILD_STARTED}"
-          echo "Linux job completed: ${BUILD_COMPLETED}"
+          echo "Windows job ID: ${BUILD_JOB_ID}"
+          echo "Windows job status: ${BUILD_STATUS}"
+          echo "Windows job conclusion: ${BUILD_CONCLUSION}"
+          echo "Windows job started: ${BUILD_STARTED}"
+          echo "Windows job completed: ${BUILD_COMPLETED}"
 
           if [[ "${BUILD_STATUS}" != "completed" ]]; then
-            echo "::error::Linux web test job is not completed."
+            echo "::error::Windows build-test job is not completed."
             exit 1
           fi
 
           if [[ "${BUILD_CONCLUSION}" != "success" ]]; then
-            echo "::error::Linux web test job did not pass."
+            echo "::error::Windows build-test job did not pass."
             exit 1
           fi
 
           echo
-          echo "PASS: authoritative Linux web test job is SUCCESS."
+          echo "PASS: authoritative Windows build-test job is SUCCESS."
 
       - name: Locate exact GitHub Actions artifact
         shell: bash
@@ -222,7 +222,7 @@ jobs:
           echo "Artifact digest: ${ARTIFACT_DIGEST}"
 
           if [[ "${ARTIFACT_EXPIRED}" == "true" ]]; then
-            echo "::error::Authoritative Linux artifact has expired."
+            echo "::error::Authoritative Windows artifact has expired."
             exit 1
           fi
 
@@ -247,14 +247,14 @@ jobs:
           echo "ARCHIVE_URL=${ARCHIVE_URL}" >> "${GITHUB_ENV}"
 
           echo
-          echo "PASS: exact Linux artifact located."
+          echo "PASS: exact Windows artifact located."
 
       - name: Download exact GitHub artifact archive
         shell: bash
         run: |
           set -euo pipefail
 
-          rm -f "${OUTPUT_ZIP}" HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256
+          rm -f "${OUTPUT_ZIP}" HRM-1.0.0-rc.2-Tested-Setup.zip.sha256
 
           echo "Downloading authoritative GitHub Actions artifact archive..."
 
@@ -316,15 +316,15 @@ jobs:
           printf '%s  %s\n' \
             "${LOCAL_SHA256}" \
             "${OUTPUT_ZIP}" \
-            > HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256
+            > HRM-1.0.0-rc.2-Tested-Setup.zip.sha256
 
           echo "LOCAL_SHA256=${LOCAL_SHA256}" >> "${GITHUB_ENV}"
           echo "DOWNLOADED_SIZE=${DOWNLOADED_SIZE}" >> "${GITHUB_ENV}"
 
           echo
-          ls -lh "${OUTPUT_ZIP}" HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256
+          ls -lh "${OUTPUT_ZIP}" HRM-1.0.0-rc.2-Tested-Setup.zip.sha256
           echo
-          cat HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256
+          cat HRM-1.0.0-rc.2-Tested-Setup.zip.sha256
 
       - name: Verify existing transfer prerelease and tag
         shell: bash
@@ -389,7 +389,7 @@ jobs:
           echo
           echo "PASS: prerelease and tag identity verified."
 
-      - name: Upload exact tested Linux artifact
+      - name: Upload exact tested Windows artifact
         shell: bash
         run: |
           set -euo pipefail
@@ -408,7 +408,7 @@ jobs:
             if gh release upload \
               "${RELEASE_TAG}" \
               "${OUTPUT_ZIP}" \
-              "HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256" \
+              "HRM-1.0.0-rc.2-Tested-Setup.zip.sha256" \
               --repo "${GH_REPO}" \
               --clobber
             then
@@ -429,7 +429,7 @@ jobs:
           fi
 
           echo
-          echo "PASS: exact tested Linux artifact uploaded."
+          echo "PASS: exact tested Windows artifact uploaded."
 
       - name: Verify published release assets
         shell: bash
@@ -450,7 +450,7 @@ jobs:
 
           SHA_COUNT="$(
             jq \
-              '[.assets[] | select(.name == "HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256")] | length' \
+              '[.assets[] | select(.name == "HRM-1.0.0-rc.2-Tested-Setup.zip.sha256")] | length' \
               <<<"${RELEASE_JSON}"
           )"
 
@@ -460,7 +460,7 @@ jobs:
           fi
 
           if [[ "${SHA_COUNT}" != "1" ]]; then
-            echo "::error::Expected exactly one HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256 asset; found ${SHA_COUNT}."
+            echo "::error::Expected exactly one HRM-1.0.0-rc.2-Tested-Setup.zip.sha256 asset; found ${SHA_COUNT}."
             exit 1
           fi
 
@@ -480,13 +480,13 @@ jobs:
 
           SHA_STATE="$(
             jq -r \
-              '.assets[] | select(.name == "HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256") | .state' \
+              '.assets[] | select(.name == "HRM-1.0.0-rc.2-Tested-Setup.zip.sha256") | .state' \
               <<<"${RELEASE_JSON}"
           )"
 
           SHA_SIZE="$(
             jq -r \
-              '.assets[] | select(.name == "HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256") | .size' \
+              '.assets[] | select(.name == "HRM-1.0.0-rc.2-Tested-Setup.zip.sha256") | .size' \
               <<<"${RELEASE_JSON}"
           )"
 
@@ -506,12 +506,12 @@ jobs:
           fi
 
           if [[ "${SHA_STATE}" != "uploaded" ]]; then
-            echo "::error::HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256 is not in uploaded state."
+            echo "::error::HRM-1.0.0-rc.2-Tested-Setup.zip.sha256 is not in uploaded state."
             exit 1
           fi
 
           if ! [[ "${SHA_SIZE}" =~ ^[1-9][0-9]*$ ]]; then
-            echo "::error::HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256 has invalid size."
+            echo "::error::HRM-1.0.0-rc.2-Tested-Setup.zip.sha256 has invalid size."
             exit 1
           fi
 
@@ -523,10 +523,10 @@ jobs:
 
           echo
           echo "============================================================"
-          echo "PASS: exact tested Linux artifact exported without rebuild"
+          echo "PASS: exact tested Windows artifact exported without rebuild"
           echo "============================================================"
           echo "Source run       : ${SOURCE_RUN_ID}"
-          echo "Linux job      : ${TARGET_JOB_NAME}"
+          echo "Windows job      : ${TARGET_JOB_NAME}"
           echo "Tested commit    : ${EXPECTED_HEAD_SHA}"
           echo "Artifact name    : ${ARTIFACT_NAME}"
           echo "Published ZIP    : ${OUTPUT_ZIP}"
