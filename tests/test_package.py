@@ -267,7 +267,7 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "1.0.0-rc.2-ci.6",
+            "1.0.0-rc.2-ci.7",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
@@ -288,10 +288,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "1.0.0-rc.2-ci.6\n", encoding="utf-8", newline="\n"
+                "1.0.0-rc.2-ci.7\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "1.0.0-rc.2-ci.6",
+                "package_revision": "1.0.0-rc.2-ci.7",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -449,6 +449,15 @@ class PackageTests(unittest.TestCase):
         self.assertIn("linux-web-test-not-for-production", builder)
         self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
         self.assertIn("HRM-1.0.0-rc.2-Linux-Web-Test", workflow)
+        self.assertIn("Install Linux web source dependencies", workflow)
+        self.assertIn(
+            "run: |\n          python -m pip install --disable-pip-version-check --only-binary=:all: -r ci/requirements-source-gates.txt",
+            workflow,
+        )
+        self.assertNotIn(
+            "run: python -m pip install --disable-pip-version-check --only-binary=:all: -r ci/requirements-source-gates.txt",
+            workflow,
+        )
 
     def test_final_candidate_has_secondary_backup_and_release_hygiene_contract(self):
         config = (PROJECT / "src" / "sazmanhr" / "config.py").read_text(encoding="utf-8")

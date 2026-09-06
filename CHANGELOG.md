@@ -1,3 +1,8 @@
+## v1.0.0-rc.2-ci.7
+- Linux CI workflow syntax hotfix: changed the `pip --only-binary=:all:` step from a YAML plain scalar to a block scalar so the trailing colon cannot be parsed as a mapping separator.
+- Preserves the ci.6 Linux dependency fix (`cryptography`, `openpyxl`, `xlrd`) and all exact-v4.9 / Windows / real-data gates unchanged.
+- Added a regression assertion that rejects the unsafe one-line YAML form.
+
 ## v1.0.0-rc.2-ci.6
 - Release gate: preserve the byte-exact v4.9 `web/assets/app.js` while applying `git diff --cached --check` to every other staged path through a SHA-256-locked exemption.
 - رفع نشت handle فایل SQLite در شمارش بسته پشتیبان روی Windows؛ اتصال read-only اکنون به‌صورت صریح بسته می‌شود و پاک‌سازی/Restore با `WinError 32` متوقف نمی‌شود.
