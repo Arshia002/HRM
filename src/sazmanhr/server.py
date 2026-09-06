@@ -8,6 +8,8 @@ import logging
 import os
 import ssl
 import sys
+import tempfile
+import threading
 import time
 import traceback
 import uuid
@@ -16,13 +18,20 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 from urllib.request import Request, urlopen
 
 from . import __version__
 from .config import ServerConfig, default_data_dir, ensure_database
 from .database import AuthenticationError, ConflictError, MfaRequired, PermissionDenied, Repository
+from .compat_v49 import (
+    build_bootstrap as build_v49_bootstrap, health as v49_health, history as v49_history,
+    load_dataset as load_v49_dataset, legacy_permissions, legacy_user, placement_reviews as v49_placement_reviews,
+    record_client_log, resolve_placement_review as v49_resolve_placement_review,
+)
 from .operations import BackupScheduler, close_logging, configure_logging, restore_database, sqlite_integrity
+from .backup_package import create_package as create_backup_package, stage_database as stage_backup_database
+from .monthly_import import MAX_IMPORT_BYTES, PREVIEW_TTL_MINUTES, apply_plan as apply_monthly_plan, preview_xlsx
 from .security import generate_temporary_password
 from .tls import ensure_self_signed_certificate, pem_fingerprint
 from .windows_service_control import stop_windows_service
@@ -42,6 +51,8 @@ class ApiServer(ThreadingHTTPServer):
         self.started_monotonic = time.monotonic()
         self.tls_enabled = tls_enabled
         self.web_root = web_root.resolve() if web_root else None
+        self.import_previews: dict[str, dict[str, Any]] = {}
+        self.import_preview_lock = threading.RLock()
 
     def handle_error(self, request, client_address) -> None:
         self.logger.warning("connection_closed_before_http", extra={"client": client_address[0]})
@@ -96,15 +107,36 @@ class ApiHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
-        if method == "GET" and getattr(self.server, "web_root", None) and (path == "/" or path == "/web" or path.startswith("/web/")):
+        if method == "GET" and getattr(self.server, "web_root", None) and (
+            path in {"/", "/web"} or path.startswith("/web/") or path.startswith("/assets/")
+        ):
             self._web_asset(path)
             return
-        if method == "GET" and path == "/api/health":
+        if method == "GET" and path == "/api/status":
             self._json(HTTPStatus.OK, {
+                "server": True, "portable": False, "network_enabled": True,
+                "version": __version__, "tls": bool(self.server.tls_enabled),  # type: ignore[attr-defined]
+            })
+            return
+        if method == "GET" and path == "/api/setup/status":
+            # Enterprise installs are provisioned before the listener starts.
+            # The exact v4.9 login shell still probes this route.
+            self._json(HTTPStatus.OK, {"required": not self.repo.has_users(), "mode": "enterprise"})
+            return
+        if method == "GET" and path == "/api/health":
+            details = v49_health(self.repo)
+            details.update({
                 "status": "ok", "version": __version__, "database": "ready",
                 "tls": bool(self.server.tls_enabled),  # type: ignore[attr-defined]
                 "uptime_seconds": int(time.monotonic() - self.server.started_monotonic),  # type: ignore[attr-defined]
             })
+            self._json(HTTPStatus.OK, details)
+            return
+        if method == "POST" and path == "/api/client-log":
+            # Runtime Core can report pre-auth failures. Only bounded/redacted
+            # diagnostic metadata is retained; headers and request context are not.
+            record_client_log(self.repo, self._body())
+            self._json(HTTPStatus.OK, {"ok": True})
             return
         if method == "POST" and path == "/api/login":
             body = self._body()
@@ -112,6 +144,13 @@ class ApiHandler(BaseHTTPRequestHandler):
                 str(body.get("username", "")), str(body.get("password", "")),
                 self.client_address[0], str(body.get("otp", "")),
             )
+            result["user"] = legacy_user(self.repo, result["user"])
+            result["permissions"] = legacy_permissions(self.repo, result["user"])
+            result["must_change"] = bool(result["user"].get("must_change_password"))
+            # v4.9 pre-auth shell requires a non-empty CSRF value. Central API
+            # mutations are protected by bearer/X-Token sessions and do not use
+            # the portable CSRF transport; this opaque value is client state only.
+            result["csrf"] = uuid.uuid4().hex
             self._json(HTTPStatus.OK, result)
             return
 
@@ -126,11 +165,136 @@ class ApiHandler(BaseHTTPRequestHandler):
             return
         if method == "POST" and path == "/api/change-password":
             body = self._body()
-            self.repo.change_password(user["id"], str(body.get("current_password", "")), str(body.get("new_password", "")))
+            new_password = str(body.get("new_password") or body.get("password") or "")
+            self.repo.change_password(user["id"], str(body.get("current_password", "")), new_password)
             self._json(HTTPStatus.OK, {"ok": True})
+            return
+        if method == "GET" and path == "/api/auth-state":
+            self._json(HTTPStatus.OK, {
+                "temporary_password_file": bool(user.get("must_change_password")),
+                "must_change": bool(user.get("must_change_password")),
+            })
             return
         if user.get("must_change_password"):
             raise PermissionDenied("پیش از ادامه باید رمز عبور موقت تغییر کند.")
+
+        if method == "GET" and path == "/api/bootstrap":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, build_v49_bootstrap(self.repo))
+            return
+        if method == "GET" and path.startswith("/api/private-data/"):
+            self.repo.require(user, "read")
+            name = path.rsplit("/", 1)[1]
+            self._json(HTTPStatus.OK, load_v49_dataset(self.repo, name))
+            return
+
+        if method == "POST" and path in {"/api/import/preview", "/portable-api/import/preview"}:
+            self.repo.require(user, "edit_personnel")
+            self.repo.require(user, "manage_movements")
+            raw = self._raw_body(
+                max_bytes=MAX_IMPORT_BYTES,
+                content_types=("application/octet-stream",
+                               "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            )
+            filename = Path(unquote(self.headers.get("X-Filename", "monthly.xlsx"))).name[:180] or "monthly.xlsx"
+            preview, plan = preview_xlsx(self.repo, raw, filename)
+            plan["expires_at_epoch"] = time.time() + PREVIEW_TTL_MINUTES * 60
+            with self.server.import_preview_lock:  # type: ignore[attr-defined]
+                expired = [key for key, item in self.server.import_previews.items()  # type: ignore[attr-defined]
+                           if float(item.get("expires_at_epoch", 0)) <= time.time()]
+                for key in expired:
+                    self.server.import_previews.pop(key, None)  # type: ignore[attr-defined]
+                self.server.import_previews[preview["preview_id"]] = plan  # type: ignore[attr-defined]
+            self._json(HTTPStatus.OK, preview)
+            return
+        if method == "POST" and path in {"/api/import/apply", "/portable-api/import/apply"}:
+            self.repo.require(user, "edit_personnel")
+            self.repo.require(user, "manage_movements")
+            preview_id = str(self._body().get("preview_id", "")).strip()
+            if not preview_id:
+                raise ValueError("شناسه Dry Run ارسال نشده است.")
+            with self.server.import_preview_lock:  # type: ignore[attr-defined]
+                plan = self.server.import_previews.get(preview_id)  # type: ignore[attr-defined]
+            if not plan or float(plan.get("expires_at_epoch", 0)) <= time.time():
+                with self.server.import_preview_lock:  # type: ignore[attr-defined]
+                    self.server.import_previews.pop(preview_id, None)  # type: ignore[attr-defined]
+                raise ValueError("اعتبار Dry Run پایان یافته است؛ فایل را دوباره بررسی کنید.")
+            backup_dir = self.repo.path.parent / "backups"
+            stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            backup = self.repo.backup(backup_dir / f"pre-monthly-import-{stamp}.sqlite", user["id"], "pre-monthly-import")
+            result = apply_monthly_plan(self.repo, plan, user["id"], backup_filename=backup.name)
+            with self.server.import_preview_lock:  # type: ignore[attr-defined]
+                self.server.import_previews.pop(preview_id, None)  # type: ignore[attr-defined]
+            self._json(HTTPStatus.OK, result)
+            return
+
+        if method == "POST" and path == "/portable-api/backup":
+            self.repo.require(user, "backup")
+            package, meta = create_backup_package(self.repo, user["id"])
+            self._binary(HTTPStatus.OK, package, "application/zip", headers={
+                "Content-Disposition": f'attachment; filename="{meta["filename"]}"',
+                "X-SazmanHR-Backup-File": str(meta["filename"]),
+                "X-SazmanHR-Backup-SHA256": str(meta["package_sha256"]),
+            })
+            return
+        if method == "POST" and path == "/portable-api/backup/inspect":
+            self.repo.require(user, "restore")
+            raw = self._raw_body(max_bytes=512 * 1024 * 1024, content_types=("application/zip",))
+            with tempfile.TemporaryDirectory(prefix="hrm-backup-inspect-") as temp_dir:
+                staged = Path(temp_dir) / "database.sqlite"
+                meta = stage_backup_database(raw, staged)
+            self._json(HTTPStatus.OK, {
+                "format": meta["format"], "app_version": meta.get("app_version", ""),
+                "created_at": meta.get("created_at", ""), "people": meta["people"], "slides": meta["slides"],
+            })
+            return
+        if method == "POST" and path == "/portable-api/backup/restore":
+            self.repo.require(user, "restore")
+            raw = self._raw_body(max_bytes=512 * 1024 * 1024, content_types=("application/zip",))
+            with tempfile.TemporaryDirectory(prefix="hrm-backup-restore-") as temp_dir:
+                staged = Path(temp_dir) / "database.sqlite"
+                meta = stage_backup_database(raw, staged)
+                with self.repo._write_lock:
+                    safety = restore_database(self.repo.path, staged)
+                    self.repo.initialize()
+                    self.repo.record_operational("INFO", "backup", "interactive_restore",
+                                                 "Interactive verified backup restore completed.",
+                                                 {"safety_backup": safety.name})
+            self._json(HTTPStatus.OK, {
+                "ok": True, "people": meta["people"], "slides": meta["slides"],
+                "safety_backup": safety.name, "require_relogin": True,
+            })
+            return
+        if method == "GET" and path == "/api/history":
+            self.repo.require(user, "view_audit")
+            self._json(HTTPStatus.OK, v49_history(
+                self.repo, limit=int(query.get("limit", ["1500"])[0]),
+                q=query.get("q", [""])[0], username=query.get("username", [""])[0],
+                action=query.get("action", [""])[0], from_value=query.get("from", [""])[0],
+                to_value=query.get("to", [""])[0],
+            ))
+            return
+
+        if method == "GET" and path == "/api/snapshots":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.OK, self.repo.list_status_snapshots(
+                query.get("engine", [""])[0], int(query.get("limit", ["96"])[0])
+            ))
+            return
+        if method == "POST" and path == "/api/snapshot":
+            self.repo.require(user, "read")
+            self._json(HTTPStatus.CREATED, self.repo.add_status_snapshot(self._body(), user["id"]))
+            return
+        if method == "GET" and path == "/api/placement-reviews":
+            self.repo.require(user, "edit_personnel")
+            self._json(HTTPStatus.OK, v49_placement_reviews(self.repo))
+            return
+        if method == "POST" and path == "/api/placement-review/resolve":
+            self.repo.require(user, "edit_personnel")
+            self._json(HTTPStatus.OK, v49_resolve_placement_review(
+                self.repo, int(self._body().get("id", 0)), user["id"]
+            ))
+            return
 
         if method == "POST" and path == "/api/mfa/setup":
             self._json(HTTPStatus.OK, self.repo.begin_mfa(
@@ -162,6 +326,47 @@ class ApiHandler(BaseHTTPRequestHandler):
             widget_id = path.rsplit("/", 1)[1]
             self.repo.delete_widget(widget_id, int(query.get("version", ["0"])[0]), user["id"])
             self._json(HTTPStatus.OK, {"ok": True})
+            return
+
+        if method == "POST" and path == "/api/person/save":
+            self.repo.require(user, "edit_personnel")
+            legacy = self._body()
+            person_id = str(legacy.get("id", "")).strip()
+            current = self.repo.get_person(person_id) if person_id else None
+            payload = {
+                "id": person_id,
+                "personnel_no": str(legacy.get("personnel_no", "")).strip(),
+                "first_name": str(legacy.get("name") or legacy.get("first_name") or "").strip(),
+                "last_name": str(legacy.get("last_name", "")).strip(),
+                "full_name": str(legacy.get("full_name", "")).strip(),
+                "gender": str(legacy.get("gender") or (current or {}).get("gender") or "").strip(),
+                "organizational_unit": str(legacy.get("organizational_unit", "")).strip(),
+                "position_code": str(legacy.get("position_code", "")).strip(),
+                "position_title": str(legacy.get("position_title", "")).strip(),
+                "employment_group": str(legacy.get("employment_group", "")).strip(),
+                "employment_subtype": str(legacy.get("employment_subtype", "")).strip(),
+                "status": str(legacy.get("status", "")).strip(),
+                "activity_area": str(legacy.get("activity_area", "")).strip(),
+                "actual_location": str(legacy.get("actual_location", "")).strip(),
+                "company": str(legacy.get("company") or (current or {}).get("company") or "").strip(),
+                "chart_node_id": str((current or {}).get("chart_node_id") or "").strip(),
+                "chart_page_no": (current or {}).get("chart_page_no"),
+                "extra": dict((current or {}).get("extra") or {}),
+            }
+            if current:
+                payload["row_version"] = int(current["row_version"])
+                movement_fields = ("organizational_unit", "position_code", "position_title", "actual_location", "status")
+                changed = [field for field in movement_fields
+                           if str(payload.get(field, "") or "").strip() != str(current.get(field, "") or "").strip()]
+                if changed:
+                    self._json(HTTPStatus.CONFLICT, {
+                        "error": "تغییر واحد، پست، محل خدمت یا وضعیت باید از مسیر ثبت جابه‌جایی پرسنلی انجام شود.",
+                        "code": "movement_required", "fields": changed,
+                    })
+                    return
+            else:
+                payload.pop("id", None)
+            self._json(HTTPStatus.OK, self.repo.save_person(payload, user["id"]))
             return
 
         if method == "GET" and path == "/api/personnel":
@@ -301,9 +506,77 @@ class ApiHandler(BaseHTTPRequestHandler):
             self.repo.require(user, "view_monitoring")
             self._json(HTTPStatus.OK, {"metrics": self.repo.monitoring(), "events": self.repo.operational_events(100)})
             return
+        if method == "POST" and path == "/api/users/create":
+            self.repo.require(user, "manage_users")
+            body = self._body()
+            temporary = generate_temporary_password()
+            created = self.repo.create_user(
+                str(body.get("username", "")), str(body.get("full_name") or body.get("display_name") or ""),
+                temporary, "admin", actor_id=user["id"], must_change_password=True,
+            )
+            created = self.repo.update_user_profile(created["username"], body, user["id"])
+            requested = body.get("permissions") if isinstance(body.get("permissions"), dict) else {}
+            overrides = {}
+            legacy_groups = {
+                "edit_data": ("edit_personnel", "manage_movements"),
+                "view_history": ("view_audit",),
+                "backup_restore": ("backup",),
+            }
+            for legacy_key, current_keys in legacy_groups.items():
+                if legacy_key in requested:
+                    for current_key in current_keys:
+                        overrides[current_key] = "allow" if bool(requested[legacy_key]) else "deny"
+            if overrides:
+                self.repo.set_user_permissions(created["id"], overrides, user["id"])
+            public = next(item for item in self.repo.list_users() if item["id"] == created["id"])
+            self._json(HTTPStatus.CREATED, {
+                "user": legacy_user(self.repo, public), "temporary_password": temporary,
+            })
+            return
+        if method == "POST" and path == "/api/users/update":
+            self.repo.require(user, "manage_users")
+            body = self._body()
+            updated = self.repo.update_user_profile(str(body.get("username", "")), body, user["id"])
+            requested = body.get("permissions") if isinstance(body.get("permissions"), dict) else {}
+            legacy_groups = {
+                "edit_data": ("edit_personnel", "manage_movements"),
+                "view_history": ("view_audit",),
+                "backup_restore": ("backup",),
+            }
+            overrides = {}
+            for legacy_key, current_keys in legacy_groups.items():
+                if legacy_key in requested:
+                    for current_key in current_keys:
+                        overrides[current_key] = "allow" if bool(requested[legacy_key]) else "deny"
+            if overrides and updated.get("role") != "owner":
+                self.repo.set_user_permissions(updated["id"], overrides, user["id"])
+            current = next(item for item in self.repo.list_users() if item["id"] == updated["id"])
+            self._json(HTTPStatus.OK, {"user": legacy_user(self.repo, current)})
+            return
+        if method == "POST" and path == "/api/users/toggle":
+            self.repo.require(user, "manage_users")
+            body = self._body()
+            updated = self.repo.set_user_active(str(body.get("username", "")), bool(body.get("active")), user["id"])
+            current = next(item for item in self.repo.list_users() if item["id"] == updated["id"])
+            self._json(HTTPStatus.OK, {"user": legacy_user(self.repo, current)})
+            return
+        if method == "POST" and path == "/api/users/reset-password":
+            self.repo.require(user, "manage_users")
+            body = self._body()
+            updated, temporary = self.repo.reset_user_password(str(body.get("username", "")), user["id"])
+            current = next(item for item in self.repo.list_users() if item["id"] == updated["id"])
+            self._json(HTTPStatus.OK, {
+                "user": legacy_user(self.repo, current), "temporary_password": temporary,
+            })
+            return
+
         if method == "GET" and path == "/api/users":
             self.repo.require(user, "manage_users")
-            self._json(HTTPStatus.OK, {"items": self.repo.list_users()})
+            users = self.repo.list_users()
+            if self.headers.get("X-Token"):
+                self._json(HTTPStatus.OK, [legacy_user(self.repo, item) for item in users])
+            else:
+                self._json(HTTPStatus.OK, {"items": users})
             return
         if method == "POST" and path == "/api/users":
             self.repo.require(user, "manage_users")
@@ -339,7 +612,12 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not web_root:
             self._json(HTTPStatus.NOT_FOUND, {"error": "Web UI disabled", "code": "not_found"})
             return
-        relative = "index.html" if path in {"/", "/web"} else path[len("/web/"):]
+        if path in {"/", "/web"}:
+            relative = "index.html"
+        elif path.startswith("/web/"):
+            relative = path[len("/web/"):]
+        else:
+            relative = path.lstrip("/")
         if not relative or relative.endswith("/"):
             relative += "index.html"
         candidate = (web_root / relative).resolve()
@@ -354,7 +632,8 @@ class ApiHandler(BaseHTTPRequestHandler):
         mime = {
             ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
             ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
-            ".png": "image/png", ".ico": "image/x-icon",
+            ".png": "image/png", ".webp": "image/webp", ".ico": "image/x-icon",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }.get(candidate.suffix.lower(), "application/octet-stream")
         body = candidate.read_bytes()
         self.send_response(HTTPStatus.OK.value)
@@ -370,10 +649,32 @@ class ApiHandler(BaseHTTPRequestHandler):
 
     def _authenticated(self) -> tuple[str, dict[str, Any]]:
         header = self.headers.get("Authorization", "")
-        if not header.startswith("Bearer "):
+        if header.startswith("Bearer "):
+            token = header[7:].strip()
+        else:
+            # Exact v4.9 Runtime Core sends X-Token.  Binary compatibility
+            # modules (Excel/backup) send X-Portable-Token even when hosted by
+            # the central Enterprise server.  Both remain ordinary validated
+            # session tokens; this changes transport only, not authorization.
+            token = (self.headers.get("X-Token", "").strip() or
+                     self.headers.get("X-Portable-Token", "").strip())
+        if not token:
             raise AuthenticationError("نشست معتبر نیست.")
-        token = header[7:].strip()
         return token, self.repo.session_user(token)
+
+    def _raw_body(self, *, max_bytes: int, content_types: tuple[str, ...]) -> bytes:
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        if length <= 0:
+            raise ValueError("بدنه درخواست خالی است.")
+        if length > max_bytes:
+            raise ValueError("حجم درخواست بیش از حد مجاز است.")
+        content_type = self.headers.get("Content-Type", "").lower().split(";", 1)[0].strip()
+        if content_type not in content_types:
+            raise ValueError("Content-Type درخواست معتبر نیست.")
+        data = self.rfile.read(length)
+        if len(data) != length:
+            raise ValueError("بدنه درخواست ناقص دریافت شد.")
+        return data
 
     def _body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0") or 0)
@@ -387,6 +688,25 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise ValueError("بدنه درخواست باید یک شیء JSON باشد.")
         return data
+
+    def _binary(self, status: HTTPStatus, body: bytes, content_type: str, *, headers: dict[str, str] | None = None) -> None:
+        try:
+            self.send_response(status.value)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Request-ID", getattr(self, "request_id", ""))
+            for name, value in (headers or {}).items():
+                self.send_header(name, value)
+            if bool(self.server.tls_enabled):  # type: ignore[attr-defined]
+                self.send_header("Strict-Transport-Security", "max-age=31536000")
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            self.logger.warning("client_disconnected", extra={"request_id": getattr(self, "request_id", "")})
 
     def _json(self, status: HTTPStatus, payload: Any) -> None:
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")

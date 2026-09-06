@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-echo [HRM] v1.0.0-rc.1 final production release-candidate gates
+echo [HRM] v1.0.0-rc.2 final production release-candidate gates
 
 where git.exe >nul 2>&1 || (echo FAIL: git not found.& exit /b 1)
 where python.exe >nul 2>&1 || (echo FAIL: python not found.& exit /b 1)
@@ -23,5 +23,5 @@ echo Regenerating package manifest from the current protected RC overlay...
 "%HRM_GATE_PYTHON%" tools\build_release.py || exit /b 1
 "%HRM_GATE_PYTHON%" ci\validate_v100rc1_candidate.py || exit /b 1
 "%HRM_GATE_PYTHON%" ci\validate_package_contract.py || exit /b 1
-echo PASS: HRM v1.0.0-rc.1 local quality gates passed.
+echo PASS: HRM v1.0.0-rc.2 local quality gates passed.
 exit /b 0

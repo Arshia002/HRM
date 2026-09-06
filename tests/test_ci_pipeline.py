@@ -18,9 +18,9 @@ class CiPipelineTests(unittest.TestCase):
         manifest = (PROJECT / "ci" / "write-ci-manifest.ps1").read_text(encoding="utf-8")
 
         self.assertIn("feat/native-v49-shell", workflow)
-        self.assertIn("HRM-1.0.0-rc.1-Tested-Setup", workflow)
-        self.assertIn("HRM-1.0.0-rc.1-Failure-Logs", workflow)
-        self.assertIn("release/v1.0.0-rc.1", workflow)
+        self.assertIn("HRM-1.0.0-rc.2-Tested-Setup", workflow)
+        self.assertIn("HRM-1.0.0-rc.2-Failure-Logs", workflow)
+        self.assertIn("release/v1.0.0-rc.2", workflow)
         self.assertIn("write-ci-manifest.ps1", workflow)
         self.assertIn("Validate packaging contract", workflow)
         self.assertIn("validate_package_contract.py", workflow)
@@ -55,7 +55,7 @@ class CiPipelineTests(unittest.TestCase):
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         contract = workflow.index("Validate packaging contract")
         dependencies = workflow.index("Install source gate dependencies")
-        candidate = workflow.index("Validate v1.0.0 rc.1 ci.2 final production candidate")
+        candidate = workflow.index("Validate v1.0.0 rc.2 ci.5 final production candidate")
         hardening = workflow.index("Validate RC network, DR and diagnostics hardening")
         real_data = workflow.index("Validate protected real data")
         inno = workflow.index("Install Inno Setup")
@@ -72,6 +72,8 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("validate_rc_hardening.py", workflow)
         self.assertIn("linux-web-test:", workflow)
         self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
+        self.assertIn("grep -F 'id=\"appShell\"'", workflow)
+        self.assertNotIn("grep 'Linux Web Test'", workflow)
 
     def test_source_dependency_pins_match_build_and_report_missing_modules(self):
         source = pinned_requirements(PROJECT / "ci" / "requirements-source-gates.txt")

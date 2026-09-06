@@ -86,18 +86,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git diff --cached --check
+"%HRM_GATE_PYTHON%" ci\validate_staged_diff.py
 if errorlevel 1 (
   echo ERROR: staged diff check failed. Nothing will be committed or pushed.
   exit /b 1
 )
 
-git commit -m "release: prepare final production candidate v1.0.0-rc.1"
+git commit -m "release: prepare final production candidate v1.0.0-rc.2"
 if errorlevel 1 exit /b 1
 
 git push -u origin %HRM_PILOT_BRANCH%
 if errorlevel 1 exit /b 1
 
 echo.
-echo PASS: %HRM_VERSION% was pushed. GitHub must pass final production, Linux web, real-data, Windows install, and v0.8-to-v1.0-rc.1 upgrade gates.
+echo PASS: %HRM_VERSION% was pushed. GitHub must pass final production, Linux web, real-data, Windows install, and v0.8-to-v1.0-rc.2 upgrade gates.
 exit /b 0

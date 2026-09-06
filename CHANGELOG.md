@@ -1,4 +1,16 @@
-# HRM v1.0.0-rc.1
+## v1.0.0-rc.2-ci.5
+- Release gate: preserve the byte-exact v4.9 `web/assets/app.js` while applying `git diff --cached --check` to every other staged path through a SHA-256-locked exemption.
+- رفع نشت handle فایل SQLite در شمارش بسته پشتیبان روی Windows؛ اتصال read-only اکنون به‌صورت صریح بسته می‌شود و پاک‌سازی/Restore با `WinError 32` متوقف نمی‌شود.
+- گیت Windows برای round-trip بسته پشتیبان بدون تغییر در قالب یا داده تقویت شد.
+
+## v1.0.0-rc.2-ci.3
+- Fixed Linux Web CI smoke to validate the exact v4.9 shell marker instead of a removed test-banner string.
+- Corrected Python package metadata to `1.0.0rc2` and added a package-contract check so release metadata cannot silently regress.
+- Corrected remaining RC2 workflow/push/upgrade labels before the guarded release push.
+- Windows Service now serves the exact hash-locked SazmanHR v4.9 UI at `/`; public UI is bundled into `HRMService.exe`.
+- Windows clean-install/upgrade smoke now fails unless the served `index.html` matches the locked v4.9 SHA-256.
+
+# HRM v1.0.0-rc.2
 
 - Final production release candidate based on the GitHub-tested v0.8.0-rc.1 source.
 - Added configurable verified secondary scheduled backup for organizational NAS/File Server storage.

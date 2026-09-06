@@ -17,9 +17,9 @@ try {
   $login=Api POST '/api/login' @{username=$User;password=$pw}; Api POST '/api/change-password' @{current_password=$pw;new_password=$Changed} $login.token|Out-Null
   $sentinel=Join-Path $Data 'ci-v080-to-v100rc1-sentinel.txt'; Set-Content $sentinel 'preserve-v080-to-v100rc1' -Encoding ASCII; $hash=(Get-FileHash $sentinel -Algorithm SHA256).Hash
   Install (Resolve-Path $CandidateInstaller).Path (Join-Path (Split-Path $LogPath) 'v100rc1-upgrade.log')
-  Health '1.0.0-rc.1'
-  if((Get-FileHash $sentinel -Algorithm SHA256).Hash-ne$hash){throw 'Sentinel changed during v0.8-to-v1.0-rc.1 upgrade.'}
+  Health '1.0.0-rc.2'
+  if((Get-FileHash $sentinel -Algorithm SHA256).Hash-ne$hash){throw 'Sentinel changed during v0.8-to-v1.0-rc.2 upgrade.'}
   $again=Api POST '/api/login' @{username=$User;password=$Changed}; if(-not $again.token){throw 'Changed credential not preserved.'}
-  Write-Host 'PASS: real v0.8.0-rc.1 -> v1.0.0-rc.1 installer upgrade preserved service, TLS, database and credentials.'
+  Write-Host 'PASS: real v0.8.0-rc.1 -> v1.0.0-rc.2 installer upgrade preserved service, TLS, database and credentials.'
   $u=Join-Path $env:ProgramFiles 'HRM\unins000.exe'; if(Test-Path $u){$p=Start-Process $u -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-') -PassThru;$p.WaitForExit()}
 } finally { try{Stop-Transcript|Out-Null}catch{} }

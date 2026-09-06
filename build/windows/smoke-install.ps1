@@ -94,6 +94,24 @@ function Assert-ApiFailure {
     }
 }
 
+function Assert-ExactV49UiRoot {
+    param([string]$Stage)
+    $servedIndex = Join-Path $ArtifactDir 'served-v49-index.html'
+    Invoke-WebRequest -Uri "$ApiBase/" -SkipCertificateCheck -TimeoutSec 8 -OutFile $servedIndex | Out-Null
+    $hash = (Get-FileHash -LiteralPath $servedIndex -Algorithm SHA256).Hash.ToLowerInvariant()
+    $expected = '3e44e10bf0cea1ccee018bcda50035101ff956a4102a2887d01422695adad3cf'
+    if ($hash -ne $expected) {
+        throw "$Stage exact v4.9 UI hash mismatch: $hash"
+    }
+    $html = Get-Content -LiteralPath $servedIndex -Raw -Encoding UTF8
+    foreach ($marker in @('formalChart','personnelDirectory','reports','systemHealth','settings')) {
+        if ($html.IndexOf($marker, [StringComparison]::Ordinal) -lt 0) {
+            throw "$Stage exact v4.9 UI is missing page marker: $marker"
+        }
+    }
+    Write-Host "[$(Get-Date -Format o)] PASS: $Stage exact SazmanHR v4.9 UI served by Windows Service"
+}
+
 function Wait-HrmHealth {
     param([string]$Stage)
     $health = $null
@@ -105,7 +123,7 @@ function Wait-HrmHealth {
         Start-Sleep -Milliseconds 500
     }
     if (-not $health -or $health.status -ne 'ok' -or -not $health.tls -or
-        $health.database -ne 'ready' -or $health.version -ne '1.0.0-rc.1') {
+        $health.database -ne 'ready' -or $health.version -ne '1.0.0-rc.2') {
         $detail = if ($health) { $health | ConvertTo-Json -Compress } else { 'no response' }
         throw "$Stage health check failed: $detail"
     }
@@ -149,6 +167,7 @@ try {
     if (-not $serviceRule) { throw "ProgramData ACL does not grant Modify to the dedicated Service SID." }
 
     Wait-HrmHealth -Stage 'Clean install'
+    Assert-ExactV49UiRoot -Stage 'Clean install'
 
     if (-not (Test-Path (Join-Path $Target 'Client\HRM.exe'))) { throw 'Desktop client missing.' }
     if (Test-Path (Join-Path $Target 'Server\data\seed\sazmanhr-seed.sqlite')) {
@@ -221,6 +240,7 @@ try {
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
     Wait-HrmHealth -Stage 'Post-upgrade'
+    Assert-ExactV49UiRoot -Stage 'Post-upgrade'
 
     if (-not (Test-Path $sentinel) -or (Get-FileHash $sentinel -Algorithm SHA256).Hash -ne $sentinelHash) {
         throw 'Upgrade did not preserve the operational sentinel.'

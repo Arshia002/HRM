@@ -200,6 +200,43 @@ CREATE INDEX IF NOT EXISTS idx_personnel_movements_order
   ON personnel_movements(order_no, order_date);
 DELETE FROM role_permissions WHERE role='admin';
 """),
+    Migration(8, "v49_frontend_compatibility_store", r"""
+CREATE TABLE IF NOT EXISTS ui_compat_datasets (
+  name TEXT PRIMARY KEY,
+  payload_json TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  size_bytes INTEGER NOT NULL,
+  record_count INTEGER NOT NULL DEFAULT 0,
+  imported_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ui_status_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  engine TEXT NOT NULL DEFAULT '',
+  payload_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  created_by TEXT REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_ui_status_snapshots_engine
+  ON ui_status_snapshots(engine, created_at DESC);
+ALTER TABLE users ADD COLUMN title TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN phone TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN last_login_at TEXT;
+"""),
+    Migration(9, "monthly_enterprise_import_overlay", r"""
+CREATE TABLE IF NOT EXISTS ui_monthly_assignments (
+  person_id TEXT PRIMARY KEY REFERENCES personnel(id) ON DELETE CASCADE,
+  personnel_no TEXT NOT NULL,
+  assignment_type TEXT NOT NULL,
+  target_page INTEGER NOT NULL,
+  target_node_id TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  batch_id TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL,
+  updated_by TEXT REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_ui_monthly_assignments_target
+  ON ui_monthly_assignments(target_page, target_node_id);
+"""),
 )
 
 

@@ -15,7 +15,7 @@ from typing import Any, Iterator
 from .security import (
     SecretBox,
     audit_digest,
-    generate_totp_secret,
+    generate_totp_secret, generate_temporary_password,
     hash_bootstrap_password, hash_password,
     new_session_token,
     normalize_username,
@@ -593,7 +593,7 @@ class Repository:
                     )
                 failure = "invalid"
             else:
-                conn.execute("UPDATE users SET failed_attempts=0,locked_until=NULL,updated_at=? WHERE id=?", (now, row["id"]))
+                conn.execute("UPDATE users SET failed_attempts=0,locked_until=NULL,last_login_at=?,updated_at=? WHERE id=?", (now, now, row["id"]))
                 raw_token, hashed_token = new_session_token()
                 expiry = (now_dt + dt.timedelta(hours=SESSION_HOURS)).isoformat(timespec="seconds")
                 conn.execute(
@@ -651,8 +651,8 @@ class Repository:
     def list_users(self) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
-                """SELECT id,username,display_name,role,is_active,must_change_password,created_at,
-                   updated_at,row_version FROM users ORDER BY display_name,username"""
+                """SELECT id,username,display_name,title,phone,role,is_active,must_change_password,created_at,
+                   updated_at,last_login_at,row_version FROM users ORDER BY display_name,username"""
             ).fetchall()
             result: list[dict[str, Any]] = []
             for row in rows:
@@ -676,6 +676,121 @@ class Repository:
                 result.append(item)
         return result
 
+    def update_user_profile(self, username: str, payload: dict[str, Any], actor_id: str) -> dict[str, Any]:
+        username = normalize_username(username)
+        now = utc_now()
+        with self.write() as conn:
+            row = conn.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE", (username,)).fetchone()
+            if not row:
+                raise ValueError("کاربر پیدا نشد.")
+            before = self._public_user(dict(row))
+            display_name = str(payload.get("display_name") or payload.get("full_name") or row["display_name"]).strip()
+            title = str(payload.get("title") or row["title"] or "").strip()
+            phone = str(payload.get("phone") or "").strip()
+            if not display_name:
+                raise ValueError("نام و نام خانوادگی کاربر الزامی است.")
+            conn.execute(
+                """UPDATE users SET display_name=?,title=?,phone=?,updated_at=?,row_version=row_version+1
+                   WHERE id=?""",
+                (display_name, title, phone, now, row["id"]),
+            )
+            current = conn.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
+            after = self._public_user(dict(current))
+            self._record(conn, actor_id, "update", "user", row["id"], before, after, int(current["row_version"]))
+        return after
+
+    def set_user_active(self, username: str, active: bool, actor_id: str) -> dict[str, Any]:
+        username = normalize_username(username)
+        now = utc_now()
+        with self.write() as conn:
+            row = conn.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE", (username,)).fetchone()
+            if not row:
+                raise ValueError("کاربر پیدا نشد.")
+            if row["role"] == "owner" and not active:
+                raise ValueError("حساب مدیر اصلی قابل غیرفعال‌سازی نیست.")
+            before = self._public_user(dict(row))
+            conn.execute(
+                "UPDATE users SET is_active=?,updated_at=?,row_version=row_version+1 WHERE id=?",
+                (1 if active else 0, now, row["id"]),
+            )
+            if not active:
+                conn.execute("DELETE FROM sessions WHERE user_id=?", (row["id"],))
+            current = conn.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
+            after = self._public_user(dict(current))
+            self._record(conn, actor_id, "set_active", "user", row["id"], before, {"active": bool(active)}, int(current["row_version"]))
+        return after
+
+    def reset_user_password(self, username: str, actor_id: str) -> tuple[dict[str, Any], str]:
+        username = normalize_username(username)
+        temporary = generate_temporary_password()
+        now = utc_now()
+        with self.write() as conn:
+            row = conn.execute("SELECT * FROM users WHERE username=? COLLATE NOCASE", (username,)).fetchone()
+            if not row:
+                raise ValueError("کاربر پیدا نشد.")
+            conn.execute(
+                """UPDATE users SET password_hash=?,must_change_password=1,failed_attempts=0,locked_until=NULL,
+                   updated_at=?,row_version=row_version+1 WHERE id=?""",
+                (hash_password(temporary), now, row["id"]),
+            )
+            conn.execute("DELETE FROM sessions WHERE user_id=?", (row["id"],))
+            current = conn.execute("SELECT * FROM users WHERE id=?", (row["id"],)).fetchone()
+            public = self._public_user(dict(current))
+            # Never record the temporary secret in audit/operational logs.
+            self._record(conn, actor_id, "reset_password", "user", row["id"], None, {"reset": True}, int(current["row_version"]))
+        return public, temporary
+
+    def add_status_snapshot(self, payload: dict[str, Any], actor_id: str) -> dict[str, Any]:
+        engine = str(payload.get("engine", "")).strip()[:120]
+        if not engine:
+            raise ValueError("شناسه موتور Snapshot الزامی است.")
+        now = utc_now()
+        clean = dict(payload)
+        clean["engine"] = engine
+        clean.setdefault("time", now)
+        with self.write() as conn:
+            cursor = conn.execute(
+                "INSERT INTO ui_status_snapshots(engine,payload_json,created_at,created_by) VALUES(?,?,?,?)",
+                (engine, canonical(clean), now, actor_id),
+            )
+            snapshot_id = int(cursor.lastrowid)
+            # Keep the UI history bounded per engine.
+            conn.execute(
+                """DELETE FROM ui_status_snapshots WHERE engine=? AND id NOT IN (
+                       SELECT id FROM ui_status_snapshots WHERE engine=? ORDER BY id DESC LIMIT 24
+                   )""",
+                (engine, engine),
+            )
+            self._record(conn, actor_id, "snapshot", "ui_status", str(snapshot_id), None, {"engine": engine}, 1)
+        return {"id": snapshot_id, **clean, "created_at": now}
+
+    def list_status_snapshots(self, engine: str = "", limit: int = 96) -> list[dict[str, Any]]:
+        limit = max(1, min(int(limit), 240))
+        with self.connect() as conn:
+            if engine.strip():
+                rows = conn.execute(
+                    "SELECT id,engine,payload_json,created_at FROM ui_status_snapshots WHERE engine=? ORDER BY id DESC LIMIT ?",
+                    (engine.strip(), limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT id,engine,payload_json,created_at FROM ui_status_snapshots ORDER BY id DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+        result: list[dict[str, Any]] = []
+        for row in reversed(rows):
+            try:
+                item = json.loads(row["payload_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                item = {}
+            if not isinstance(item, dict):
+                item = {}
+            item.setdefault("engine", row["engine"])
+            item.setdefault("time", row["created_at"])
+            item["id"] = row["id"]
+            result.append(item)
+        return result
+
     def mfa_status(self, user_id: str) -> dict[str, bool]:
         with self.connect() as conn:
             row = conn.execute("SELECT is_enabled FROM mfa_totp WHERE user_id=?", (user_id,)).fetchone()
@@ -684,7 +799,8 @@ class Repository:
     @staticmethod
     def _public_user(row: dict[str, Any]) -> dict[str, Any]:
         return {key: row[key] for key in (
-            "id", "username", "display_name", "role", "is_active", "must_change_password", "row_version"
+            "id", "username", "display_name", "title", "phone", "role", "is_active",
+            "must_change_password", "created_at", "updated_at", "last_login_at", "row_version"
         ) if key in row}
 
     def permissions_for(self, user: dict[str, Any]) -> set[str]:

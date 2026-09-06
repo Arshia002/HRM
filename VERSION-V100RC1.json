@@ -1,11 +1,11 @@
 {
   "product": "HRM",
-  "version": "1.0.0-rc.1",
-  "package_revision": "1.0.0-rc.1-ci.2",
-  "candidate_kind": "final-production-release-candidate-and-linux-web-test",
+  "version": "1.0.0-rc.2",
+  "package_revision": "1.0.0-rc.2-ci.5",
+  "candidate_kind": "v49-exact-ui-enterprise-integration-release-candidate-and-linux-web-test",
   "baseline_tag": "tested-v0.8.0-rc.1-source",
   "baseline_commit": "8f1adfa88a1b53db1b075504c58900957e812894",
-  "pilot_branch": "release/v1.0.0-rc.1",
+  "pilot_branch": "release/v1.0.0-rc.2",
   "expected_personnel": 1356,
   "expected_source_assignments": {
     "county_enrichments": 590,
@@ -62,6 +62,21 @@
     "privacy-safe-diagnostics",
     "v0.8-to-current-installer-upgrade",
     "optional-authenticode-signing-pipeline",
-    "repository-hygiene"
-  ]
+    "repository-hygiene",
+    "v49-exact-ui-hash-lock",
+    "v49-browser-visual-regression",
+    "v49-compatibility-api",
+    "supplemental-real-data-import",
+    "monthly-import-dry-run-apply",
+    "portable-backup-inspect-restore",
+    "legacy-service-port-conflict-preflight",
+    "windows-service-serves-exact-v49-ui"
+  ],
+  "parent_tested_commit": "391ff7d3b36faddee871e883d8011a7adbed344c",
+  "ui_reference": {
+    "product": "SazmanHR",
+    "version": "4.9.0",
+    "exe_sha256": "3902169b338825af3a6320c8e4aa9995327902c9ffc4e7081496945c5df36c9b",
+    "policy": "exact-reference-html-css-js-assets-with-enterprise-bridge-only"
+  }
 }

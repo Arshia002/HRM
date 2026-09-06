@@ -99,7 +99,7 @@ def migrate(source: Path, output_root: Path) -> dict:
                 str(person.get("actual_location", "")).strip(), str(person.get("company", "")).strip(),
                 int(person.get("current_chart_page_v421") or person.get("home_page") or 0) or None,
                 str(person.get("approved_node_id") or person.get("target_node_id") or "").strip(),
-                canonical({key: value for key, value in person.items() if key not in PERSON_FIELDS}), 1, now, None,
+                canonical({**{key: value for key, value in person.items() if key not in PERSON_FIELDS}, "_legacy_index": index}), 1, now, None,
             )
             conn.execute(
                 """INSERT INTO personnel(id,personnel_no,first_name,last_name,full_name,gender,
@@ -158,11 +158,15 @@ def migrate(source: Path, output_root: Path) -> dict:
             "chart_lines": conn.execute("SELECT COUNT(*) FROM chart_lines").fetchone()[0],
             "users": conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
         }
+        schema_row = conn.execute("SELECT value FROM metadata WHERE key='schema_version'").fetchone()
+        if not schema_row:
+            raise RuntimeError("Generated database does not expose schema_version metadata.")
+        schema_version = int(schema_row[0])
     write_gzip_json(export_dir / "personnel.json.gz", people)
     write_gzip_json(export_dir / "organization-chart.json.gz", slides)
     manifest = {
         "format": "HRM clean seed",
-        "schema_version": 5,
+        "schema_version": schema_version,
         "dataset_version": 1500,
         "generated_at": now,
         "counts": counts,

@@ -1,92 +1,339 @@
-<!doctype html>
-<html lang="fa" dir="rtl">
+<!DOCTYPE html>
+
+<html dir="rtl" lang="fa">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HRM کرمانشاه — Linux Web Test</title>
-  <link rel="stylesheet" href="/web/styles.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="#d6cfc7" name="theme-color"/>
+<meta content="no-cache, no-store, must-revalidate" http-equiv="Cache-Control"/>
+<meta content="no-cache" http-equiv="Pragma"/>
+<meta content="0" http-equiv="Expires"/>
+<title>سامانه هوشمند مدیریت منابع انسانی</title>
+<link href="assets/logo.svg" rel="icon"/>
+<link href="assets/styles.css?v=4.9.0" rel="stylesheet"/>
 </head>
-<body>
-<header class="topbar">
-  <div><strong>HRM</strong><span>شرکت توزیع نیروی برق استان کرمانشاه</span></div>
-  <div class="badge">Linux Web Test · NOT FOR PRODUCTION</div>
+<body class="light theme-v4130 theme-v4131 theme-v4132 theme-v4133 theme-v4134 theme-v4135 theme-v4136 theme-v4139 theme-v4140 theme-v4141 theme-v4142 theme-v4144 theme-v4145 theme-v4150 theme-v4151 theme-v4156 theme-v4157">
+<div aria-hidden="true" class="boot hidden" id="boot"></div>
+<section class="login-screen executive-login selected-login-v4131 selected-login-v4132" id="loginScreen">
+<div class="v4131-login-shell v4132-login-shell">
+<aside aria-label="نمای شبکه توزیع برق و سامانه منابع انسانی" class="v4131-login-hero v4132-login-hero">
+<span class="sr-only">سامانه هوشمند مدیریت منابع انسانی شرکت توزیع نیروی برق استان کرمانشاه</span>
+</aside>
+<div class="login-panel executive-panel v4131-login-panel v4132-login-panel">
+<header class="v4132-system-head">
+<img alt="لوگوی شرکت توزیع نیروی برق استان کرمانشاه" src="assets/logo.svg"/>
+<h1>سامانه هوشمند مدیریت منابع انسانی</h1>
+<p>شرکت توزیع نیروی برق استان کرمانشاه</p>
 </header>
-<main>
-  <section id="loginView" class="card narrow">
-    <h1>ورود به سامانه</h1>
-    <p class="muted">این رابط وب فقط برای تست Linux است و از همان API و دیتابیس هسته HRM استفاده می‌کند.</p>
-    <form id="loginForm">
-      <label>نام کاربری<input id="username" autocomplete="username" required></label>
-      <label>رمز عبور<input id="password" type="password" autocomplete="current-password" required></label>
-      <label>کد MFA (در صورت فعال بودن)<input id="otp" inputmode="numeric" autocomplete="one-time-code"></label>
-      <button>ورود</button>
-    </form>
-    <form id="passwordForm" class="hidden">
-      <h2>تغییر رمز اجباری</h2>
-      <label>رمز فعلی<input id="currentPassword" type="password" required></label>
-      <label>رمز جدید<input id="newPassword" type="password" required></label>
-      <button>ثبت رمز جدید</button>
-    </form>
-    <div id="loginError" class="error"></div>
-  </section>
+<div class="v4131-panel-rule v4132-panel-rule"></div>
+<div class="v4131-welcome v4132-welcome">
+<h2 id="loginTitle">ورود به سامانه</h2>
+<p id="loginDesc">نام کاربری و رمز عبور خود را وارد کنید.</p>
+</div>
+<div aria-live="polite" class="login-runtime v4131-runtime hidden" id="loginRuntime">
+<span class="runtime-dot checking" id="loginRuntimeDot"></span>
+<div class="runtime-copy"><b id="loginRuntimeTitle">در حال بررسی وضعیت سامانه…</b><small id="loginRuntimeText">چند لحظه صبر کنید.</small></div>
+<div class="runtime-actions"><button class="runtime-btn" id="retryServer" type="button">بررسی وضعیت</button><button class="runtime-btn primary-link hidden" id="openLocalServer" type="button">ورود تک‌کلیکی</button></div>
+</div>
+<form class="password-form executive-password v4131-password v4132-password v4171-direct-login" id="passwordForm">
+<label id="usernameLabel" for="usernameInput">نام کاربری</label>
+<div class="password-box username-box"><input autocomplete="username" id="usernameInput" placeholder="نام کاربری مدیریتی" type="text"/></div>
+<label id="passwordLabel" for="passwordInput">رمز عبور</label>
+<div class="password-box"><input autocomplete="current-password" id="passwordInput" placeholder="رمز عبور خود را وارد کنید" type="password"/><button id="togglePassword" type="button">نمایش</button></div>
+<button class="primary wide" id="passwordSubmit" type="submit">ورود به سامانه</button>
+</form>
+<form class="password-form executive-password v4131-password v4132-password hidden" id="ownerSetupForm">
+<div id="setupIdentityFields">
+<label for="setupFullName">نام و نام خانوادگی مدیر اصلی</label>
+<div class="password-box username-box"><input autocomplete="name" id="setupFullName" type="text"/></div>
+<label for="setupUsername">نام کاربری انگلیسی</label>
+<div class="password-box username-box"><input autocomplete="username" dir="ltr" id="setupUsername" pattern="[A-Za-z0-9._-]{3,32}" type="text"/></div>
+<label for="setupTitle">عنوان مدیر در سامانه</label>
+<div class="password-box username-box"><input id="setupTitle" value="مدیر اصلی سامانه" type="text"/></div>
+<label for="setupPhone">شماره همراه (اختیاری)</label>
+<div class="password-box username-box"><input autocomplete="tel" dir="ltr" id="setupPhone" inputmode="tel" type="tel"/></div>
+</div>
+<label for="setupPassword">رمز اختصاصی مدیر اصلی</label>
+<div class="password-box"><input autocomplete="new-password" id="setupPassword" minlength="6" required type="password"/></div>
+<label for="setupPasswordConfirm">تکرار رمز اختصاصی</label>
+<div class="password-box"><input autocomplete="new-password" id="setupPasswordConfirm" minlength="6" required type="password"/></div>
+<button class="primary wide" id="setupSubmit" type="submit">تکمیل راه‌اندازی امن</button>
+</form>
+<p aria-live="assertive" class="form-error login-global-error" id="loginError"></p>
+<footer class="v4131-security-note v4132-security-note"><span>◇</span><small>دسترسی شما مطابق سیاست‌های امنیتی شرکت ثبت و پایش می‌شود.</small></footer>
+</div>
+</div>
+</section>
+<div class="app-shell hidden" id="appShell">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-brand">
+<img alt="" src="assets/logo.svg"/>
+<div><strong>سامانه هوشمند منابع انسانی</strong><span>توزیع برق استان کرمانشاه</span></div>
+<button aria-label="بستن نوار کناری" class="icon-btn mobile-only" id="collapseSidebar">×</button>
+</div>
+<nav id="mainNav">
+<button class="nav-item active" data-page="formalChart"><span>⌘</span><b>چارت سازمان</b></button>
+<button class="nav-item" data-page="statusChart"><span>⌁</span><b>وضعیت چارت</b></button>
+<button class="nav-item" data-page="personnelDirectory"><span>☷</span><b>لیست کلی پرسنل</b></button>
+<button class="nav-item education-nav-item" data-page="personnelEducation"><span>🎓</span><b>تحصیلات پرسنل</b></button>
+<button class="nav-item job-family-nav-item" data-page="jobFamilies"><span>⚡</span><b>وضعیت پرسنل</b></button>
+<button class="nav-item personnel-age-nav-item" data-page="personnelAge"><span>◷</span><b>سن پرسنل</b></button>
+<button class="nav-item" data-page="reports"><span>▤</span><b>گزارش‌ها</b></button>
+<button class="nav-item perm-edit-data" data-page="imports"><span>⇧</span><b>ورود و به‌روزرسانی Excel</b></button>
+<button class="nav-item owner-only" data-page="users"><span>♙</span><b>مدیریت کاربران</b></button>
+<button class="nav-item perm-view-history" data-page="history"><span>↻</span><b>سوابق فعالیت و پشتیبان</b></button>
+<button class="nav-item perm-view-history" data-page="systemHealth"><span>✓</span><b>سلامت سیستم</b></button>
+</nav>
+<div class="sidebar-bottom">
+<div class="server-card hidden" aria-hidden="true"><span id="serverDot"></span><div><b id="serverStatus">وضعیت اجرا</b><small id="serverSub">سامانه</small></div></div>
+<button class="nav-item" data-page="settings"><span>⚙</span><b>تنظیمات</b></button>
+<button class="nav-item danger" id="logoutBtn"><span>↪</span><b>خروج از سامانه</b></button>
+<button class="nav-item danger owner-only" id="shutdownAppBtn" type="button"><span>⏻</span><b>بستن کامل سامانه</b></button>
+</div>
+</aside>
+<main class="main">
+<header class="topbar">
+<button aria-label="بازکردن نوار کناری" class="icon-btn mobile-only" id="openSidebar">☰</button>
+<div class="top-actions">
+<button aria-label="تغییر قالب نمایش" class="icon-btn" id="themeToggle" title="قالب روشن سازمانی">☀</button>
+<button aria-label="نمایش پیام‌ها" class="icon-btn has-dot" id="notificationBtn" title="پیام‌ها">◇</button>
+<div class="profile"><div class="avatar" id="avatar">ا</div><div><b id="roleName">کاربر سامانه</b><small id="userMode">سطح دسترسی</small></div></div>
+</div>
+</header>
+<div class="content">
+<section class="page chart-page active" id="page-formalChart">
+<div class="page-head compact"><div><div class="eyebrow">چارت یکپارچه رسمی، شرکتی، حجمی و مشاور</div><h1>چارت سازمان</h1><p>تمام نیروها در یک چارت واحد نمایش داده می‌شوند؛ رنگ نودها نوع همکاری و نشان‌های حفظ پست، پست بانام و خارج از چارت را مشخص می‌کند.</p></div><div class="head-actions"><button class="secondary chart-print">چاپ / PDF</button></div></div>
+<div class="chart-browsebar"><button class="secondary chart-back" data-type="formal" id="formalBack">بازگشت</button><div class="chart-breadcrumb" id="formalBreadcrumb"></div><strong id="formalCurrentTitle"></strong></div>
+<div class="chart-toolbar no-page-selector">
+<div class="chart-search"><input id="formalChartSearch" placeholder="جست‌وجو در این بخش…"/><button>جست‌وجو</button></div>
+<div class="legend"><span><i class="dot formal-v4130"></i> رسمی</span><span><i class="dot company-v4130"></i> شرکتی</span><span><i class="dot volume-v4130"></i> حجمی</span><span><i class="dot consultant-v4130"></i> مشاور</span><span><i class="dot named-v4130"></i> پست با نام</span><span><i class="dot hold-v4130"></i> حفظ پست</span><span><i class="dot red"></i> پست خالی</span><span><i class="dot cyan"></i> خارج از چارت</span></div>
+</div>
+<div class="chart-layout"><div class="chart-stage"><div class="chart-canvas" id="formalCanvas"></div></div><aside class="details-panel" id="formalDetails"><div class="empty-state"><div>⌘</div><h3>جزئیات نود</h3><p>برای مشاهده پست‌ها و افراد، روی یک نود کلیک کنید.</p></div></aside></div>
+</section>
+<section aria-hidden="true" class="page chart-page deprecated-chart-page" id="page-nonChart">
+<div class="page-head compact"><div><div class="eyebrow">وضعیت نیروهای شرکتی و حجمی</div><h1>چارت سازمان</h1><p>افراد مرتبط زیر نودهای متناظر قرار گرفته‌اند و ساختار مصوب کامل باقی مانده است.</p></div><div class="head-actions"><button class="secondary chart-print">چاپ / PDF</button></div></div>
+<div class="chart-browsebar"><button class="secondary chart-back" data-type="non" id="nonBack">بازگشت</button><div class="chart-breadcrumb" id="nonBreadcrumb"></div><strong id="nonCurrentTitle"></strong></div>
+<div class="chart-toolbar no-page-selector">
+<div class="chart-search"><input id="nonChartSearch" placeholder="جست‌وجو در این بخش…"/><button>جست‌وجو</button></div>
+<div class="legend"><span><i class="dot white"></i> شرکتی / حجمی</span><span><i class="dot cyan"></i> خارج از چارت</span><span><i class="dot neutral"></i> نود سازمانی</span></div>
+</div>
+<div class="chart-layout"><div class="chart-stage"><div class="chart-canvas" id="nonCanvas"></div></div><aside class="details-panel" id="nonDetails"><div class="empty-state"><div>◎</div><h3>جزئیات نود</h3><p>برای مشاهده نیروهای مرتبط، روی یک نود کلیک کنید.</p></div></aside></div>
+</section>
+<section class="page status-chart-page org115-status" id="page-statusChart">
+<header class="org115-command-bar">
+<div class="org115-command-title">
+<div aria-hidden="true" class="org115-command-icon">⌘</div>
+<div><div class="eyebrow">تحلیل نیروی انسانی و وضعیت موجود</div><h1>وضعیت چارت</h1><p>داشبورد مدیریتی زنده از استقرار فعلی، ترکیب پرسنل و مقایسه واحدهای زیرمجموعه.</p></div>
+</div>
+<div class="org115-command-scope">
+<label for="statusScope">حوزه مورد بررسی</label>
+<select id="statusScope"></select>
+</div>
+<div class="org115-command-meta">
 
-  <section id="appView" class="hidden">
-    <nav class="tabs">
-      <button data-tab="dashboard" class="active">داشبورد</button>
-      <button data-tab="personnel">پرسنل</button>
-      <button data-tab="audit">ممیزی</button>
-      <button data-tab="users">کاربران</button>
-      <button id="backupBtn">پشتیبان‌گیری</button>
-      <button id="logoutBtn">خروج</button>
-    </nav>
+<div class="org115-updated"><span>آخرین بروزرسانی</span><b id="statusSnapshotDate"></b></div>
+</div>
+<div class="org115-command-actions">
+<button class="secondary page-back-action" id="statusBack" type="button"><span aria-hidden="true">→</span><span>بازگشت</span></button>
+<button class="secondary" id="statusExport" type="button"><span aria-hidden="true">▣</span><span>خروجی Excel</span></button>
+<button class="secondary" id="statusPrint" type="button"><span aria-hidden="true">▤</span><span>چاپ گزارش</span></button>
+<button class="primary" id="statusOpenChart" type="button"><span aria-hidden="true">⌘</span><span>مشاهده چارت</span></button>
+</div>
+</header>
+<section aria-labelledby="org115SummaryTitle" class="org115-block org115-summary-block">
+<div class="org115-section-head"><div><span>نمای مدیریتی</span><h2 id="org115SummaryTitle">شاخص‌های اصلی وضعیت چارت</h2><p>مهم‌ترین اعداد حوزه در یک نگاه؛ کارت‌های دارای فهرست قابل کلیک‌اند.</p></div><div class="status-chip-row"><span class="status-chip success">محاسبه زنده</span><span class="status-chip info">شماره پرسنلی یکتا</span><span class="status-chip warn">بدون دوباره‌شماری</span></div></div>
+<div class="org115-kpi-grid" id="statusKpis"></div>
+<div class="org115-subsection-title"><div><h3>ترکیب نیروی انسانی و وضعیت‌های ویژه</h3><p>گروه‌های استخدامی جمعاً ۱۰۰٪ نیروی یکتا هستند؛ وضعیت‌های ویژه هم‌پوشان‌اند و مستقل گزارش می‌شوند.</p></div></div>
+<div class="org116-workforce-layout">
+<article class="org115-analytics-card org116-workforce-chart-card">
+<div class="org115-mini-head"><h3>نمودار تفکیکی قابل کلیک</h3><span>تعداد، درصد، زن و مرد</span></div>
+<div class="org116-workforce-chart" id="statusWorkforceChart"></div>
+</article>
+<div class="org116-workforce-cards">
+<article class="org115-analytics-card org116-employment-panel"><div class="org115-mini-head"><h3>گروه‌های استخدامی</h3><span>جمع گروه‌ها = نیروی یکتا</span></div><div class="org115-employment-grid" id="statusEmploymentKpis"></div></article>
+<article class="org115-analytics-card org116-special-panel"><div class="org115-mini-head"><h3>وضعیت‌های ویژه</h3><span>ویژگی‌های هم‌پوشان</span></div><div class="org116-special-grid" id="statusSpecialKpis"></div></article>
+</div>
+</div>
+</section>
+<section aria-labelledby="jobFamilyDashboardTitle" class="org115-block job-family-dashboard-block">
+<div class="org115-section-head"><div><span>تحلیل تخصصی نیروی انسانی</span><h2 id="jobFamilyDashboardTitle">خلاصه وضعیت پرسنل</h2><p>هر یک از ۱۳۵۶ نفر دقیقاً یک‌بار و بر اساس عنوان پست، حوزه فعالیت و واحد سازمانی طبقه‌بندی می‌شود.</p></div><button class="secondary" id="jobFamilyOpen" type="button">مشاهده جزئیات کامل</button></div>
+<div class="job-family-summary-kpis" id="jobFamilySummaryKpis"></div>
+<div class="job-family-summary-layout"><article class="org115-analytics-card"><div class="org115-mini-head"><h3>توزیع فنی و غیرفنی</h3><span>بدون دوباره‌شماری</span></div><div id="jobFamilySummarySplit"></div></article><article class="org115-analytics-card"><div class="org115-mini-head"><h3>گروه‌های فعالیت پرتعداد</h3><span>برای جزئیات روی هر گروه کلیک کنید</span></div><div class="job-family-summary-bars" id="jobFamilySummaryBars"></div></article></div>
+</section>
+<section aria-labelledby="org118CompareTitle" class="org115-block org118-comparison-block">
+<div class="org115-section-head"><div><span>مقایسه زیرمجموعه‌ها</span><h2 id="org118CompareTitle">مقایسه حوزه‌های زیرمجموعه</h2><p>نمودار میله‌ای گروهیِ رسمی، شرکتی، حجمی، حفظ پست، پست با نام و پست خالی؛ هر ستون قابل کلیک است.</p></div><div class="status-series-legend" id="statusSeriesLegend"></div></div>
+<p class="org115-chart-subtitle" id="statusCompareSubtitle"></p>
+<div class="org118-compare-chart" id="statusCompareChart"></div>
+</section>
 
-    <section id="dashboard" class="tab active">
-      <div id="identity" class="card"></div>
-      <div id="stats" class="stats"></div>
-    </section>
+<section aria-labelledby="org115TableTitle" class="org115-block org115-table-block">
+<div class="org115-section-head"><div><span>مقایسه و رتبه‌بندی</span><h2 id="org115TableTitle">جدول مقایسه واحدها</h2><p>جست‌وجو، مرتب‌سازی و مشاهده جزئیات پست‌ها و افراد در یک جدول تمام‌عرض و خوانا.</p></div><button class="secondary" id="statusScopeBack" type="button"><span aria-hidden="true">→</span> بازگشت به سطح قبل</button></div>
+<div class="org115-table-summary" id="statusTableSummary"></div>
+<div class="org115-table-toolbar">
+<label class="org115-search"><span aria-hidden="true">⌕</span><input id="org115TableSearch" placeholder="جست‌وجوی نام واحد..." type="search"/></label>
+<select aria-label="مرتب‌سازی جدول" id="org115TableSort"><option value="occupancy-desc">درصد اشغال: زیاد به کم</option><option value="occupancy-asc">درصد اشغال: کم به زیاد</option><option value="vacancy-desc">پست خالی: زیاد به کم</option><option value="hold-desc">حفظ پست: زیاد به کم</option><option value="people-desc">نیروی فعلی: زیاد به کم</option></select>
+<div class="org115-filter-chips"><button class="active" data-org115-filter="all" type="button">همه واحدها</button><button data-org115-filter="vacancy" type="button">نیازمند توجه</button><button data-org115-filter="hold" type="button">دارای حفظ پست</button><button data-org115-filter="low" type="button">اشغال زیر ۸۰٪</button></div>
+</div>
+<div class="org117-table-layout"><div class="org117-table-surface"><div class="table-wrap status-table org115-smart-table" id="statusTable"></div><div class="org115-table-pager" id="org115TablePager"></div></div></div>
 
-    <section id="personnel" class="tab">
-      <div class="card toolbar">
-        <input id="search" placeholder="جستجو نام، شماره پرسنلی، واحد یا پست">
-        <button id="searchBtn">جستجو</button>
-      </div>
-      <div class="split">
-        <div class="card list-card">
-          <table><thead><tr><th>شماره</th><th>نام</th><th>واحد</th><th>پست</th><th>وضعیت</th></tr></thead><tbody id="personnelRows"></tbody></table>
-        </div>
-        <div id="personDetail" class="card detail"><p class="muted">یک نفر را انتخاب کنید.</p></div>
-      </div>
-    </section>
+</section>
+</section>
+<section class="page" id="page-personnelDirectory">
+<div class="page-head"><div><div class="eyebrow">فهرست تجمیعی و بخش‌بندی‌شده</div><h1>لیست کلی پرسنل</h1><p>نمای یکپارچه از تمام پرسنل به‌همراه لیست تفکیکی هر حوزه، مدیریت، اداره، گروه و شهرستان.</p></div><div class="head-actions"><button class="secondary" data-action="print">چاپ فهرست</button><button class="secondary" id="directoryExportAll">خروجی Excel کل پرسنل</button></div></div>
+<div class="panel directory-filters-panel">
+<div class="filters directory-filters">
+<select id="directoryScope"></select>
+<select id="directoryGroup"><option value="">همه گروه‌ها</option><option value="رسمی">رسمی</option><option value="شرکتی">شرکتی</option><option value="حجمی">حجمی</option><option value="مشاور">مشاور</option><option value="__hold">حفظ پست</option><option value="__outside">خارج از چارت</option><option value="__named">پست با نام</option></select>
+<button class="ghost" id="directoryClear">پاک‌کردن فیلترها</button>
+</div>
+</div>
+<div class="status-kpi-grid" id="directoryKpis"></div>
+<div class="status-dashboard-grid directory-grid">
+<article class="panel status-side-card directory-side-panel directory-top-panel">
+<div class="panel-head"><div><h3>بخش‌های اصلی</h3><p>دسترسی سریع به فهرست پرسنل هر بخش و ورود مستقیم به همان لیست</p></div></div>
+<div class="directory-quick-scopes" id="directoryQuickScopes"></div>
+</article>
+<article class="panel status-main-chart directory-main-panel">
+<div class="panel-head"><div><h3>لیست کلی پرسنل</h3><p id="directoryTableSubtitle">نمایش تجمیعی تمام افرادِ حوزه انتخاب‌شده</p></div><button class="secondary" id="directoryExportCurrent">خروجی Excel همین لیست</button></div>
+<div class="directory-count" id="directoryCount"></div>
+<div class="directory-list-tools"><input id="directoryListSearch" placeholder="جست‌وجو در همین لیستِ فعلی: نام، شماره پرسنلی، پست یا واحد"/><div class="directory-list-note">جست‌وجوی این بخش فقط روی لیست فعلی اعمال می‌شود.</div></div>
+<div class="table-wrap status-table directory-big-table" id="directoryTable"></div>
+</article>
+</div>
+</section>
+<section class="page personnel-education-page" id="page-personnelEducation">
+<div class="page-head"><div><div class="eyebrow">نمای آماری سطح تحصیلات</div><h1>تحصیلات پرسنل</h1><p>تجمیع مدرک تحصیلی همه پرسنل با تفکیک زن و مرد؛ با کلیک روی هر کارت، فهرست همان گروه نمایش داده می‌شود.</p></div><div class="head-actions"><button class="secondary" id="educationExport" type="button">خروجی Excel تحصیلات</button></div></div>
+<section class="panel education-summary-panel">
+<div class="panel-head"><div><h3>کارت‌های آماری تحصیلات</h3><p id="educationSummaryText">اطلاعات تحصیلی پس از ورود به صفحه محاسبه می‌شود.</p></div></div>
+<div class="education-kpi-grid" id="educationKpis"></div>
+</section>
+<section class="panel education-chart-panel" aria-labelledby="educationChartTitle">
+<div class="panel-head"><div><h3 id="educationChartTitle">نمودار میله‌ای تحصیلات پرسنل</h3><p id="educationChartSubtitle">مقایسه تعداد کل، مرد و زن در هر مقطع تحصیلی</p></div><div class="education-chart-legend" id="educationChartLegend"></div></div>
+<div class="education-bar-chart" id="educationBarChart" aria-live="polite"></div>
+<p class="education-chart-note">با کلیک روی هر میله، فهرست پایین صفحه روی همان مقطع و جنسیت فیلتر می‌شود.</p>
+</section>
+<section class="panel education-directory-panel">
+<div class="panel-head"><div><h3>فهرست پرسنل بر اساس تحصیلات</h3><p id="educationTableSubtitle">همه مدارک تحصیلی</p></div><button class="ghost" id="educationClear" type="button">پاک‌کردن فیلترها</button></div>
+<div class="education-tools"><select id="educationCategory"><option value="">همه مدارک تحصیلی</option><option value="دیپلم">دیپلم</option><option value="فوق دیپلم">فوق دیپلم</option><option value="لیسانس">لیسانس</option><option value="فوق لیسانس">فوق لیسانس</option><option value="دکتری">دکتری</option><option value="زیر دیپلم/نامشخص">زیر دیپلم/نامشخص</option></select><select id="educationGender"><option value="">همه جنسیت‌ها</option><option value="مرد">مرد</option><option value="زن">زن</option></select><input id="educationSearch" type="search" placeholder="جست‌وجوی نام، شماره پرسنلی، مدرک یا واحد…"/></div>
+<div class="education-count" id="educationCount"></div>
+<div class="table-wrap status-table education-table" id="educationTable"></div>
+</section>
+</section>
+<section class="page job-family-page" id="page-jobFamilies">
+<div class="page-head"><div><div class="eyebrow">تحلیل ترکیب تخصصی و عملیاتی</div><h1>تحلیل وضعیت پرسنل</h1><p>طبقه‌بندی یکتای تمام پرسنل بر اساس نوع فعالیت فنی، عملیاتی، اداری و پشتیبانی؛ مجموع همه گروه‌ها دقیقاً برابر کل نیروی انسانی است.</p></div><div class="head-actions"><button class="secondary" id="jobFamilyExport" type="button">خروجی Excel وضعیت پرسنل</button></div></div>
+<section class="panel job-family-kpi-panel"><div class="panel-head"><div><h3>کارت‌های آماری ترکیب تخصصی</h3><p id="jobFamilySummaryText">اطلاعات پس از ورود به صفحه محاسبه می‌شود.</p></div></div><div class="job-family-kpi-grid" id="jobFamilyKpis"></div></section>
+<section class="job-family-chart-grid"><article class="panel job-family-split-panel"><div class="panel-head"><div><h3>فنی و عملیاتی در برابر غیرفنی و اداری</h3><p>سهم هر گروه از کل ۱۳۵۶ نفر</p></div></div><div class="job-family-donut-wrap" id="jobFamilyDonut"></div></article><article class="panel job-family-chart-panel"><div class="panel-head"><div><h3>توزیع پرسنل بر اساس نوع فعالیت</h3><p>هر ستون قابل کلیک است و فهرست پایین را فیلتر می‌کند.</p></div></div><div class="job-family-column-chart" id="jobFamilyChart"></div></article></section>
+<section class="panel job-family-directory-panel"><div class="panel-head"><div><h3>فهرست پرسنل بر اساس نوع فعالیت</h3><p id="jobFamilyTableSubtitle">همه انواع فعالیت</p></div><button class="ghost" id="jobFamilyClear" type="button">پاک‌کردن فیلترها</button></div>
+<div class="job-family-tools"><select id="jobFamilyClass"><option value="">همه گروه‌های تخصصی</option><option value="technical">فنی و عملیاتی</option><option value="nontechnical">غیرفنی و اداری</option><option value="review">نیازمند تعیین گروه</option></select><select id="jobFamilyCategory"><option value="">همه انواع فعالیت</option></select><select id="jobFamilyEmployment"><option value="">همه انواع همکاری</option><option value="رسمی">رسمی</option><option value="شرکتی">شرکتی</option><option value="حجمی">حجمی</option><option value="مشاور">مشاور</option></select><input id="jobFamilySearch" type="search" placeholder="جست‌وجوی نام، شماره پرسنلی، عنوان پست، واحد یا محل خدمت…"/></div>
+<div class="job-family-count" id="jobFamilyCount"></div><div class="table-wrap status-table job-family-table" id="jobFamilyTable"></div></section>
+</section>
 
-    <section id="audit" class="tab"><div class="card"><h2>ممیزی</h2><div id="auditRows"></div></div></section>
-    <section id="users" class="tab"><div class="card"><h2>کاربران</h2><div id="userRows"></div></div></section>
-  </section>
+<section class="page personnel-age-page" id="page-personnelAge">
+<div class="page-head"><div><div class="eyebrow">داشبورد مدیریتی ترکیب سنی</div><h1>سن پرسنل</h1><p>میانگین سن و ترکیب سنی کل شرکت و تمام واحدهای سازمانی، بر اساس تاریخ تولد و محل خدمت/حوزه واقعی هر فرد.</p></div></div>
+<section class="panel age-controls-panel"><div class="panel-head"><div><h3>فیلتر نمودارهای سن</h3><p id="ageSummaryText">سه نمودار مستقل برای آقایان، بانوان و کل پرسنل؛ با کلیک روی هر میله فهرست همان بخش باز می‌شود.</p></div></div><div class="age-filter-tools"><select id="ageEmployment"><option value="">همه انواع همکاری</option><option value="رسمی">رسمی</option><option value="شرکتی">شرکتی</option><option value="حجمی">حجمی</option><option value="مشاور">مشاور</option></select><select id="ageView"><option value="overview">نمای مدیریتی کل</option><option value="headquarters">ستاد و مناطق کرمانشاه</option><option value="counties">مدیریت‌های شهرستان‌ها</option><option value="all">همه واحدها</option></select><input id="ageScopeSearch" type="search" placeholder="جست‌وجوی واحد؛ مثلا هرسین یا منابع انسانی…"><button class="ghost" id="ageClear" type="button">پاک‌کردن فیلترها</button></div></section>
+<section class="panel age-chart-panel age-chart-men"><div class="panel-head"><div><h3>میانگین سنی آقایان</h3><p id="ageMenSubtitle">میله سبز — برای مشاهده فهرست آقایان هر واحد روی میله کلیک کنید.</p></div></div><div class="age-bar-chart" id="ageMenChart" aria-live="polite"></div></section>
+<section class="panel age-chart-panel age-chart-women"><div class="panel-head"><div><h3>میانگین سنی بانوان</h3><p id="ageWomenSubtitle">میله قرمز — برای مشاهده فهرست بانوان هر واحد روی میله کلیک کنید.</p></div></div><div class="age-bar-chart" id="ageWomenChart" aria-live="polite"></div></section>
+<section class="panel age-chart-panel age-chart-all"><div class="panel-head"><div><h3>میانگین سنی کل آقایان و بانوان</h3><p id="ageAllSubtitle">میله آبی — میانگین واقعی از همه افراد واحد، نه میانگین ساده دو گروه.</p></div></div><div class="age-bar-chart" id="ageAllChart" aria-live="polite"></div></section>
+<section class="panel age-directory-panel" id="ageDirectoryPanel"><div class="panel-head"><div><h3 id="ageTableTitle">فهرست پرسنل</h3><p id="ageTableSubtitle">برای مشاهده فهرست روی یکی از میله‌های نمودار کلیک کنید.</p></div><button class="ghost" id="ageBackAll" type="button">بستن فهرست</button></div><div class="age-count" id="ageCount"></div><div class="table-wrap status-table age-table" id="ageTable"><div class="empty-state"><p>یک میله از نمودار را انتخاب کنید.</p></div></div></section>
+</section>
+
+<section class="page owner-only user-management-page" id="page-users">
+<div class="page-head"><div><div class="eyebrow">کنترل ساده و قابل پیگیری دسترسی‌ها</div><h1>مدیریت کاربران</h1><p>هر کاربر مدیریتی نام کاربری و رمز مستقل دارد و فعالیت‌های او با نام واقعی ثبت می‌شود.</p></div><div class="head-actions"><button class="primary" id="addSystemUser" type="button">افزودن کاربر مدیریتی</button></div></div>
+<div class="user-kpi-grid" id="userKpis"></div>
+<section class="panel user-directory-panel"><div class="panel-head"><div><h3>حساب‌های مدیریتی سامانه</h3><p>حساب مدیر اصلی در ابتدای فهرست نمایش داده می‌شود؛ شماره همراه فقط در جزئیات حساب قابل مشاهده است.</p></div><button class="secondary" id="refreshUsers" type="button">به‌روزرسانی فهرست</button></div><div class="user-table-wrap" id="usersTable"></div></section>
+</section>
+<section class="page perm-edit-data org460-import-page" id="page-imports">
+<header class="org460-import-head">
+  <div><div class="eyebrow">مرکز امن تغییر داده و جانمایی</div><h1>ورود و به‌روزرسانی Excel ماهانه</h1><p>پیش‌نمایش، مقایسه، جانمایی، پشتیبان‌گیری و اعمال تراکنشی؛ هیچ تغییری قبل از تأیید نهایی روی داده اصلی انجام نمی‌شود.</p></div>
+  <div class="org460-import-actions"><a class="secondary org460-template-link" href="assets/templates/SazmanHR-Monthly-Import-Template.xlsx" download>دریافت قالب استاندارد Excel</a></div>
+</header>
+<section class="org460-safety-grid" aria-label="کنترل‌های ایمنی ورود Excel">
+  <article><i>◉</i><div><b>Dry Run واقعی</b><span>فایل ابتدا فقط خوانده و مقایسه می‌شود؛ داده اصلی دست‌نخورده می‌ماند.</span></div></article>
+  <article><i>⎙</i><div><b>پشتیبان خودکار</b><span>در لحظه اعمال، نسخه ایمنی کامل قبل از اولین تغییر ساخته می‌شود.</span></div></article>
+  <article><i>↶</i><div><b>تراکنش و Rollback</b><span>در خطای بحرانی، داده قبلی برگردانده می‌شود و تغییر نیمه‌کاره نمی‌ماند.</span></div></article>
+</section>
+<div class="import-steps org460-import-steps" id="org460ImportSteps"><div class="active" data-step="1"><b>۱</b><span>انتخاب فایل</span></div><i></i><div data-step="2"><b>۲</b><span>اعتبارسنجی</span></div><i></i><div data-step="3"><b>۳</b><span>مقایسه و جانمایی</span></div><i></i><div data-step="4"><b>۴</b><span>تأیید و اعمال</span></div><i></i><div data-step="5"><b>۵</b><span>نتیجه</span></div></div>
+<section class="org460-import-layout">
+  <article class="panel org460-upload-panel">
+    <div class="panel-head"><div><h3>فایل تغییرات ماهانه</h3><p>فرمت امن این نسخه فقط .xlsx است. برای فایل قدیمی .xls ابتدا در Excel گزینه Save As → .xlsx را بزنید.</p></div><span class="org460-safe-badge">بدون تغییر تا تأیید</span></div>
+    <label class="org460-dropzone" id="org460Dropzone"><input accept=".xlsx" data-kind="monthly" id="org460MonthlyFile" type="file"/><span class="org460-upload-icon">⇧</span><strong>فایل Excel ماهانه را انتخاب کنید</strong><small>قالب پیشنهادی شامل Sheetهای Personnel و Assignments است — حداکثر ۲۴ مگابایت</small><em>انتخاب فایل .xlsx</em></label>
+    <div class="org460-sheet-help">
+      <div><b>Personnel</b><span>تغییر اطلاعات فردی، نیروی جدید، نوع همکاری، محل خدمت، عنوان پست و سایر فیلدها</span></div>
+      <div><b>Assignments</b><span>جانمایی جاری یا انتقال پست مصوب با target_node_id معتبر از فهرست پست‌ها</span></div>
+    </div>
+  </article>
+  <aside class="panel org460-policy-panel">
+    <div class="panel-head"><div><h3>قواعد اعمال</h3><p>قواعد محافظتی ثابت این موتور</p></div></div>
+    <ul>
+      <li><b>سلول خالی اطلاعات موجود را پاک نمی‌کند.</b><span>برای پاک‌کردن باید نام فیلد صریحاً در clear_fields نوشته شود.</span></li>
+      <li><b>شماره پرسنلی کلید تطبیق است.</b><span>تکراری یا خالی بودن شماره پرسنلی عملیات را مسدود می‌کند.</span></li>
+      <li><b>مقصد جانمایی اعتبارسنجی می‌شود.</b><span>target_node_id باید در ساختار همین نسخه وجود داشته باشد.</span></li>
+      <li><b>انتقال مصوب سخت‌گیرانه است.</b><span>approved_transfer فقط به پست تأییدشده در وضعیت چارت اجازه داده می‌شود.</span></li>
+    </ul>
+  </aside>
+</section>
+<section class="panel import-preview org460-preview" id="importPreview"><div class="empty-state"><div>⇧</div><h3>هنوز فایلی انتخاب نشده است</h3><p>پس از انتخاب فایل، افراد جدید، تغییرات فیلدی، جابه‌جایی‌ها، هشدارها و خطاها بدون دست‌زدن به داده اصلی نمایش داده می‌شوند.</p></div></section>
+<section class="panel org460-history-panel" id="placementReviewPanel"><div class="empty-state"><div>↻</div><h3>تاریخچه به‌روزرسانی‌های ماهانه</h3><p>پس از اولین اعمال، نام فایل، کاربر، زمان، تعداد تغییرات و نسخه پشتیبان در این قسمت نمایش داده می‌شود.</p></div></section>
+</section>
+<section class="page org450-report-page" id="page-reports">
+<header class="org450-report-head">
+  <div class="org450-title-wrap"><div class="org450-title-icon">▦</div><div><div class="eyebrow">مرکز تحلیل و گزارش مدیریتی</div><h1>داشبورد گزارش‌های مدیریتی</h1><p>تحلیل یکپارچه نیروی انسانی، ساختار مصوب، کیفیت داده و گزارش‌های قابل پیگیری</p></div></div>
+  <div class="org450-head-meta"><span>آخرین محاسبه</span><b id="org450Updated">—</b></div>
+  <div class="org450-head-actions"><button class="secondary" id="org450Print" type="button">چاپ / PDF</button><button class="secondary" id="org450ExportExcel" type="button">خروجی Excel</button><button class="primary" id="org450ExportPpt" type="button">PowerPoint مدیریتی</button></div>
+</header>
+<section class="org450-filter-panel" aria-label="فیلترهای گزارش">
+  <div class="org450-filter-title"><b>فیلتر سراسری گزارش</b><span>تمام کارت‌ها، نمودارها و جدول پایین هم‌زمان به‌روزرسانی می‌شوند.</span></div>
+  <div class="org450-filters">
+    <label><span>حوزه سازمانی</span><select id="org450Scope"></select></label>
+    <label><span>نوع همکاری</span><select id="org450Employment"><option value="">همه انواع همکاری</option><option value="رسمی">رسمی</option><option value="شرکتی">شرکتی</option><option value="حجمی">حجمی</option><option value="مشاور">مشاور</option></select></label>
+    <label><span>وضعیت اشتغال</span><select id="org450Status"><option value="">همه وضعیت‌ها</option></select></label>
+    <label><span>گروه تخصصی</span><select id="org450JobClass"><option value="">همه گروه‌ها</option><option value="technical">فنی و عملیاتی</option><option value="nontechnical">غیرفنی و اداری</option><option value="review">نیازمند تعیین گروه</option></select></label>
+    <label><span>تحصیلات</span><select id="org450Education"><option value="">همه مدارک</option><option value="زیر دیپلم/نامشخص">زیر دیپلم/نامشخص</option><option value="دیپلم">دیپلم</option><option value="فوق دیپلم">فوق دیپلم</option><option value="لیسانس">لیسانس</option><option value="فوق لیسانس">فوق لیسانس</option><option value="دکتری">دکتری</option></select></label>
+    <label class="org450-search-filter"><span>جست‌وجو</span><input id="org450Search" type="search" placeholder="نام، شماره پرسنلی، پست، واحد یا محل خدمت…"></label>
+    <button class="ghost" id="org450Reset" type="button">پاک‌کردن همه فیلترها</button>
+  </div>
+  <div class="org450-active-filters" id="org450ActiveFilters"></div>
+</section>
+<section class="org450-kpi-grid" id="org450Kpis"></section>
+<section class="org450-main-grid">
+  <article class="panel org450-insight-panel"><div class="org450-card-head"><div><span>تحلیل خودکار</span><h2>نکات و هشدارهای مدیریتی</h2><p>نتایج مستقیم از داده‌های فعلی؛ هر مورد قابل کلیک و پیگیری است.</p></div><span class="org450-live">محاسبه زنده</span></div><div class="org450-insights" id="org450Insights"></div></article>
+  <article class="panel org450-chart-card"><div class="org450-card-head"><div><span>ترکیب نیروی انسانی</span><h2>نوع همکاری</h2><p>سهم هر گروه از فیلتر فعلی</p></div></div><div id="org450EmploymentChart"></div></article>
+  <article class="panel org450-chart-card org450-wide"><div class="org450-card-head"><div><span>مقایسه سازمانی</span><h2>واحدهای پرتعداد</h2><p>رتبه‌بندی بر اساس نیروی منطبق با فیلتر فعلی</p></div></div><div class="org450-bar-chart" id="org450UnitChart"></div></article>
+  <article class="panel org450-chart-card"><div class="org450-card-head"><div><span>تحلیل تحصیلات</span><h2>توزیع سطح تحصیلات</h2><p>هر ستون برای Drill-down قابل کلیک است.</p></div></div><div class="org450-mini-bars" id="org450EducationChart"></div></article>
+  <article class="panel org450-chart-card"><div class="org450-card-head"><div><span>تحلیل تخصصی</span><h2>فنی / غیرفنی</h2><p>طبقه‌بندی یکتای پرسنل فیلترشده</p></div></div><div id="org450JobChart"></div></article>
+  <article class="panel org450-chart-card"><div class="org450-card-head"><div><span>کنترل کیفیت</span><h2>کیفیت اطلاعات</h2><p>کامل بودن، تطابق محل و وضعیت‌های ویژه</p></div></div><div id="org450Quality"></div></article>
+</section>
+<section class="panel org450-quick-panel"><div class="org450-card-head"><div><span>گزارش‌های سریع</span><h2>دسترسی یک‌کلیکی</h2><p>برای مشاهده جزئیات، یکی از گزارش‌های زیر را انتخاب کنید.</p></div></div><div class="org450-quick-reports" id="org450QuickReports"></div></section>
+<section class="panel org450-table-panel">
+  <div class="org450-card-head org450-table-head"><div><span>گزارش تفصیلی</span><h2>فهرست پرسنل منطبق با گزارش</h2><p id="org450TableSubtitle">—</p></div><div class="org450-table-actions"><label>مرتب‌سازی <select id="org450Sort"><option value="name">نام و نام خانوادگی</option><option value="personnel">شماره پرسنلی</option><option value="unit">واحد سازمانی</option><option value="employment">نوع همکاری</option></select></label><label>نمایش <select id="org450PageSize"><option value="10">10</option><option value="15" selected>15</option><option value="25">25</option><option value="50">50</option></select></label><button class="secondary" id="org450ColumnsBtn" type="button">انتخاب ستون‌ها</button></div></div>
+  <div class="org450-column-picker hidden" id="org450ColumnPicker"></div>
+  <div class="org450-table-wrap" id="org450Table"></div>
+  <div class="org450-pager" id="org450Pager"></div>
+</section>
+<section class="org450-report-meta"><div><span>مبنای گزارش</span><b>داده جاری سامانه + ساختار مصوب + موتور وضعیت چارت</b></div><div><span>تعداد رکورد منطبق</span><b id="org450MetaCount">—</b></div><div><span>نسخه گزارش</span><b>4.9.0</b></div></section>
+<!-- legacy report controls kept hidden for backward-compatible boot bindings -->
+<div class="hidden" aria-hidden="true"><select id="reportUnit"></select><select id="reportGroup"></select><button id="buildReport"></button><button id="printReport"></button><button id="downloadReport"></button><div id="reportCards"></div><div id="reportResult"></div></div>
+</section>
+<section class="page perm-view-history" id="page-history">
+<div class="page-head"><div><div class="eyebrow">ردیابی اقدامات کاربران</div><h1>سوابق فعالیت کاربران</h1><p>Audit Log زنجیره‌ای و قابل فیلتر؛ ورودها، تغییرات اطلاعات، مدیریت حساب‌ها و پشتیبان‌گیری با نام کاربر و زمان دقیق ثبت می‌شوند.</p></div><div class="head-actions perm-backup-restore"><button class="secondary" id="restoreBackup">بازیابی پشتیبان کامل</button><button class="secondary" id="backupNow">تهیه پشتیبان کامل</button><input class="hidden" id="restoreBackupInput" accept=".sazhr.zip,.zip,application/zip" type="file"/></div></div>
+<section class="panel audit-filter-panel"><div class="audit-filter-tools"><input id="auditSearch" type="search" placeholder="جست‌وجو در عملیات، شخص یا جزئیات…"><select id="auditUser"><option value="">همه کاربران</option></select><input id="auditAction" placeholder="نوع عملیات…"><label>از <input id="auditFrom" type="date"></label><label>تا <input id="auditTo" type="date"></label><button class="secondary" id="auditClear" type="button">پاک‌کردن فیلتر</button><b id="auditCount">—</b></div></section>
+<div class="timeline" id="historyList"></div>
+</section>
+<section class="page" id="page-systemHealth">
+<div class="page-head"><div><div class="eyebrow">کنترل کیفیت و پایداری</div><h1>سلامت سیستم</h1><p>کنترل مستقیم SQLite، Baseline پرسنل، یکپارچگی Audit، Backup و خطاهای ثبت‌شده.</p></div></div>
+<div id="systemHealthContent"></div>
+</section>
+<section class="page" id="page-settings">
+<div class="page-head"><div><div class="eyebrow">پیکربندی سامانه</div><h1>تنظیمات</h1><p>شخصی‌سازی نمایش و مدیریت نسخه محلی</p></div></div>
+<div class="settings-grid"><article class="panel"><h3>ظاهر سامانه</h3><div class="setting-row"><div><b>تم رابط کاربری</b><small>قالب خاکستری-آبی متعادل و کم‌درخشش</small></div><button class="secondary" disabled="" id="settingsTheme">قالب خاکستری-آبی فعال</button></div><div class="setting-row"><div><b>اندازه متن چارت</b><small>برای نمایشگرهای کوچک یا سالن جلسات</small></div><select id="chartFontSize"><option value="compact">فشرده</option><option selected="" value="normal">استاندارد</option><option value="large">بزرگ</option></select></div></article><article class="panel admin-only"><h3>امنیت و دسترسی</h3><div class="setting-row"><div><b>رمز حساب شخصی</b><small>رمز حساب با Hash امن در SQLite نگهداری می‌شود؛ مدیر اصلی نیز می‌تواند رمز شخصی خود را با تأیید رمز فعلی تغییر دهد.</small></div><button class="secondary" id="changePassword">تغییر رمز من</button></div></article><article class="panel"><h3>اطلاعات نسخه</h3><dl class="info-list"><div><dt>نام سامانه</dt><dd>سامانه هوشمند معاونت منابع انسانی</dd></div><div><dt>ساختار مصوب</dt><dd>اردیبهشت ۱۳۹۴ — ساختار کامل مصوب</dd></div><div><dt>حالت اجرا</dt><dd id="runtimeMode">نسخه مستقل آفلاین</dd></div><div><dt>نسخه سامانه</dt><dd id="appVersion">4.9.0</dd></div></dl></article></div>
+</section>
+</div>
 </main>
-<template id="movementTemplate">
-  <section class="movement-box">
-    <h3>ثبت جابه‌جایی / تغییر سازمانی</h3>
-    <form id="movementForm" class="grid-form">
-      <label>نوع تغییر<select name="movement_type" required>
-        <option value="transfer">انتقال</option><option value="position_change">تغییر پست</option>
-        <option value="unit_change">تغییر واحد</option><option value="location_change">تغییر محل خدمت</option>
-        <option value="appointment">انتصاب</option><option value="acting">سرپرستی</option>
-        <option value="retirement">بازنشستگی</option><option value="service_exit">خروج از خدمت</option>
-        <option value="service_return">بازگشت به خدمت</option><option value="correction">اصلاح</option><option value="other">سایر</option>
-      </select></label>
-      <label>تاریخ اجرا<input name="effective_date" required placeholder="1405/07/01"></label>
-      <label>واحد جدید<input name="organizational_unit"></label>
-      <label>کد پست<input name="position_code"></label>
-      <label>عنوان پست<input name="position_title"></label>
-      <label>محل خدمت<input name="actual_location"></label>
-      <label>وضعیت<input name="status"></label>
-      <label>شماره حکم<input name="order_no"></label>
-      <label>تاریخ حکم<input name="order_date"></label>
-      <label class="wide">علت<input name="reason"></label>
-      <label class="wide">توضیحات<textarea name="note"></textarea></label>
-      <button class="wide">ثبت تغییر با حفظ سابقه</button>
-    </form>
-  </section>
-</template>
-<script src="/web/app.js"></script>
+</div>
+<div class="modal hidden" id="personModal"><div class="modal-card"><button class="modal-close">×</button><div id="personModalContent"></div></div></div>
+<div class="toast-stack" id="toastStack"></div>
+<script defer="" src="assets/modules/runtime-core.js?v=4.9.0"></script>
+<script defer="" src="assets/modules/application-services.js?v=4.9.0"></script>
+<script defer="" src="assets/modules/auth-shell.js?v=4.9.0"></script>
 </body>
 </html>

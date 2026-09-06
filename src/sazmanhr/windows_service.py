@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import ssl
+import sys
 import threading
+from pathlib import Path
 
 import servicemanager
 import win32event
@@ -16,6 +18,24 @@ from .database import Repository
 from .operations import BackupScheduler, close_logging, configure_logging
 from .server import ApiServer, ensure_initial_owner, write_startup_failure
 from .tls import ensure_self_signed_certificate
+
+
+def _service_web_root() -> Path:
+    """Resolve the exact v4.9 UI for the frozen Windows service.
+
+    Prefer a sibling web directory so a private deployment can overlay
+    organization-only chart/template assets without rebuilding the service.
+    Fall back to PyInstaller's bundled public reference UI, then source-tree UI.
+    """
+    candidates = [
+        Path(sys.executable).resolve().parent / "web",
+        Path(getattr(sys, "_MEIPASS", "")) / "web",
+        Path(__file__).resolve().parents[2] / "web",
+    ]
+    for candidate in candidates:
+        if (candidate / "index.html").is_file() and (candidate / "assets" / "app.js").is_file():
+            return candidate.resolve()
+    raise RuntimeError("Exact SazmanHR v4.9 web UI is missing from the Windows service runtime.")
 
 
 class SazmanHRService(win32serviceutil.ServiceFramework):
@@ -55,7 +75,10 @@ class SazmanHRService(win32serviceutil.ServiceFramework):
                 fingerprint = pem_fingerprint(cert)
             ensure_initial_owner(repository, "arshia.shahbazi", "ارشیا شهبازی",
                                  os.environ.get("SAZMANHR_INITIAL_PASSWORD"), fingerprint)
-            self.httpd = ApiServer((config.host, config.port), repository, logger, tls_enabled=bool(cert))
+            self.httpd = ApiServer(
+                (config.host, config.port), repository, logger,
+                tls_enabled=bool(cert), web_root=_service_web_root(),
+            )
             if cert and key:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
                 context.minimum_version = ssl.TLSVersion.TLSv1_2

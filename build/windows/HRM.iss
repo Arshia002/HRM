@@ -8,7 +8,7 @@
 [Setup]
 AppId={{4F82A3C7-1D55-4B80-9F21-6B3D4E7A1600}
 AppName=HRM
-AppVersion=1.0.0-rc.1
+AppVersion=1.0.0-rc.2
 AppPublisher=HRM
 DefaultDirName={autopf}\HRM
 DefaultGroupName=HRM

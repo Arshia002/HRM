@@ -10,7 +10,7 @@ on:
       - feat/real-data-import-v040a2
       - feat/full-v49-ui-v050a1
       - feat/production-history-web-v080rc1
-      - release/v1.0.0-rc.1
+      - release/v1.0.0-rc.2
     tags:
       - "v*"
 
@@ -55,7 +55,7 @@ jobs:
           & python -m pip install --disable-pip-version-check --only-binary=:all: -r .\ci\requirements-source-gates.txt 2>&1 | Tee-Object -FilePath .\source-gate-dependencies.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Validate v1.0.0 rc.1 ci.2 final production candidate
+      - name: Validate v1.0.0 rc.2 ci.5 final production candidate
         shell: pwsh
         run: |
           & python .\ci\validate_v100rc1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
@@ -109,13 +109,13 @@ jobs:
           Copy-Item -Force (Join-Path $baseline 'build-output\installer\HRM-Setup-x64.exe') (Join-Path $env:RUNNER_TEMP 'HRM-V080-Setup-x64.exe')
           git worktree remove --force $baseline
 
-      - name: Reset disposable runner data before v0.8-to-v1.0-rc.1 upgrade test
+      - name: Reset disposable runner data before v0.8-to-v1.0-rc.2 upgrade test
         shell: pwsh
         run: |
           Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'HRM-Kermanshah') -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'SazmanHR') -ErrorAction SilentlyContinue
 
-      - name: Prove real v0.8.0-rc.1 to v1.0.0-rc.1 installer upgrade
+      - name: Prove real v0.8.0-rc.1 to v1.0.0-rc.2 installer upgrade
         timeout-minutes: 12
         shell: pwsh
         run: .\build\windows\smoke-upgrade-from-v080.ps1 -BaselineInstaller (Join-Path $env:RUNNER_TEMP 'HRM-V080-Setup-x64.exe') -CandidateInstaller .\build-output\installer\HRM-Setup-x64.exe -LogPath .\build-output\installer\v080-to-v100rc1-upgrade.log
@@ -142,7 +142,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.1-Tested-Setup
+          name: HRM-1.0.0-rc.2-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -177,7 +177,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.1-Failure-Logs
+          name: HRM-1.0.0-rc.2-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log
@@ -228,14 +228,14 @@ jobs:
             sleep 1
           done
           curl -fsS http://127.0.0.1:18080/api/health
-          curl -fsS http://127.0.0.1:18080/ | grep 'Linux Web Test'
+          curl -fsS http://127.0.0.1:18080/ | grep -F 'id="appShell"'
       - name: Upload Linux web test package
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.1-Linux-Web-Test
+          name: HRM-1.0.0-rc.2-Linux-Web-Test
           path: |
-            build-output/linux-web/HRM-1.0.0-rc.1-Linux-Web-Test.zip
-            build-output/linux-web/HRM-1.0.0-rc.1-Linux-Web-Test.zip.sha256
+            build-output/linux-web/HRM-1.0.0-rc.2-Linux-Web-Test.zip
+            build-output/linux-web/HRM-1.0.0-rc.2-Linux-Web-Test.zip.sha256
             linux-web-health.json
           if-no-files-found: error
           retention-days: 30

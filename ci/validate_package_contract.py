@@ -148,19 +148,27 @@ def validate_builder_contract() -> None:
 
 def validate_branding_contract() -> None:
     client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
-    pages = (PROJECT / "src" / "sazmanhr" / "ui_v49.py").read_text(encoding="utf-8")
     branding = (PROJECT / "src" / "sazmanhr" / "branding.py").read_text(encoding="utf-8")
     client_spec = (PROJECT / "build" / "windows" / "client.spec").read_text(encoding="utf-8")
-    required = ("brandPanel", "loginPanel", "topbar", "connectionBadge", "--ui-smoke-test", "COMPANY_NAME")
-    for item in required:
+    html = (PROJECT / "web" / "index.html").read_text(encoding="utf-8")
+    required_client = ("QWebEngineView", "PinnedPage", "ApiClient(", "certificateError", "--ui-smoke-test")
+    for item in required_client:
         if item not in client:
-            fail(f"Native v4.9 shell branding marker missing from client.py: {item}")
-    if 'assets" / "HRM.png"' not in client_spec:
-        fail("client.spec does not bundle assets/HRM.png for frozen native branding")
-    for relative in ("assets/HRM.png", "assets/HRM.ico", "assets/company-logo-source.png"):
+            fail(f"Exact v4.9 web shell marker missing from client.py: {item}")
+    if 'str(root / "web")' not in client_spec:
+        fail("client.spec does not bundle the exact v4.9 web payload")
+    for marker in ("PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets"):
+        if marker not in client_spec:
+            fail(f"client.spec missing embedded web runtime: {marker}")
+    for relative in (
+        "assets/HRM.png", "assets/HRM.ico", "assets/company-logo-source.png",
+        "web/assets/logo.svg", "web/assets/login-power-final.webp",
+        "web/assets/styles.css", "web/assets/app.js",
+        "web/assets/modules/enterprise-bridge.js",
+    ):
         path = PROJECT / relative
         if not path.is_file() or path.stat().st_size < 100:
-            fail(f"Brand asset missing or invalid: {relative}")
+            fail(f"Brand/UI asset missing or invalid: {relative}")
     if 'COMPANY_NAME = "شرکت توزیع نیروی برق استان کرمانشاه"' not in branding:
         fail("Official company branding constant is missing")
     for page_key in (
@@ -168,22 +176,9 @@ def validate_branding_contract() -> None:
         "jobFamilies", "personnelAge", "reports", "imports", "users", "history",
         "systemHealth", "settings",
     ):
-        if f'"{page_key}"' not in client + pages:
-            fail(f"Native v4.9 reference page is missing: {page_key}")
-    for page_class in (
-        "StatusChartPage", "PersonnelEducationPage", "PersonnelStatusPage",
-        "PersonnelAgePage", "ReportsPage", "ImportPage", "UsersPage",
-        "HistoryBackupPage", "SystemHealthPage", "SettingsPage",
-    ):
-        if f"class {page_class}" not in pages or f"{page_class}(self)" not in client:
-            fail(f"Native v4.9 page is not wired into the client: {page_class}")
-    lowered = (client + pages).lower()
-    for forbidden in ("qtwebengine", "qwebengine", "chromium", "electron"):
-        if forbidden in lowered:
-            fail(f"Native client contains forbidden browser-runtime marker: {forbidden}")
-    if "set(V49_REFERENCE_PAGES) - set(window.page_keys)" not in client:
-        fail("Frozen native UI smoke does not enforce complete v4.9 page coverage")
-    print("PASS full native v4.9 shell, page coverage and HRM branding contract")
+        if page_key not in html:
+            fail(f"Exact v4.9 reference page is missing from web/index.html: {page_key}")
+    print("PASS exact v4.9 web shell, page coverage, embedded runtime and HRM branding contract")
 
 
 def validate_versions() -> None:
@@ -198,6 +193,7 @@ def validate_versions() -> None:
         )
     checks = {
         "src/sazmanhr/__init__.py": f'__version__ = "{EXPECTED_VERSION}"',
+        "pyproject.toml": 'version = "1.0.0rc2"',
         "build/windows/HRM.iss": f"AppVersion={EXPECTED_VERSION}",
         "build/windows/smoke-install.ps1": EXPECTED_VERSION,
         "ci/write-ci-manifest.ps1": f"version = '{EXPECTED_VERSION}'",

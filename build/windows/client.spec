@@ -7,11 +7,17 @@ a = Analysis(
     [str(root / "build" / "windows" / "entry_client.py")],
     pathex=[str(src)],
     binaries=[],
-    datas=[(str(root / "assets" / "HRM.png"), "assets")],
-    hiddenimports=["PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets"],
+    datas=[
+        (str(root / "assets" / "HRM.png"), "assets"),
+        (str(root / "web"), "web"),
+    ],
+    hiddenimports=[
+        "PySide6.QtCore", "PySide6.QtGui", "PySide6.QtWidgets",
+        "PySide6.QtNetwork", "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets",
+    ],
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "PySide6.QtWebEngineCore", "PySide6.QtWebEngineWidgets"],
+    excludes=["tkinter"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)
