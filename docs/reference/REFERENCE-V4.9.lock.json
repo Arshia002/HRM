@@ -1,0 +1,779 @@
+{
+  "source": {
+    "outer_zip": {
+      "bytes": 13206763,
+      "sha256": "789703ed3b057c82089a0424a7807db8a0cacc4e0188f865c76d927d711639f9"
+    },
+    "installer_exe": {
+      "bytes": 16624640,
+      "sha256": "b323aa8c3d1581ecd26a65f92dd3cf6918f74d2c16918494dc3f24691f89dd5d"
+    },
+    "payload_file_count": 99,
+    "payload_uncompressed_bytes": 39117951
+  },
+  "version": "4.9.0",
+  "ui": {
+    "nav": [
+      {
+        "page": "formalChart",
+        "label": "⌘ چارت سازمان"
+      },
+      {
+        "page": "statusChart",
+        "label": "⌁ وضعیت چارت"
+      },
+      {
+        "page": "personnelDirectory",
+        "label": "☷ لیست کلی پرسنل"
+      },
+      {
+        "page": "personnelEducation",
+        "label": "🎓 تحصیلات پرسنل"
+      },
+      {
+        "page": "jobFamilies",
+        "label": "⚡ وضعیت پرسنل"
+      },
+      {
+        "page": "personnelAge",
+        "label": "◷ سن پرسنل"
+      },
+      {
+        "page": "reports",
+        "label": "▤ گزارش‌ها"
+      },
+      {
+        "page": "imports",
+        "label": "⇧ ورود و به‌روزرسانی Excel"
+      },
+      {
+        "page": "users",
+        "label": "♙ مدیریت کاربران"
+      },
+      {
+        "page": "history",
+        "label": "↻ سوابق فعالیت و پشتیبان"
+      },
+      {
+        "page": "systemHealth",
+        "label": "✓ سلامت سیستم"
+      },
+      {
+        "page": "settings",
+        "label": "⚙ تنظیمات"
+      }
+    ],
+    "pages": [
+      {
+        "id": "page-formalChart",
+        "title": "چارت سازمان",
+        "buttons": 3,
+        "inputs": 1
+      },
+      {
+        "id": "page-nonChart",
+        "title": "چارت سازمان",
+        "buttons": 3,
+        "inputs": 1
+      },
+      {
+        "id": "page-statusChart",
+        "title": "وضعیت چارت",
+        "buttons": 10,
+        "inputs": 3
+      },
+      {
+        "id": "page-personnelDirectory",
+        "title": "لیست کلی پرسنل",
+        "buttons": 4,
+        "inputs": 3
+      },
+      {
+        "id": "page-personnelEducation",
+        "title": "تحصیلات پرسنل",
+        "buttons": 2,
+        "inputs": 3
+      },
+      {
+        "id": "page-jobFamilies",
+        "title": "تحلیل وضعیت پرسنل",
+        "buttons": 2,
+        "inputs": 4
+      },
+      {
+        "id": "page-personnelAge",
+        "title": "سن پرسنل",
+        "buttons": 2,
+        "inputs": 3
+      },
+      {
+        "id": "page-users",
+        "title": "مدیریت کاربران",
+        "buttons": 2,
+        "inputs": 0
+      },
+      {
+        "id": "page-imports",
+        "title": "ورود و به‌روزرسانی Excel ماهانه",
+        "buttons": 0,
+        "inputs": 1
+      },
+      {
+        "id": "page-reports",
+        "title": "داشبورد گزارش‌های مدیریتی",
+        "buttons": 8,
+        "inputs": 10
+      },
+      {
+        "id": "page-history",
+        "title": "سوابق فعالیت کاربران",
+        "buttons": 3,
+        "inputs": 6
+      },
+      {
+        "id": "page-systemHealth",
+        "title": "سلامت سیستم",
+        "buttons": 0,
+        "inputs": 0
+      },
+      {
+        "id": "page-settings",
+        "title": "تنظیمات",
+        "buttons": 2,
+        "inputs": 1
+      }
+    ],
+    "core_hashes": {
+      "index.html": {
+        "bytes": 46987,
+        "sha256": "3e44e10bf0cea1ccee018bcda50035101ff956a4102a2887d01422695adad3cf"
+      },
+      "assets/styles.css": {
+        "bytes": 546280,
+        "sha256": "86f3c46e45200a475862f1e609791d59624d2542c22fa9ba9d5ad366a03182ba"
+      },
+      "assets/app.js": {
+        "bytes": 1137491,
+        "sha256": "d65eebcb8e807effe84c856e35c7a96778773cbb7ea33e753a997e8adf4d9070"
+      },
+      "assets/login-power-final.webp": {
+        "bytes": 248150,
+        "sha256": "06f5165bca158ddc61c715aaa7df9070ba8ab72e2742796110e1fc0bcd8966f1"
+      },
+      "assets/logo.svg": {
+        "bytes": 455,
+        "sha256": "078ed95b4afa50d3dfc14b49d8c34b6a6f99d84fc8894acc2cc9e0ecc20e7adf"
+      },
+      "assets/modules/access-control.js": {
+        "bytes": 2742,
+        "sha256": "4e1dab808c0d71f02c44fad7152ad9ef4bdab7372f62ab2f22fc0a8c348cfd20"
+      },
+      "assets/modules/accessibility.js": {
+        "bytes": 1681,
+        "sha256": "8c6c5b6d4dac2a9eb29768d10647481c248f5bf21fc2c246bdaab5513ca28315"
+      },
+      "assets/modules/application-services.js": {
+        "bytes": 1581,
+        "sha256": "3a7d1f49c2d0a4a4e95129ab06c7a6729db125ba69a1477d42fba9bf81284f8a"
+      },
+      "assets/modules/audit-center.js": {
+        "bytes": 2657,
+        "sha256": "481d52dabba05437e453722ddac0f97d1d8d67e0f4b4b272d937ea46c9f4fc47"
+      },
+      "assets/modules/auth-shell.js": {
+        "bytes": 7982,
+        "sha256": "3660f37f122bb4366a9ff634f491c4f322450f98e578c92f0bc7b809d5d9d971"
+      },
+      "assets/modules/backup-client.js": {
+        "bytes": 2448,
+        "sha256": "0f558d281eb13442fabf07665f8b7a372d4b61d833b4f5e33f2482d0ee046f0a"
+      },
+      "assets/modules/global-search.js": {
+        "bytes": 2958,
+        "sha256": "79c015d0f2338c0aa9925a45f892cc5a3f105e9e3b632650a7069c593cc337d9"
+      },
+      "assets/modules/job-family-engine.js": {
+        "bytes": 8316,
+        "sha256": "b321b961a7ed7795ef5c609d67e6f636fd8fb5a927d16065733787683907ed88"
+      },
+      "assets/modules/runtime-core.js": {
+        "bytes": 7067,
+        "sha256": "46d7acded7dc49bb56bee933d95e0e0c8e77d14d176cbdb86c74bcf3f3131183"
+      },
+      "assets/modules/security-ui.js": {
+        "bytes": 1873,
+        "sha256": "e2023d44cde495a92edae12c8b134162f32b88f99b770279f030addee39086df"
+      },
+      "assets/modules/system-health.js": {
+        "bytes": 3454,
+        "sha256": "442ed26b48e9a93a4c774f368f45cb2134cd3c1d9aeb96d77ebc4742ab374dba"
+      },
+      "assets/modules/xlsx-engine.js": {
+        "bytes": 15899,
+        "sha256": "1821a87d2d94e59dca743ad44d5524ae696949cd197687faf1fb712fe1da3325"
+      }
+    },
+    "chart_page_images": 54,
+    "chart_page_image_dimensions": "1041x720",
+    "login_image_dimensions": "1387x1215",
+    "font_stack": "Tahoma, Segoe UI, Arial, sans-serif"
+  },
+  "data": {
+    "people": 1356,
+    "slides": 53,
+    "people_unique_ids": 1356,
+    "people_unique_personnel_numbers": 1356,
+    "employment_groups": {
+      "رسمی": 523,
+      "شرکتی": 94,
+      "حجمی": 720,
+      "مشاور": 19
+    },
+    "status": {
+      "شاغل": 1355,
+      "استعلاجی": 1
+    },
+    "person_details_people": 1356,
+    "person_details_field_count_min": 32,
+    "person_details_field_count_max": 68,
+    "person_details_fields_total": 67205,
+    "education_people": 1356,
+    "education_meta": {
+      "version": "4.1.49",
+      "source": "person-details-v4.1.13.js",
+      "total": 1356,
+      "matched": 1356,
+      "unmatched": 0,
+      "categories": [
+        "دیپلم",
+        "فوق دیپلم",
+        "لیسانس",
+        "فوق لیسانس",
+        "دکتری",
+        "زیر دیپلم/نامشخص"
+      ],
+      "summary": {
+        "دیپلم": {
+          "total": 660,
+          "male": 654,
+          "female": 6,
+          "unknown": 0
+        },
+        "فوق دیپلم": {
+          "total": 115,
+          "male": 110,
+          "female": 5,
+          "unknown": 0
+        },
+        "لیسانس": {
+          "total": 347,
+          "male": 291,
+          "female": 56,
+          "unknown": 0
+        },
+        "فوق لیسانس": {
+          "total": 78,
+          "male": 57,
+          "female": 21,
+          "unknown": 0
+        },
+        "دکتری": {
+          "total": 3,
+          "male": 3,
+          "female": 0,
+          "unknown": 0
+        },
+        "زیر دیپلم/نامشخص": {
+          "total": 153,
+          "male": 153,
+          "female": 0,
+          "unknown": 0
+        }
+      }
+    },
+    "gender_people": 1356,
+    "gender_counts": {
+      "male": 1268,
+      "female": 88
+    },
+    "service_history_people": 684,
+    "service_history_records": 6161,
+    "service_history_matched_formal_people": 523,
+    "training_history_people": 507,
+    "training_history_records": 12556,
+    "position_catalog_count": 1335,
+    "position_catalog_approved_count": 474,
+    "vacancy_audit_count": 474,
+    "placement_models": {
+      "org79PptTree": 52,
+      "ORG97_ACTIVITY_POST_PLACEMENTS": 513,
+      "ORG99_VERIFIED_MODEL": 3,
+      "ORG101_VERIFIED_MODEL": 3,
+      "ORG102_HEAD_MODEL": 3,
+      "ORG104_HEAD_MODEL": 3,
+      "ORG121_PLACEMENTS": 52,
+      "ORG152_ROLE_NODES": 318,
+      "ORG152_CORRECTIONS": 805,
+      "ORG153_PEOPLE": 51
+    },
+    "summary_selected": {
+      "total_count": 1356,
+      "pages": 53,
+      "approved_fixed_posts": 536,
+      "approved_named_posts_legacy": 32,
+      "approved_posts_total": 568,
+      "named_count": 185,
+      "formal_count": 523,
+      "outside_chart_count": 1,
+      "personnel_directory_unique_people": 1356,
+      "job_family_total": 1356,
+      "service_history_personnel_count": 684
+    },
+    "private_manifest_verified": true,
+    "private_manifest": {
+      "initial-data.json": {
+        "bytes": 4351500,
+        "sha256": "e26f51c8ed03c0a6f1646e52a39505317e91052e4ce531c2e3d915ad396f3c5b",
+        "manifest_match": true
+      },
+      "position-catalog.json": {
+        "bytes": 270653,
+        "sha256": "4c1cdd2514011b6e62e288b3544774a8b5ce03633a3fa2cd189cf0f9b1c689c7",
+        "manifest_match": true
+      },
+      "placement-models.json": {
+        "bytes": 3075343,
+        "sha256": "2e2fc0cf6552aa973cd64b2505a6163b148bf3f10ba0339b524934b1f79fffae",
+        "manifest_match": true
+      },
+      "person-education.json": {
+        "bytes": 111624,
+        "sha256": "a711c1d9d829f14b51fee193ecaece373193a71f2023b9d46fc8b6b51f0c7e89",
+        "manifest_match": true
+      },
+      "person-details.json": {
+        "bytes": 7290951,
+        "sha256": "5bde210bdda3ec435a3bb8fd8fdd9f1aa8eb0b4a101fbda268d89fdb71e27058",
+        "manifest_match": true
+      },
+      "service-history.json": {
+        "bytes": 1941379,
+        "sha256": "3c4ed5bc9778f589a2f837530b64dc86aeb35caeae2c45fbad6f65b076fd6a11",
+        "manifest_match": true
+      },
+      "training-history.json": {
+        "bytes": 2375911,
+        "sha256": "1665d61bceb06ebba4d59d6dfd53979cf6b62d9e3574e37507b75ea3e7b6d92f",
+        "manifest_match": true
+      },
+      "vacancy-audit.json": {
+        "bytes": 240625,
+        "sha256": "2b85b930c3cff3609df6f2099e81a3710a34f371bdf08be78263d1417043e024",
+        "manifest_match": true
+      },
+      "gender-map.json": {
+        "bytes": 21874,
+        "sha256": "e238021ce12da05726682a5611347a68046e76f3d470e9f6a9e5dc08ed5c7578",
+        "manifest_match": true
+      }
+    }
+  },
+  "payload_files": {
+    "LICENSES/LOGO_SOURCE.txt": {
+      "bytes": 190,
+      "sha256": "e638eb9c166d950e5e617fb9b8b518314270a570773c88eb866e511f4a64de5a"
+    },
+    "LICENSES/go-webview2-LICENSE.txt": {
+      "bytes": 1117,
+      "sha256": "3f10f3374cf30076196eb239667ce6063c64e4275afd2b397f6343f69676bb79"
+    },
+    "MIGRATIONS.json": {
+      "bytes": 9167,
+      "sha256": "59410216795c1491ea9aaec52c08ce8b02e193b1289c5be14ccb92b6de3f89a4"
+    },
+    "README_FA.txt": {
+      "bytes": 2655,
+      "sha256": "c07d4a36a3a4860fc54717f5de4eb5b66f96a130c86d4f46c7f9ba2c271f27ba"
+    },
+    "SazmanHR-Uninstall.exe": {
+      "bytes": 1677312,
+      "sha256": "4fa52991ecdefdb5f367e4f1ded1345c1ff63f7fc1ab0b1121ede6d2837fb966"
+    },
+    "SazmanHR.exe": {
+      "bytes": 5934080,
+      "sha256": "3902169b338825af3a6320c8e4aa9995327902c9ffc4e7081496945c5df36c9b"
+    },
+    "VERSION.txt": {
+      "bytes": 6,
+      "sha256": "b9c635e14ee1fd055bbf8779b20efb85b5eff17d66df342c4735683297373176"
+    },
+    "assets/app.ico": {
+      "bytes": 52541,
+      "sha256": "fdb28e5efad0249a9070b9dbd9cf65d7acac75d97f8d6d77e3e6b953816f1bda"
+    },
+    "assets/app.js": {
+      "bytes": 1137491,
+      "sha256": "d65eebcb8e807effe84c856e35c7a96778773cbb7ea33e753a997e8adf4d9070"
+    },
+    "assets/chart-pages/page-1.webp": {
+      "bytes": 8894,
+      "sha256": "278bd05ee1361b5f5ff2b0c3203d119b0b0a53eb49e9c83511e6624d1f05777f"
+    },
+    "assets/chart-pages/page-10.webp": {
+      "bytes": 27352,
+      "sha256": "c0f5f38393f78b56302117d436ff8329b157e052e0c23a079e08f68cf9a4f2dc"
+    },
+    "assets/chart-pages/page-11.webp": {
+      "bytes": 26322,
+      "sha256": "9b1e8ca776c1e6d9f42ca4f943d04f17ca8328ef1483cec8bb2c334b92d0b499"
+    },
+    "assets/chart-pages/page-12.webp": {
+      "bytes": 25988,
+      "sha256": "599028cea7e90bfc4b513a21288c5cb067e5004066e57f8f506f5e7cac60a209"
+    },
+    "assets/chart-pages/page-13.webp": {
+      "bytes": 18066,
+      "sha256": "7559092b3f919524e94c68e29246d1bc503fef2fa4df88ec681bbdc685c382db"
+    },
+    "assets/chart-pages/page-14.webp": {
+      "bytes": 23632,
+      "sha256": "c592c5f13e4ebfb8df35b829993b76679c1a2d0261bbb483e815babe7232326b"
+    },
+    "assets/chart-pages/page-15.webp": {
+      "bytes": 25466,
+      "sha256": "9caee8a8c0fcdbe365dd558ab0b061ce3b75224fa14f463549effb912506d644"
+    },
+    "assets/chart-pages/page-16.webp": {
+      "bytes": 64576,
+      "sha256": "57b0487e2867f67b75fbf6aabf01f38a09c8f63df73763746ed221a448004785"
+    },
+    "assets/chart-pages/page-17.webp": {
+      "bytes": 50558,
+      "sha256": "003e9ee18a2ece766ff6c19ff4fc9a1c8ce7c70a11861f204420d61d179888ef"
+    },
+    "assets/chart-pages/page-18.webp": {
+      "bytes": 20900,
+      "sha256": "10cf55072421b25c4e535c23dbcd54bb276fa03895bc8bd8549c6f2cc988d84f"
+    },
+    "assets/chart-pages/page-19.webp": {
+      "bytes": 59562,
+      "sha256": "865055a6ce7de52bf389bf4d0652530b308254d039445f8f3b2bd267092d9d60"
+    },
+    "assets/chart-pages/page-2.webp": {
+      "bytes": 64520,
+      "sha256": "38fdacc6cbeab5e98bc07d281421b30f8874b7508567faebb02c90a03358ef2a"
+    },
+    "assets/chart-pages/page-20.webp": {
+      "bytes": 35764,
+      "sha256": "46e64903bf1419a4c1dcfdc0212e6bd5d5af1c47c4e3f2754e7ab7830ed3ab13"
+    },
+    "assets/chart-pages/page-21.webp": {
+      "bytes": 30504,
+      "sha256": "11c3da7c42ce01c5ed5854232f658c3f32368e469838126c18953434d291d200"
+    },
+    "assets/chart-pages/page-22.webp": {
+      "bytes": 29382,
+      "sha256": "bc1155602f440c86b140c4b52f2131c2804a6dd9d2178985f3194508280cc8b2"
+    },
+    "assets/chart-pages/page-23.webp": {
+      "bytes": 27656,
+      "sha256": "8e07ba0d5fcacb83604de8a3c41628e2889dd3c403d94ce66a9c0c86f38b8eae"
+    },
+    "assets/chart-pages/page-24.webp": {
+      "bytes": 28648,
+      "sha256": "588669b15b403ff2c5c91d7abcfcfcab5c2aeaff91345d099a21a13ab05f502a"
+    },
+    "assets/chart-pages/page-25.webp": {
+      "bytes": 30306,
+      "sha256": "54eaa11bf6d46bdfebd9541b795a5cf28a68027912a5da9ff651036125fdddfd"
+    },
+    "assets/chart-pages/page-26.webp": {
+      "bytes": 22920,
+      "sha256": "5ed39b4dd1c0a6b4304e6d1eee7cadac4412097add4bf5e5a2077606949fe1c2"
+    },
+    "assets/chart-pages/page-27.webp": {
+      "bytes": 23016,
+      "sha256": "40aa40125607d7a2edd3f1088048a57b3605b305a8eba6f3b01f065d62a6b114"
+    },
+    "assets/chart-pages/page-28.webp": {
+      "bytes": 30942,
+      "sha256": "c4583bacd642e70cc0cc12b0f2481e0569ca6809feacd6aa45e9a5e691f045b8"
+    },
+    "assets/chart-pages/page-29.webp": {
+      "bytes": 31470,
+      "sha256": "0007fe7fbbcb5647ca41f286a846cc57d85f3762d2f78fe4beb88c4871997340"
+    },
+    "assets/chart-pages/page-3.webp": {
+      "bytes": 36982,
+      "sha256": "2c1f3fac756d9220b8b16f7b1a1d4f8dd6557c8d79b8b9505833abca1c58fff0"
+    },
+    "assets/chart-pages/page-30.webp": {
+      "bytes": 22580,
+      "sha256": "3a92dba862b348237faa4cd5802d89a942f43840c331c6d9048d5dc056c25a6a"
+    },
+    "assets/chart-pages/page-31.webp": {
+      "bytes": 24622,
+      "sha256": "e4a3a9ffe46d3e1c02a7ffe191a2ae31989e726ef97fd2cd96eae7569f4bf3dc"
+    },
+    "assets/chart-pages/page-32.webp": {
+      "bytes": 31726,
+      "sha256": "1eaf4614c41af23d61148b5e0f67b82a81f6a54b6af9a24926020e01a439d24e"
+    },
+    "assets/chart-pages/page-33.webp": {
+      "bytes": 30788,
+      "sha256": "cd40bfb51fe3c22edd6e69b43436022cbb7ce7f73b57822eb84c4dfcb49e4a24"
+    },
+    "assets/chart-pages/page-34.webp": {
+      "bytes": 21420,
+      "sha256": "b631b64e55f0a377a1630374d2a644b8cb5b335ec7133e38ca40d655edb4caa4"
+    },
+    "assets/chart-pages/page-35.webp": {
+      "bytes": 28298,
+      "sha256": "5b1731e686d180f084a559e54aeef3c276b6562b4d645d00ed6c321af6ee1e3f"
+    },
+    "assets/chart-pages/page-36.webp": {
+      "bytes": 29682,
+      "sha256": "554132b0b96076f09ec58eba3d40817ce29585eceb23acc11b8f6159739db681"
+    },
+    "assets/chart-pages/page-37.webp": {
+      "bytes": 26828,
+      "sha256": "d28e026dc11f905781a8d4f58bf6594e48c1f3dae4474fad47411da3466b658c"
+    },
+    "assets/chart-pages/page-38.webp": {
+      "bytes": 31382,
+      "sha256": "7e6fedcb002797a3710ed498627e7d95f85cde98e2ca209f6674a0cf15a1b694"
+    },
+    "assets/chart-pages/page-39.webp": {
+      "bytes": 20904,
+      "sha256": "5d15af6376a7fb2b2ce0b716a7618d92b09c98689fbdf58badd685fbd0c1fa07"
+    },
+    "assets/chart-pages/page-4.webp": {
+      "bytes": 19180,
+      "sha256": "3f12aedc7ac5b0ecec413d4f679aa4e63b283510fd33c14703309f244e97e185"
+    },
+    "assets/chart-pages/page-40.webp": {
+      "bytes": 22774,
+      "sha256": "fbfa65ac782274d9f65db4d527b6cf18071006a263457cc9f7312f74d778ed2c"
+    },
+    "assets/chart-pages/page-41.webp": {
+      "bytes": 22146,
+      "sha256": "59b9f12bf60316f4749f35f19a0f84cea591f2f8305153d6d43dae547475ca99"
+    },
+    "assets/chart-pages/page-42.webp": {
+      "bytes": 25484,
+      "sha256": "23cc819075d965ee306977ac3c14a8592c8700bd9fdcdd166804aa1e7a34d9f4"
+    },
+    "assets/chart-pages/page-43.webp": {
+      "bytes": 34520,
+      "sha256": "ba264238826c6714ba7b13d66d145ee39e68ffa445e610c90cb708cbd7f35684"
+    },
+    "assets/chart-pages/page-44.webp": {
+      "bytes": 24416,
+      "sha256": "ad870185b5eaae4c94ca4ed969efbb1a6601eb79dfc45fb53ba3c5fd3867441d"
+    },
+    "assets/chart-pages/page-45.webp": {
+      "bytes": 30370,
+      "sha256": "e37902dbe1a476e07ef030760386c98b45e0e8ba95420818c23c10a3a7c1727d"
+    },
+    "assets/chart-pages/page-46.webp": {
+      "bytes": 25730,
+      "sha256": "738a5bde14aab23ca9847c9f75cfadd59c1d1a68a2e1fbb3e08f7c480ba54e3a"
+    },
+    "assets/chart-pages/page-47.webp": {
+      "bytes": 32216,
+      "sha256": "cfcef37bda06248f2ed37f4a34e0ff598523abf2f947e632f7de7cf329924fc2"
+    },
+    "assets/chart-pages/page-48.webp": {
+      "bytes": 33840,
+      "sha256": "8a043385000b02d2eeb33da69d216e376fa0dbfabecb1df481a02d447f0d45f0"
+    },
+    "assets/chart-pages/page-49.webp": {
+      "bytes": 31768,
+      "sha256": "f39c51fd08d91a865d6c2e6750b97868da1a384f5febea445a0d5c58cd575621"
+    },
+    "assets/chart-pages/page-5.webp": {
+      "bytes": 38260,
+      "sha256": "5ab63b5b9f92714217a478283d13a11ac6f778d33ced94936a9edbfd49e7c85f"
+    },
+    "assets/chart-pages/page-50.webp": {
+      "bytes": 31424,
+      "sha256": "8ddaa02267dd43e2babbfc0d78d0fd369af90ffce62aabce9995264a384d58af"
+    },
+    "assets/chart-pages/page-51.webp": {
+      "bytes": 24306,
+      "sha256": "3c6e66053cdc513ef26d28b9bfd31f6ca6fa94bc127db1a650ee396092e93514"
+    },
+    "assets/chart-pages/page-52.webp": {
+      "bytes": 34374,
+      "sha256": "c94e4cc3d64c4738ff788b54594bcb6a8905e9f678a423f540df245f9495f55a"
+    },
+    "assets/chart-pages/page-53.webp": {
+      "bytes": 30442,
+      "sha256": "1bdd2328fc1bf463c004d1a73c92806ec5adc0ead8d5ffe8696523170de12892"
+    },
+    "assets/chart-pages/page-54.webp": {
+      "bytes": 32090,
+      "sha256": "025f0f704bae06b8d704012f5c845d1d13e5c33d660d0039c4c3ba505ecd152c"
+    },
+    "assets/chart-pages/page-6.webp": {
+      "bytes": 22432,
+      "sha256": "ffdfc727724ea37149579cf35e4db7ffe27385f1fc78601a22713b59806443b0"
+    },
+    "assets/chart-pages/page-7.webp": {
+      "bytes": 21422,
+      "sha256": "beb92e81b6c4dda902518cc62f416bd77ef14c1fb2f49367f26a5dff23a84ab6"
+    },
+    "assets/chart-pages/page-8.webp": {
+      "bytes": 34170,
+      "sha256": "6acb4ebac992065be6e430a70450e2630c001f0d3b0930b4b67d3baf3d4d8993"
+    },
+    "assets/chart-pages/page-9.webp": {
+      "bytes": 32106,
+      "sha256": "78de0e995eb64ba9a2d85240a6aafa33ac399867df8b47bb84d4744130e6fb91"
+    },
+    "assets/login-power-final.webp": {
+      "bytes": 248150,
+      "sha256": "06f5165bca158ddc61c715aaa7df9070ba8ab72e2742796110e1fc0bcd8966f1"
+    },
+    "assets/logo.svg": {
+      "bytes": 455,
+      "sha256": "078ed95b4afa50d3dfc14b49d8c34b6a6f99d84fc8894acc2cc9e0ecc20e7adf"
+    },
+    "assets/modules/access-control.js": {
+      "bytes": 2742,
+      "sha256": "4e1dab808c0d71f02c44fad7152ad9ef4bdab7372f62ab2f22fc0a8c348cfd20"
+    },
+    "assets/modules/accessibility.js": {
+      "bytes": 1681,
+      "sha256": "8c6c5b6d4dac2a9eb29768d10647481c248f5bf21fc2c246bdaab5513ca28315"
+    },
+    "assets/modules/application-services.js": {
+      "bytes": 1581,
+      "sha256": "3a7d1f49c2d0a4a4e95129ab06c7a6729db125ba69a1477d42fba9bf81284f8a"
+    },
+    "assets/modules/audit-center.js": {
+      "bytes": 2657,
+      "sha256": "481d52dabba05437e453722ddac0f97d1d8d67e0f4b4b272d937ea46c9f4fc47"
+    },
+    "assets/modules/auth-shell.js": {
+      "bytes": 7982,
+      "sha256": "3660f37f122bb4366a9ff634f491c4f322450f98e578c92f0bc7b809d5d9d971"
+    },
+    "assets/modules/backup-client.js": {
+      "bytes": 2448,
+      "sha256": "0f558d281eb13442fabf07665f8b7a372d4b61d833b4f5e33f2482d0ee046f0a"
+    },
+    "assets/modules/global-search.js": {
+      "bytes": 2958,
+      "sha256": "79c015d0f2338c0aa9925a45f892cc5a3f105e9e3b632650a7069c593cc337d9"
+    },
+    "assets/modules/job-family-engine.js": {
+      "bytes": 8316,
+      "sha256": "b321b961a7ed7795ef5c609d67e6f636fd8fb5a927d16065733787683907ed88"
+    },
+    "assets/modules/runtime-core.js": {
+      "bytes": 7067,
+      "sha256": "46d7acded7dc49bb56bee933d95e0e0c8e77d14d176cbdb86c74bcf3f3131183"
+    },
+    "assets/modules/security-ui.js": {
+      "bytes": 1873,
+      "sha256": "e2023d44cde495a92edae12c8b134162f32b88f99b770279f030addee39086df"
+    },
+    "assets/modules/system-health.js": {
+      "bytes": 3454,
+      "sha256": "442ed26b48e9a93a4c774f368f45cb2134cd3c1d9aeb96d77ebc4742ab374dba"
+    },
+    "assets/modules/xlsx-engine.js": {
+      "bytes": 15899,
+      "sha256": "1821a87d2d94e59dca743ad44d5524ae696949cd197687faf1fb712fe1da3325"
+    },
+    "assets/styles.css": {
+      "bytes": 546280,
+      "sha256": "86f3c46e45200a475862f1e609791d59624d2542c22fa9ba9d5ad366a03182ba"
+    },
+    "assets/templates/SazmanHR-Monthly-Import-Template.xlsx": {
+      "bytes": 77527,
+      "sha256": "a6245199d921c08d46a6043cf6a58f85b6dcc4ec0ef1c4d9e238585022440073"
+    },
+    "docs/ARCHITECTURE_FA.md": {
+      "bytes": 9554,
+      "sha256": "fedc7ca90fa7686cad080ca47dc69dbc918f8bea2b5c691a5504ff8ea7c7101e"
+    },
+    "docs/validation/HR-page16-v4.1.38.json": {
+      "bytes": 389,
+      "sha256": "299b511091f00145c62a3d41dfd0ebaa150bd5aaf1181c5c150cc924cd3cc21e"
+    },
+    "docs/validation/HR-page16-v4.1.38.png": {
+      "bytes": 478450,
+      "sha256": "38a262c63a06cfcd7e9dc7a12fa8fc48441f002db83fc16ddbd7cd52f1ecba55"
+    },
+    "docs/validation/named-post-all-pages-v4.1.40.json": {
+      "bytes": 4258,
+      "sha256": "511c5334f812c6cef7a6fa6ddda3cb8707edc3a9694526c8626d7fb71723d71f"
+    },
+    "docs/validation/named-post-page4-v4.1.40.json": {
+      "bytes": 694,
+      "sha256": "9daf280e2a416d50fe864b9ad5cf30fb8f20e7dab8c8a2e27d28863d24d4a913"
+    },
+    "docs/validation/named-post-page4-v4.1.40.png": {
+      "bytes": 397080,
+      "sha256": "9e3c4b8e5c0bcbebc5d923025c3a282e3fe1f7e1c4c77748f5408c5638b9b38c"
+    },
+    "index.html": {
+      "bytes": 46987,
+      "sha256": "3e44e10bf0cea1ccee018bcda50035101ff956a4102a2887d01422695adad3cf"
+    },
+    "portable/README_FA.txt": {
+      "bytes": 799,
+      "sha256": "cbd088fabd8df41d1f236134fe8a78a94094303cccb76e7ec66e5b9af773f20a"
+    },
+    "private-data/gender-map.json": {
+      "bytes": 21874,
+      "sha256": "e238021ce12da05726682a5611347a68046e76f3d470e9f6a9e5dc08ed5c7578"
+    },
+    "private-data/initial-data.json": {
+      "bytes": 4351500,
+      "sha256": "e26f51c8ed03c0a6f1646e52a39505317e91052e4ce531c2e3d915ad396f3c5b"
+    },
+    "private-data/manifest.json": {
+      "bytes": 1326,
+      "sha256": "6e63d37213c7c3007a958bb025f12f73c24cb61f66100bd9caac8c43ccf5b706"
+    },
+    "private-data/person-details.json": {
+      "bytes": 7290951,
+      "sha256": "5bde210bdda3ec435a3bb8fd8fdd9f1aa8eb0b4a101fbda268d89fdb71e27058"
+    },
+    "private-data/person-education.json": {
+      "bytes": 111624,
+      "sha256": "a711c1d9d829f14b51fee193ecaece373193a71f2023b9d46fc8b6b51f0c7e89"
+    },
+    "private-data/placement-models.json": {
+      "bytes": 3075343,
+      "sha256": "2e2fc0cf6552aa973cd64b2505a6163b148bf3f10ba0339b524934b1f79fffae"
+    },
+    "private-data/position-catalog.json": {
+      "bytes": 270653,
+      "sha256": "4c1cdd2514011b6e62e288b3544774a8b5ce03633a3fa2cd189cf0f9b1c689c7"
+    },
+    "private-data/service-history.json": {
+      "bytes": 1941379,
+      "sha256": "3c4ed5bc9778f589a2f837530b64dc86aeb35caeae2c45fbad6f65b076fd6a11"
+    },
+    "private-data/training-history.json": {
+      "bytes": 2375911,
+      "sha256": "1665d61bceb06ebba4d59d6dfd53979cf6b62d9e3574e37507b75ea3e7b6d92f"
+    },
+    "private-data/vacancy-audit.json": {
+      "bytes": 240625,
+      "sha256": "2b85b930c3cff3609df6f2099e81a3710a34f371bdf08be78263d1417043e024"
+    },
+    "runtime/SazmanHR.Server.exe": {
+      "bytes": 7136256,
+      "sha256": "41dd54b0005efee6e52fceb0dbaf26afea957bdd68fa1d0572cf49818550c9a8"
+    },
+    "راهنمای_اجرای_ویندوز.txt": {
+      "bytes": 1543,
+      "sha256": "adb9a29e9c42172bbef377e89618ac7e1b239c6abaf74b72e3f9b3169a18e017"
+    }
+  }
+}

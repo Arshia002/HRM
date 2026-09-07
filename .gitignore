@@ -38,3 +38,10 @@ normalized-private.json
 
 # Final release hygiene: generated test logs must stay out of Git.
 test-evidence/*.log
+
+# BEGIN HRM V4.9 FINAL REFERENCE PRIVATE GUARD
+SazmanHR-v4.9.0-Dashboard-Optimized-Installer-Unsigned.zip
+reference-private/
+v4.9-reference/private-data/
+v4.9-reference/payload/
+# END HRM V4.9 FINAL REFERENCE PRIVATE GUARD
