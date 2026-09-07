@@ -26,6 +26,13 @@ $ApiBase = 'https://127.0.0.1:8765'
 $BootstrapPassword = ''
 $ChangedPassword = 'CI-Changed!Password1401'
 $Username = 'arshia.shahbazi'
+$LegacyServiceNames = @(
+    'SazmanHREnterpriseCentral',
+    'SazmanHRCentral',
+    'SazmanHRNetworkServer'
+)
+$LegacyFixtureCommand = "$env:SystemRoot\System32\cmd.exe /c exit 0"
+$LegacyServiceStateLog = Join-Path $ArtifactDir "legacy-service-state.json"
 
 function Invoke-CheckedProcess {
     param(
@@ -130,6 +137,124 @@ function Wait-HrmHealth {
     Write-Host "[$(Get-Date -Format o)] PASS: $Stage health/TLS/database/version"
 }
 
+function Assert-NoPreexistingLegacyServices {
+    foreach ($name in $LegacyServiceNames) {
+        $existing = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
+        if ($existing) {
+            throw "Refusing to create smoke fixture because a real/pre-existing legacy service exists: $name"
+        }
+    }
+}
+
+function New-TestLegacyServices {
+    Assert-NoPreexistingLegacyServices
+
+    foreach ($name in $LegacyServiceNames) {
+        $output = & "$env:SystemRoot\System32\sc.exe" create $name `
+            binPath= $LegacyFixtureCommand start= auto 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "Unable to create legacy service fixture $name : $output"
+        }
+
+        $info = Get-CimInstance Win32_Service -Filter "Name='$name'"
+        if (-not $info -or $info.StartMode -ne 'Auto' -or $info.State -ne 'Stopped') {
+            throw "Legacy fixture $name was not created as STOPPED + AUTO_START."
+        }
+        if ($info.PathName -notlike '*\System32\cmd.exe /c exit 0*') {
+            throw "Legacy fixture $name has an unexpected binary path: $($info.PathName)"
+        }
+    }
+
+    Write-Host "[$(Get-Date -Format o)] PASS: legacy STOPPED + AUTO_START fixtures created"
+}
+
+function Remove-TestLegacyFixtures {
+    foreach ($name in $LegacyServiceNames) {
+        $info = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
+        if (-not $info) { continue }
+
+        if ($info.PathName -notlike '*\System32\cmd.exe /c exit 0*') {
+            Write-Warning "Skipping cleanup for non-fixture legacy service: $name"
+            continue
+        }
+
+        $service = Get-Service $name -ErrorAction SilentlyContinue
+        if ($service -and $service.Status -ne 'Stopped') {
+            try {
+                Stop-Service $name -Force -ErrorAction Stop
+                $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+            } catch { }
+        }
+
+        & "$env:SystemRoot\System32\sc.exe" delete $name | Out-Null
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            if (-not (Get-Service $name -ErrorAction SilentlyContinue)) { break }
+            Start-Sleep -Milliseconds 250
+        }
+    }
+}
+
+function Assert-LegacyServicesDisabled {
+    param([Parameter(Mandatory=$true)][string]$Stage)
+
+    foreach ($name in $LegacyServiceNames) {
+        $info = Get-CimInstance Win32_Service -Filter "Name='$name'"
+        if (-not $info) {
+            throw "$Stage legacy service registration disappeared unexpectedly: $name"
+        }
+        if ($info.State -ne 'Stopped' -or $info.StartMode -ne 'Disabled') {
+            throw "$Stage legacy service $name is not STOPPED + DISABLED (state=$($info.State), start=$($info.StartMode))."
+        }
+    }
+
+    Write-Host "[$(Get-Date -Format o)] PASS: $Stage legacy services are STOPPED + DISABLED"
+}
+
+function Assert-CanonicalPortOwner {
+    param([Parameter(Mandatory=$true)][string]$Stage)
+
+    $listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8765 -ErrorAction SilentlyContinue)
+    if ($listeners.Count -lt 1) {
+        throw "$Stage found no LISTEN socket on port 8765."
+    }
+
+    $ownerPids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($ownerPids.Count -ne 1) {
+        throw "$Stage expected one process owner for port 8765; found: $($ownerPids -join ',')"
+    }
+
+    $canonical = Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'"
+    if (-not $canonical -or $canonical.State -ne 'Running') {
+        throw "$Stage canonical HRMCentralService is not running."
+    }
+    if ([int]$canonical.ProcessId -ne [int]$ownerPids[0]) {
+        throw "$Stage port 8765 owner PID $($ownerPids[0]) is not HRMCentralService PID $($canonical.ProcessId)."
+    }
+
+    Write-Host "[$(Get-Date -Format o)] PASS: $Stage port 8765 has exactly one canonical process owner"
+}
+
+function Assert-LegacyMigrationLoggedBeforeCopy {
+    param([Parameter(Mandatory=$true)][string]$UpgradeSetupText)
+
+    $firstFile = $UpgradeSetupText.IndexOf('-- File entry --')
+    if ($firstFile -lt 0) {
+        throw 'Upgrade log does not contain a file-copy boundary.'
+    }
+
+    foreach ($name in $LegacyServiceNames) {
+        foreach ($stage in @('legacy-service-stop-before-copy-', 'legacy-service-disable-before-copy-')) {
+            $marker = "HRM_STAGE|PASS|$stage$name"
+            $index = $UpgradeSetupText.IndexOf($marker)
+            if ($index -lt 0 -or $index -gt $firstFile) {
+                throw "Upgrade did not prove $marker completed before file copy."
+            }
+        }
+    }
+
+    Write-Host "[$(Get-Date -Format o)] PASS: all legacy stop/disable stages completed before file copy"
+}
+
 try {
     $Installer = (Resolve-Path $Installer).Path
     $Target = Join-Path $env:ProgramFiles "HRM"
@@ -167,6 +292,7 @@ try {
     if (-not $serviceRule) { throw "ProgramData ACL does not grant Modify to the dedicated Service SID." }
 
     Wait-HrmHealth -Stage 'Clean install'
+    Assert-CanonicalPortOwner -Stage 'Clean install'
     Assert-ExactV49UiRoot -Stage 'Clean install'
 
     if (-not (Test-Path (Join-Path $Target 'Client\HRM.exe'))) { throw 'Desktop client missing.' }
@@ -216,6 +342,7 @@ try {
     [IO.File]::WriteAllText($sentinel, "HRM-UPGRADE-PRESERVE-$(Get-Date -Format o)")
     $sentinelHash = (Get-FileHash $sentinel -Algorithm SHA256).Hash
     $dbHashBeforeUpgrade = (Get-FileHash $database -Algorithm SHA256).Hash
+    New-TestLegacyServices
 
     Invoke-CheckedProcess -FilePath $Installer `
         -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full', "/LOG=`"$UpgradeLog`"") `
@@ -227,6 +354,7 @@ try {
     if ($StopBeforeCopyIndex -lt 0 -or $FirstFileEntryIndex -lt 0 -or $StopBeforeCopyIndex -gt $FirstFileEntryIndex) {
         throw 'Upgrade did not prove the existing service stopped before Setup replaced files.'
     }
+    Assert-LegacyMigrationLoggedBeforeCopy -UpgradeSetupText $UpgradeSetupText
     if ($UpgradeSetupText -match 'RestartManager found an application using one of our files: HRM') {
         throw 'An HRM process still held an installed file when the upgrade copy phase started.'
     }
@@ -240,6 +368,8 @@ try {
         $service.WaitForStatus('Running', [TimeSpan]::FromSeconds(20))
     }
     Wait-HrmHealth -Stage 'Post-upgrade'
+    Assert-LegacyServicesDisabled -Stage 'Post-upgrade'
+    Assert-CanonicalPortOwner -Stage 'Post-upgrade'
     Assert-ExactV49UiRoot -Stage 'Post-upgrade'
 
     if (-not (Test-Path $sentinel) -or (Get-FileHash $sentinel -Algorithm SHA256).Hash -ne $sentinelHash) {
@@ -275,7 +405,7 @@ try {
         throw 'Operational data sentinel was removed or changed by uninstall.'
     }
 
-    Write-Host "ALL ACCEPTANCE TESTS PASSED: clean install, TLS, service, ACL, desktop, bootstrap login, forced password change, in-place upgrade, data preservation and uninstall."
+    Write-Host "ALL ACCEPTANCE TESTS PASSED: clean install, TLS, canonical port ownership, service, ACL, desktop, bootstrap login, forced password change, legacy-service migration, in-place upgrade, data preservation and uninstall."
 } catch {
     try { ($_ | Format-List * -Force | Out-String) | Out-File -FilePath $FailureSummaryLog -Encoding utf8 -Force } catch { }
     throw
@@ -284,6 +414,14 @@ try {
         try { Stop-Transcript | Out-Null } catch { }
         $TranscriptStarted = $false
     }
+    try {
+        Get-CimInstance Win32_Service |
+            Where-Object { $_.Name -in $LegacyServiceNames } |
+            Select-Object Name, State, StartMode, ProcessId, PathName, StartName |
+            ConvertTo-Json -Depth 4 |
+            Out-File -FilePath $LegacyServiceStateLog -Encoding utf8 -Force
+    } catch { }
+    try { Remove-TestLegacyFixtures } catch { }
     try { & "$env:SystemRoot\System32\sc.exe" qc HRMCentralService 2>&1 | Out-File -FilePath $ServiceConfigLog -Encoding utf8 -Force } catch { }
     try { & "$env:SystemRoot\System32\sc.exe" queryex HRMCentralService 2>&1 | Out-File -FilePath $ServiceStateLog -Encoding utf8 -Force } catch { }
     try { Get-CimInstance Win32_Service -Filter "Name='HRMCentralService'" | ConvertTo-Json -Depth 4 | Out-File -FilePath $ServiceCimLog -Encoding utf8 -Force } catch { }

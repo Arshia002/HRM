@@ -80,6 +80,16 @@ var
   PreInstallServiceHandled: Boolean;
   SetupCompleted: Boolean;
   ProvisionFailed: Boolean;
+  LegacyServicesHandled: Boolean;
+  LegacyEnterpriseExists: Boolean;
+  LegacyEnterpriseWasRunning: Boolean;
+  LegacyEnterpriseStartType: Cardinal;
+  LegacyCentralExists: Boolean;
+  LegacyCentralWasRunning: Boolean;
+  LegacyCentralStartType: Cardinal;
+  LegacyNetworkExists: Boolean;
+  LegacyNetworkWasRunning: Boolean;
+  LegacyNetworkStartType: Cardinal;
 
 function EnterpriseDataDir: String;
 begin
@@ -118,6 +128,151 @@ begin
   Exec(Filename, Parameters, '', SW_HIDE, ewWaitUntilTerminated, IgnoredCode);
 end;
 
+function ServiceRegistryPath(ServiceName: String): String;
+begin
+  Result := 'SYSTEM\CurrentControlSet\Services\' + ServiceName;
+end;
+
+function ServiceStartModeArgument(StartType: Cardinal): String;
+begin
+  case StartType of
+    2: Result := 'auto';
+    3: Result := 'demand';
+    4: Result := 'disabled';
+  else
+    Result := 'demand';
+  end;
+end;
+
+procedure RestoreOneLegacyService(ServiceName: String; ExistsBefore: Boolean;
+  WasRunningBefore: Boolean; StartTypeBefore: Cardinal);
+var
+  ResultCode: Integer;
+  Started: Boolean;
+begin
+  if not ExistsBefore then
+    exit;
+
+  ResultCode := -1;
+  Started := Exec(ExpandConstant('{sys}\sc.exe'),
+    'config ' + ServiceName + ' start= ' + ServiceStartModeArgument(StartTypeBefore),
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Started and (ResultCode = 0) then
+    LogSetupStage('PASS', 'restore-legacy-start-' + ServiceName, ResultCode)
+  else
+    LogSetupStage('FAIL', 'restore-legacy-start-' + ServiceName, ResultCode);
+
+  if WasRunningBefore then
+  begin
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{sys}\sc.exe'), 'start ' + ServiceName,
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+      LogSetupStage('PASS', 'restore-legacy-running-' + ServiceName, ResultCode)
+    else
+      LogSetupStage('FAIL', 'restore-legacy-running-' + ServiceName, ResultCode);
+  end;
+end;
+
+procedure RestoreLegacyServicesIfNeeded;
+begin
+  if not LegacyServicesHandled then
+    exit;
+
+  RestoreOneLegacyService('SazmanHREnterpriseCentral',
+    LegacyEnterpriseExists, LegacyEnterpriseWasRunning, LegacyEnterpriseStartType);
+  RestoreOneLegacyService('SazmanHRCentral',
+    LegacyCentralExists, LegacyCentralWasRunning, LegacyCentralStartType);
+  RestoreOneLegacyService('SazmanHRNetworkServer',
+    LegacyNetworkExists, LegacyNetworkWasRunning, LegacyNetworkStartType);
+  LegacyServicesHandled := False;
+end;
+
+procedure HandleLegacyServiceBeforeCopy(PreflightExe: String; DiagnosticPath: String;
+  ServiceName: String; var ExistsBefore: Boolean; var WasRunningBefore: Boolean;
+  var StartTypeBefore: Cardinal; var FailureText: String);
+var
+  ServiceStatePath: String;
+  ServiceStateContent: AnsiString;
+  ResultCode: Integer;
+  Started: Boolean;
+  CurrentStartType: Cardinal;
+begin
+  ExistsBefore := RegKeyExists(HKLM, ServiceRegistryPath(ServiceName));
+  WasRunningBefore := False;
+  StartTypeBefore := 0;
+  if not ExistsBefore then
+    exit;
+
+  if not RegQueryDWordValue(HKLM, ServiceRegistryPath(ServiceName), 'Start', StartTypeBefore) then
+  begin
+    { No service mutation happened yet, so rollback must not rewrite its start mode. }
+    ExistsBefore := False;
+    FailureText := 'نوع راه‌اندازی سرویس قدیمی ' + ServiceName + ' قابل خواندن نیست.';
+    exit;
+  end;
+
+  if (StartTypeBefore < 2) or (StartTypeBefore > 4) then
+  begin
+    { Unsupported state was not modified; exclude it from rollback. }
+    ExistsBefore := False;
+    FailureText := 'نوع راه‌اندازی سرویس قدیمی ' + ServiceName + ' پشتیبانی نمی‌شود.';
+    exit;
+  end;
+
+  ServiceStatePath := ExpandConstant('{tmp}\legacy-service-' + ServiceName + '.json');
+  DeleteFile(ServiceStatePath);
+  ResultCode := -1;
+  LogSetupStage('START', 'legacy-service-stop-before-copy-' + ServiceName, ResultCode);
+  Started := Exec(PreflightExe,
+    '--data-dir "' + EnterpriseDataDir +
+    '" --stop-windows-service ' + ServiceName + ' --service-stop-timeout 30' +
+    ' --service-state-file "' + ServiceStatePath +
+    '" --diagnostic-log "' + DiagnosticPath + '"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if (not Started) or (ResultCode <> 0) then
+  begin
+    LogSetupStage('FAIL', 'legacy-service-stop-before-copy-' + ServiceName, ResultCode);
+    FailureText := 'توقف ایمن سرویس قدیمی ' + ServiceName +
+      ' پیش از ارتقا شکست خورد (کد ' + IntToStr(ResultCode) + ').';
+    exit;
+  end;
+
+  if not LoadStringFromLockedFile(ServiceStatePath, ServiceStateContent) then
+  begin
+    LogSetupStage('FAIL', 'legacy-service-state-' + ServiceName, -1);
+    FailureText := 'وضعیت سرویس قدیمی ' + ServiceName + ' قابل اعتبارسنجی نیست.';
+    exit;
+  end;
+
+  WasRunningBefore :=
+    Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
+  LogSetupStage('PASS', 'legacy-service-stop-before-copy-' + ServiceName, 0);
+
+  ResultCode := -1;
+  LogSetupStage('START', 'legacy-service-disable-before-copy-' + ServiceName, ResultCode);
+  Started := Exec(ExpandConstant('{sys}\sc.exe'),
+    'config ' + ServiceName + ' start= disabled',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if (not Started) or (ResultCode <> 0) then
+  begin
+    LogSetupStage('FAIL', 'legacy-service-disable-before-copy-' + ServiceName, ResultCode);
+    FailureText := 'غیرفعال‌سازی سرویس قدیمی ' + ServiceName +
+      ' شکست خورد (کد ' + IntToStr(ResultCode) + ').';
+    exit;
+  end;
+
+  if (not RegQueryDWordValue(HKLM, ServiceRegistryPath(ServiceName), 'Start', CurrentStartType)) or
+     (CurrentStartType <> 4) then
+  begin
+    LogSetupStage('FAIL', 'legacy-service-disable-validation-' + ServiceName, -1);
+    FailureText := 'غیرفعال‌سازی سرویس قدیمی ' + ServiceName + ' قابل تأیید نیست.';
+    exit;
+  end;
+
+  LogSetupStage('PASS', 'legacy-service-disable-before-copy-' + ServiceName, 0);
+end;
+
 procedure RestoreOriginalServiceIfNeeded;
 var
   ResultCode: Integer;
@@ -152,6 +307,32 @@ begin
     RunIgnored(ExpandConstant('{sys}\netsh.exe'),
       'advfirewall firewall delete rule name="HRM Central Service 8765"');
   end;
+end;
+
+procedure VerifyOneLegacyServiceDisabled(ServiceName: String);
+var
+  StartType: Cardinal;
+begin
+  if not RegKeyExists(HKLM, ServiceRegistryPath(ServiceName)) then
+    exit;
+
+  if (not RegQueryDWordValue(HKLM, ServiceRegistryPath(ServiceName), 'Start', StartType)) or
+     (StartType <> 4) then
+  begin
+    LogSetupStage('FAIL', 'legacy-service-final-validation-' + ServiceName, -1);
+    ProvisionFailed := True;
+    RecoverServerAfterFailure;
+    RaiseException('Legacy Windows Service was not disabled: ' + ServiceName);
+  end;
+
+  LogSetupStage('PASS', 'legacy-service-final-validation-' + ServiceName, 0);
+end;
+
+procedure VerifyLegacyServicesDisabled;
+begin
+  VerifyOneLegacyServiceDisabled('SazmanHREnterpriseCentral');
+  VerifyOneLegacyServiceDisabled('SazmanHRCentral');
+  VerifyOneLegacyServiceDisabled('SazmanHRNetworkServer');
 end;
 
 procedure RunRequired(Filename: String; Parameters: String; StageName: String);
@@ -250,6 +431,7 @@ begin
     ' --diagnostic-log "' + DiagnosticPath + '"',
     'آزمون نهایی TLS و سرویس پس از سخت‌سازی ACL');
 
+  VerifyLegacyServicesDisabled;
   if ServiceExistedBeforeInstall and (not ServiceWasRunningBeforeInstall) then
     RunRequired(ServiceExe, '--wait 30 stop', 'بازگردانی وضعیت توقف قبلی سرویس');
   ServiceStoppedForUpgrade := False;
@@ -263,6 +445,16 @@ begin
   ServiceStoppedForUpgrade := False;
   PreInstallServiceHandled := False;
   SetupCompleted := False;
+  LegacyServicesHandled := False;
+  LegacyEnterpriseExists := False;
+  LegacyEnterpriseWasRunning := False;
+  LegacyEnterpriseStartType := 0;
+  LegacyCentralExists := False;
+  LegacyCentralWasRunning := False;
+  LegacyCentralStartType := 0;
+  LegacyNetworkExists := False;
+  LegacyNetworkWasRunning := False;
+  LegacyNetworkStartType := 0;
   ServerPage := CreateInputQueryPage(wpSelectComponents,
     'اتصال به سرور مرکزی',
     'آدرس سرویس مرکزی را مشخص کنید.',
@@ -300,6 +492,30 @@ begin
       ExtractTemporaryFile('hrm-seed.sqlite');
       PreflightExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
       DiagnosticPath := EnterpriseDataDir + '\logs\setup-server.log';
+
+      if not LegacyServicesHandled then
+      begin
+        LegacyServicesHandled := True;
+        HandleLegacyServiceBeforeCopy(PreflightExe, DiagnosticPath,
+          'SazmanHREnterpriseCentral', LegacyEnterpriseExists,
+          LegacyEnterpriseWasRunning, LegacyEnterpriseStartType, Result);
+        if Result = '' then
+          HandleLegacyServiceBeforeCopy(PreflightExe, DiagnosticPath,
+            'SazmanHRCentral', LegacyCentralExists,
+            LegacyCentralWasRunning, LegacyCentralStartType, Result);
+        if Result = '' then
+          HandleLegacyServiceBeforeCopy(PreflightExe, DiagnosticPath,
+            'SazmanHRNetworkServer', LegacyNetworkExists,
+            LegacyNetworkWasRunning, LegacyNetworkStartType, Result);
+        if Result <> '' then
+        begin
+          LogProtectedDiagnostics;
+          ProvisionFailed := True;
+          RestoreLegacyServicesIfNeeded;
+          exit;
+        end;
+      end;
+
       ServiceExistedBeforeInstall := RegKeyExists(HKLM,
         'SYSTEM\CurrentControlSet\Services\HRMCentralService');
 
@@ -378,6 +594,7 @@ begin
     if Result <> '' then
     begin
       RestoreOriginalServiceIfNeeded;
+      RestoreLegacyServicesIfNeeded;
       PreInstallServiceHandled := False;
     end;
   end;
@@ -414,5 +631,8 @@ end;
 procedure DeinitializeSetup;
 begin
   if not SetupCompleted then
+  begin
     RestoreOriginalServiceIfNeeded;
+    RestoreLegacyServicesIfNeeded;
+  end;
 end;

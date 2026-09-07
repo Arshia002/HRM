@@ -199,7 +199,11 @@ class PackageTests(unittest.TestCase):
         self.assertIn("runrequired", lowered)
         self.assertIn("raiseexception", lowered)
         self.assertNotIn("{commonappdata}\\sazmanhr\\", lowered)
-        self.assertNotIn("sazmanhrcentral", lowered)
+        self.assertIn("sazmanhrenterprisecentral", lowered)
+        self.assertIn("sazmanhrcentral", lowered)
+        self.assertIn("sazmanhrnetworkserver", lowered)
+        self.assertIn("legacy-service-stop-before-copy", lowered)
+        self.assertIn("legacy-service-disable-before-copy", lowered)
         for forbidden in ("python.exe", "pip install", "winget", "powershell", "download"):
             self.assertNotIn(forbidden, lowered)
 

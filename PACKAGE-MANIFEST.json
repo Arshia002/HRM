@@ -116,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 18061,
-      "sha256": "c74d117bfd266c7ef723d1e7737715de2c913ef18d7862a00dc47ed4bb87da23"
+      "bytes": 26134,
+      "sha256": "e864e2c7d5589389451d4935854b3c5fc0a8c2ac765e9b4bfed25a9a1c9f45bd"
     },
     {
       "path": "build/windows/migration.spec",
@@ -141,8 +141,8 @@
     },
     {
       "path": "build/windows/smoke-install.ps1",
-      "bytes": 16298,
-      "sha256": "f5fe4bf9b27e8b453790f33ff5c6f2816ad17c4525f418a26776e068f15a00ec"
+      "bytes": 21964,
+      "sha256": "35785b52b5357c024e9fe30851f966848ab3aa0b5b0a6ef0e3d295ab0c373aa8"
     },
     {
       "path": "build/windows/smoke-upgrade-from-beta.ps1",
@@ -836,13 +836,23 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 27772,
-      "sha256": "78c3eaa3fb4207f269df8f81668910101c4806d56693a717922f8e2af95ee943"
+      "bytes": 28020,
+      "sha256": "ed155c72bd53fa78823b567f1cf8269d44c386050f95f56ce57e906b1161c477"
     },
     {
       "path": "tests/test_provisioning.py",
       "bytes": 3086,
       "sha256": "6170a070b27c0a3b5c9bcf7c4e1e07c61f7b1bf51481f30e833fac51a51f4aaf"
+    },
+    {
+      "path": "tests/test_rc3_legacy_service_migration.py",
+      "bytes": 1658,
+      "sha256": "5ba256f857de64543bd43d89d732b272d95b29a39a97f511e3afaa9463fccd54"
+    },
+    {
+      "path": "tests/test_rc3_legacy_smoke_contract.py",
+      "bytes": 2037,
+      "sha256": "f9a454d3effddb1052afd45efbf17f7c8b6c241e9e13e66598c1751276999f01"
     },
     {
       "path": "tests/test_rc3_organization_overrides.py",
