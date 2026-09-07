@@ -49,6 +49,8 @@ ALLOWED_DIRS = {".github", "assets", "build", "ci", "data", "deploy", "docs", "s
 
 
 # HRM_MANIFEST_CANONICAL_LF_V1
+PUBLIC_SAFE_SPREADSHEET = "web/assets/templates/SazmanHR-Monthly-Import-Template.xlsx"
+PUBLIC_SAFE_SPREADSHEET_SHA256 = "a6245199d921c08d46a6043cf6a58f85b6dcc4ec0ef1c4d9e238585022440073"
 BINARY_SUFFIXES = {'.ico', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.sqlite', '.db', '.zip', '.enc', '.exe', '.dll', '.pyd', '.so', '.pdf', '.xls', '.xlsx', '.ppt', '.pptx', '.doc', '.docx', '.woff', '.woff2', '.ttf', '.otf'}
 
 def canonical_bytes(path: Path) -> bytes:
@@ -78,7 +80,12 @@ def is_stable_overlay_file(path: Path) -> bool:
     if relative.parts[:2] == ("data", "export"):
         return False
     if path.suffix.lower() in {".xls", ".xlsx", ".csv"}:
-        return False
+        if relative.as_posix() != PUBLIC_SAFE_SPREADSHEET:
+            return False
+        if digest(path) != PUBLIC_SAFE_SPREADSHEET_SHA256:
+            raise RuntimeError(
+                f"Canonical public spreadsheet hash mismatch: {relative.as_posix()}"
+            )
     # The overlay itself is intentionally ASCII-path-safe. Existing historical
     # Unicode documents in the repository are outside this boundary.
     try:

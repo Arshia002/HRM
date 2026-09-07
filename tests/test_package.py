@@ -396,7 +396,13 @@ class PackageTests(unittest.TestCase):
     def test_protected_real_data_boundary_excludes_plaintext_key_and_artifacts(self):
         manifest = json.loads((PROJECT / "PACKAGE-MANIFEST.json").read_text(encoding="utf-8"))
         paths = {item["path"] for item in manifest["files"]}
-        self.assertFalse(any(path.lower().endswith((".key", ".xls", ".xlsx", ".csv")) for path in paths))
+        safe_spreadsheet = "web/assets/templates/SazmanHR-Monthly-Import-Template.xlsx"
+        self.assertIn(safe_spreadsheet, paths)
+        self.assertEqual(hashlib.sha256((PROJECT / safe_spreadsheet).read_bytes()).hexdigest(), "a6245199d921c08d46a6043cf6a58f85b6dcc4ec0ef1c4d9e238585022440073")
+        self.assertFalse(any(
+            path != safe_spreadsheet and path.lower().endswith((".key", ".xls", ".xlsx", ".csv"))
+            for path in paths
+        ))
         self.assertFalse(any(path.startswith("private-data/") for path in paths))
         workflow = (PROJECT / ".github" / "workflows" / "windows-build.yml").read_text(encoding="utf-8")
         self.assertIn("environment: real-data-validation", workflow)

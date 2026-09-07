@@ -29,6 +29,8 @@ EXPECTED_EXES = {
 }
 INNO = PROJECT / "build" / "windows" / "HRM.iss"
 PACKAGE_MANIFEST = PROJECT / "PACKAGE-MANIFEST.json"
+PUBLIC_SAFE_SPREADSHEET = "web/assets/templates/SazmanHR-Monthly-Import-Template.xlsx"
+PUBLIC_SAFE_SPREADSHEET_SHA256 = "a6245199d921c08d46a6043cf6a58f85b6dcc4ec0ef1c4d9e238585022440073"
 EPHEMERAL_PARTS = {
     ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox",
     ".venv", "venv", "__pycache__", "build-output", ".git",
@@ -303,10 +305,21 @@ def validate_public_safe_seed() -> None:
     export_dir = PROJECT / "data" / "export"
     if export_dir.exists():
         fail("data/export must not be present in a public CI package")
+    safe_spreadsheet = PROJECT / PUBLIC_SAFE_SPREADSHEET
+    if not safe_spreadsheet.is_file():
+        fail(f"Missing canonical public-safe spreadsheet: {PUBLIC_SAFE_SPREADSHEET}")
+    if sha256_file(safe_spreadsheet) != PUBLIC_SAFE_SPREADSHEET_SHA256:
+        fail(f"Canonical public-safe spreadsheet hash mismatch: {PUBLIC_SAFE_SPREADSHEET}")
     for pattern in ("*.xls", "*.xlsx", "*.csv"):
-        matches = [p for p in PROJECT.rglob(pattern) if p.is_file() and ".git" not in p.parts]
+        matches = [
+            p for p in PROJECT.rglob(pattern)
+            if p.is_file()
+            and ".git" not in p.parts
+            and p.resolve() != safe_spreadsheet.resolve()
+        ]
         if matches:
             fail(f"Public CI package contains forbidden data file(s): {matches}")
+    print("PASS canonical public-safe monthly import template is hash locked")
 
     manifest_path = PROJECT / "data" / "seed" / "manifest.json"
     database = PROJECT / "data" / "seed" / "sazmanhr-seed.sqlite"
@@ -340,7 +353,10 @@ def validate_protected_real_data_boundary(paths: list[str]) -> None:
     forbidden_manifest = [
         relative for relative in paths
         if relative.startswith("private-data/")
-        or relative.lower().endswith((".key", ".xls", ".xlsx", ".csv"))
+        or (
+            relative != PUBLIC_SAFE_SPREADSHEET
+            and relative.lower().endswith((".key", ".xls", ".xlsx", ".csv"))
+        )
     ]
     if forbidden_manifest:
         fail(f"CI overlay contains plaintext/private real-data material: {forbidden_manifest}")
