@@ -1,6 +1,8 @@
 (function(global){
 'use strict';
 const VERSION='1.0.0-rc.3';
+const PUBLISHER_FA='ارشیا شهبازی';
+const PUBLISHER_EN='Arshia Shahbazi';
 const REPORTS_ISSUE_SELECTOR='#org450Kpis [data-org450-action="issue"]';
 let reportsObserver=null;
 let discoveryObserver=null;
@@ -25,9 +27,27 @@ function bindReportsKpis(){
  return true;
 }
 
+function addPublisherInfo(){
+ const info=document.querySelector('#page-settings .info-list');
+ if(!info)return false;
+ if(info.querySelector('[data-rc3-publisher]'))return true;
+ const row=document.createElement('div');
+ row.setAttribute('data-rc3-publisher','true');
+ const label=document.createElement('dt');
+ const value=document.createElement('dd');
+ label.textContent='ناشر';
+ value.textContent=PUBLISHER_FA;
+ value.title=PUBLISHER_EN;
+ row.append(label,value);
+ info.appendChild(row);
+ return true;
+}
+
 function install(){
+ addPublisherInfo();
  if(bindReportsKpis())return;
  discoveryObserver=new MutationObserver(()=>{
+  addPublisherInfo();
   if(!bindReportsKpis())return;
   discoveryObserver.disconnect();
   discoveryObserver=null;
@@ -38,6 +58,7 @@ function install(){
 install();
 global.__SAZMANHR_ORGANIZATION_OVERRIDES__=Object.freeze({
  version:VERSION,
+ publisher:Object.freeze({fa:PUBLISHER_FA,en:PUBLISHER_EN}),
  reports:Object.freeze({hideInspectionKpi:true})
 });
 })(window);

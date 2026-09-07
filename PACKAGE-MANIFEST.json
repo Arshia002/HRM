@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "1.0.0-rc.3",
-  "package_revision": "1.0.0-rc.3-ci.1",
+  "package_revision": "1.0.0-rc.3-ci.2",
   "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -116,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 26134,
-      "sha256": "39dc75d07faa4f1793d20c9aefc6634da282004de79bf0f92c47a8b172a64bc5"
+      "bytes": 26146,
+      "sha256": "39a6e71a87a8b79992316a598f02f99d731516a7f7fc32ee76a2ab3c96a5b54f"
     },
     {
       "path": "build/windows/migration.spec",
@@ -302,7 +302,7 @@
     {
       "path": "ci/validate_v100rc1_candidate.py",
       "bytes": 5645,
-      "sha256": "3bf92c302f5061a079b3ffe61b3405179edc728ab31d469d3a50500b22b29854"
+      "sha256": "f6be5a89084e13b2badcdd949646a07b41531b0b893567b7d27a4ea32104c5f1"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
@@ -317,7 +317,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "14b72eabeca4c40cf9f734fa599d8abc2a4bec11b8cae6b25cb6f409da66c2a7"
+      "sha256": "57bd291dd91a8283ad7c3230d6e008a77f8fad1f24aea26a3756d541b19b050f"
     },
     {
       "path": "CI-README-FA.md",
@@ -837,7 +837,7 @@
     {
       "path": "tests/test_package.py",
       "bytes": 28020,
-      "sha256": "5ab49410292ff193cdb90a6b22a52870eb253bf16c066a38994a1863c461a447"
+      "sha256": "2adacf6e4ec8951ec4a34cf1fadffe379e40534b4e7c8955f902a96b3f4bfb3e"
     },
     {
       "path": "tests/test_provisioning.py",
@@ -856,8 +856,8 @@
     },
     {
       "path": "tests/test_rc3_organization_overrides.py",
-      "bytes": 1727,
-      "sha256": "0c3d0c8505cbfe68726552d4a69b013b866d33504f9bb023676849681704c666"
+      "bytes": 2497,
+      "sha256": "1e466610a57841a8b01eeb198aedf360fab227e36ad19988b6e105c5395022d3"
     },
     {
       "path": "tests/test_rc_diagnostics_privacy.py",
@@ -877,7 +877,7 @@
     {
       "path": "tests/test_rc_release_identity.py",
       "bytes": 1003,
-      "sha256": "9b16be14d1f8d791929731a2c29272697312d76fb78cbf76920219ef6a332100"
+      "sha256": "694ca6534050d1a6d4778bc7a68f2ad67e5f45d67718d7021784e4cb3f1cce1e"
     },
     {
       "path": "tests/test_repository.py",
@@ -1097,7 +1097,7 @@
     {
       "path": "VERSION-V100RC1.json",
       "bytes": 2650,
-      "sha256": "933ccc464a91fc3777044d9bdf3c45f9c25cac751d1d1e09ad11059ae8f16eea"
+      "sha256": "a9e0ee4b83578f27d163a547a36fe05b2f218ed27dce4191dacbee7d303ccbd0"
     },
     {
       "path": "web/app.js",
@@ -1441,8 +1441,8 @@
     },
     {
       "path": "web/assets/modules/organization-overrides.js",
-      "bytes": 1247,
-      "sha256": "a16e0464a00ec6e9fba217080c23fa887554f78fc3323de9158d95106560c95c"
+      "bytes": 1947,
+      "sha256": "22f50b8ec4fe9ded8e9b73014321fadb593f2a55da3da5b14f62539198e86737"
     },
     {
       "path": "web/assets/modules/runtime-core.js",
