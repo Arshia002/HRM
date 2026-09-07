@@ -45,3 +45,7 @@ reference-private/
 v4.9-reference/private-data/
 v4.9-reference/payload/
 # END HRM V4.9 FINAL REFERENCE PRIVATE GUARD
+
+# Canonical v4.9 runtime template
+!web/assets/templates/
+!web/assets/templates/SazmanHR-Monthly-Import-Template.xlsx
