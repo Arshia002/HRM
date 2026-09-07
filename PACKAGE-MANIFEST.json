@@ -845,6 +845,11 @@
       "sha256": "6170a070b27c0a3b5c9bcf7c4e1e07c61f7b1bf51481f30e833fac51a51f4aaf"
     },
     {
+      "path": "tests/test_rc3_organization_overrides.py",
+      "bytes": 1727,
+      "sha256": "0c3d0c8505cbfe68726552d4a69b013b866d33504f9bb023676849681704c666"
+    },
+    {
       "path": "tests/test_rc_diagnostics_privacy.py",
       "bytes": 783,
       "sha256": "065461e077825e9f2b6c1d00b012181f599decb7af96cfe0e6a1995782d67a44"
@@ -1401,8 +1406,8 @@
     },
     {
       "path": "web/assets/modules/auth-shell.js",
-      "bytes": 8988,
-      "sha256": "d2b8d549f3b2831d80501fb549136a4cdf90b36b988a442f3f82ce7a7cf9944b"
+      "bytes": 9033,
+      "sha256": "9acccd184dc22397166fac16688a5e0995ccaf212c6f9cadac5f83e5c14d14be"
     },
     {
       "path": "web/assets/modules/backup-client.js",
@@ -1423,6 +1428,11 @@
       "path": "web/assets/modules/job-family-engine.js",
       "bytes": 8316,
       "sha256": "b321b961a7ed7795ef5c609d67e6f636fd8fb5a927d16065733787683907ed88"
+    },
+    {
+      "path": "web/assets/modules/organization-overrides.js",
+      "bytes": 1247,
+      "sha256": "a16e0464a00ec6e9fba217080c23fa887554f78fc3323de9158d95106560c95c"
     },
     {
       "path": "web/assets/modules/runtime-core.js",

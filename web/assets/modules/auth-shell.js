@@ -22,7 +22,8 @@ const postAppScripts=[
  'assets/modules/audit-center.js',
  'assets/modules/system-health.js',
  'assets/modules/security-ui.js',
- 'assets/modules/accessibility.js'
+ 'assets/modules/accessibility.js',
+ 'assets/modules/organization-overrides.js'
 ];
 
 function message(value){
