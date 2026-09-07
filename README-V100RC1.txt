@@ -1,4 +1,4 @@
-HRM v1.0.0-rc.2-ci.8 — Final Production Release Candidate
+HRM v1.0.0-rc.3-ci.1 — Final Production Release Candidate
 
 Purpose
 -------
@@ -19,8 +19,8 @@ Production profile
 
 Release outputs
 ---------------
-- GitHub Windows artifact: HRM-1.0.0-rc.2-Tested-Setup
-- GitHub Linux test artifact: HRM-1.0.0-rc.2-Linux-Web-Test
+- GitHub Windows artifact: HRM-1.0.0-rc.3-Tested-Setup
+- GitHub Linux test artifact: HRM-1.0.0-rc.3-Linux-Web-Test
 
 Promotion rule
 --------------

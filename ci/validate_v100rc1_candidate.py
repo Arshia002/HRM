@@ -46,8 +46,8 @@ def main() -> int:
         fail("source-gate dependencies are not ready: " + "; ".join(errors))
 
     metadata = identity.metadata
-    if identity.version != "1.0.0-rc.2" or identity.package_revision != "1.0.0-rc.2-ci.8":
-        fail("RC identity is not the approved v1.0 rc.2 ci.8 release identity")
+    if identity.version != "1.0.0-rc.3" or identity.package_revision != "1.0.0-rc.3-ci.1":
+        fail("RC identity is not the approved v1.0 rc.3 ci.1 release identity")
     if identity.baseline_commit != "8f1adfa88a1b53db1b075504c58900957e812894":
         fail("v1.0 RC must remain anchored to the tested v0.8 source revision")
     if metadata.get("expected_personnel") != 1356:
@@ -112,7 +112,7 @@ def main() -> int:
     )
     if regression.returncode:
         return regression.returncode
-    print("PASS: HRM v1.0.0-rc.2 final production release-candidate gates passed.")
+    print("PASS: HRM v1.0.0-rc.3 final production release-candidate gates passed.")
     return 0
 
 

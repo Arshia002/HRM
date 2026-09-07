@@ -9,16 +9,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HARDENING_MODULES = (
-    "tests.test_rc_release_identity",
-    "tests.test_rc_network_resilience",
-    "tests.test_rc_disaster_recovery",
-    "tests.test_rc_diagnostics_privacy",
+    "test_rc_release_identity",
+    "test_rc_network_resilience",
+    "test_rc_disaster_recovery",
+    "test_rc_diagnostics_privacy",
 )
 
 
 def source_test_environment(base: dict[str, str] | None = None) -> dict[str, str]:
     environment = dict(os.environ if base is None else base)
-    paths = [str(ROOT), str(ROOT / "src")]
+    paths = [str(ROOT / "tests"), str(ROOT), str(ROOT / "src")]
     inherited = environment.get("PYTHONPATH", "")
     if inherited:
         paths.append(inherited)
@@ -28,7 +28,7 @@ def source_test_environment(base: dict[str, str] | None = None) -> dict[str, str
 
 def source_path_self_check() -> int:
     result = subprocess.run(
-        [sys.executable, "-c", "import sazmanhr; import ci.release_identity; import tests.test_rc_network_resilience; import tests.test_rc_disaster_recovery"],
+        [sys.executable, "-c", "import sazmanhr; import ci.release_identity; import test_rc_network_resilience; import test_rc_disaster_recovery"],
         cwd=ROOT,
         env=source_test_environment({}),
         text=True,

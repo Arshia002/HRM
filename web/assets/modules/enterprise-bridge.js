@@ -1,6 +1,6 @@
 (function(global){
 'use strict';
-const VERSION='1.0.0-rc.2';
+const VERSION='1.0.0-rc.3';
 const pre=global.__SAZMANHR_PREAUTH__||{};
 const token=String(pre.token||'');
 const user=pre.user||{};

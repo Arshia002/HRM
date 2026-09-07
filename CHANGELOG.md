@@ -1,3 +1,10 @@
+## v1.0.0-rc.3-ci.1
+
+- Restored canonical v4.9 presentation assets and CSP compatibility.
+- Added the organization override layer without modifying the canonical v4.9 application payload.
+- Added safe Windows legacy-service migration: snapshot, stop, disable, rollback, and final validation.
+- Added Windows upgrade smoke contracts for legacy-service state and single canonical ownership of port 8765.
+
 ## v1.0.0-rc.2-ci.8
 - Fixed Linux Docker runtime dependency parity: the container now installs the same pinned source dependencies (`cryptography`, `openpyxl`, `xlrd`) required by `sazmanhr.server` and monthly import.
 - Added a regression guard that keeps Docker Linux-web requirements byte-for-byte aligned with `ci/requirements-source-gates.txt`.
