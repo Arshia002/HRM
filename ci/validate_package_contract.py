@@ -195,7 +195,7 @@ def validate_versions() -> None:
         )
     checks = {
         "src/sazmanhr/__init__.py": f'__version__ = "{EXPECTED_VERSION}"',
-        "pyproject.toml": 'version = "1.0.0rc2"',
+        "pyproject.toml": 'version = "1.0.0rc3"',
         "build/windows/HRM.iss": f"AppVersion={EXPECTED_VERSION}",
         "build/windows/smoke-install.ps1": EXPECTED_VERSION,
         "ci/write-ci-manifest.ps1": f"version = '{EXPECTED_VERSION}'",

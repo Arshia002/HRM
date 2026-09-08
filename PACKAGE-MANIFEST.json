@@ -2,7 +2,7 @@
   "manifest_schema": 4,
   "product": "HRM",
   "version": "1.0.0-rc.3",
-  "package_revision": "1.0.0-rc.3-ci.3",
+  "package_revision": "1.0.0-rc.3-ci.4",
   "purpose": "github-windows-and-linux-web-ci-clean-checkout-candidate",
   "contains_plaintext_real_data": false,
   "contains_encrypted_real_data_bundle": true,
@@ -247,7 +247,7 @@
     {
       "path": "ci/validate_package_contract.py",
       "bytes": 23784,
-      "sha256": "6d43a7167d83c2c219cdc29537f229e1ba83a43541b224b887defb4dd75c079b"
+      "sha256": "bdd2b0064bd0ba573cef6f9b89ffe377a199e9204d69a6e36692fcea19baf047"
     },
     {
       "path": "ci/validate_rc_hardening.py",
@@ -302,7 +302,7 @@
     {
       "path": "ci/validate_v100rc1_candidate.py",
       "bytes": 5645,
-      "sha256": "d65bf3bd0e9b5ae680f7da892ec11cbd435728784bf1da7d4e8fafc8fa00d764"
+      "sha256": "e3e6aa2c4eb2096188d30c08348c80596588661aa328196dfddbd2155f89e61e"
     },
     {
       "path": "ci/write-ci-manifest.ps1",
@@ -317,7 +317,7 @@
     {
       "path": "CI-PACKAGE-VERSION",
       "bytes": 16,
-      "sha256": "42679792857e6e2e73a5cec8ae13e13d10fa944a68c716c14a2f38d4481c226f"
+      "sha256": "e8c677ee682f5e0a34012181d1e249846ec7b8e6358e483e01a3a78dae603ea5"
     },
     {
       "path": "CI-README-FA.md",
@@ -567,7 +567,7 @@
     {
       "path": "pyproject.toml",
       "bytes": 561,
-      "sha256": "d2e938e29733c123c87d62fa316b39dda4394c37387dfc3ba6dff67cde75e023"
+      "sha256": "2bdd950358c0b44c17f86220d14a46b689177f31b93aff9682ad4d965f261b02"
     },
     {
       "path": "README-V040A1.txt",
@@ -691,8 +691,8 @@
     },
     {
       "path": "src/sazmanhr/client.py",
-      "bytes": 7249,
-      "sha256": "bb5335cd8488881a5162e14cd07109968c244e8d4d414a0c12e331ecbf23a974"
+      "bytes": 8020,
+      "sha256": "5ca33df6f2c662012bce7a184075cf0f39d77d6d3ab5eb0b5ced2ecf30427c35"
     },
     {
       "path": "src/sazmanhr/compat_v49.py",
@@ -837,12 +837,17 @@
     {
       "path": "tests/test_package.py",
       "bytes": 28020,
-      "sha256": "1ae94a1400403edea376f934ea31e171924ab82745e38663742eb85785d972fd"
+      "sha256": "26866b3493aedec0b0fd595978d033b7e5fbe0f3a9b47dd5223c9137c9dda763"
     },
     {
       "path": "tests/test_provisioning.py",
       "bytes": 3086,
       "sha256": "6170a070b27c0a3b5c9bcf7c4e1e07c61f7b1bf51481f30e833fac51a51f4aaf"
+    },
+    {
+      "path": "tests/test_rc3_desktop_tls_pin.py",
+      "bytes": 3992,
+      "sha256": "9eba4db93cf15113d70dafff9fee7ad6c0f841cb81c1f77c5f496449e3f58a71"
     },
     {
       "path": "tests/test_rc3_legacy_service_migration.py",
@@ -882,7 +887,7 @@
     {
       "path": "tests/test_rc_release_identity.py",
       "bytes": 1003,
-      "sha256": "309b596878171845d94d0013abdb6b521fc7101c64089058214f9fd5e81c231c"
+      "sha256": "950ac87355353bd3e8e2a3afeab6ed37927dfc8268c91be7f2a90ae4ff96e7d1"
     },
     {
       "path": "tests/test_repository.py",
@@ -1102,7 +1107,7 @@
     {
       "path": "VERSION-V100RC1.json",
       "bytes": 2650,
-      "sha256": "d092c9d6fb4780f6d2b411be4e9f928710b95216fa8e6afcbee8b40906e4b8dc"
+      "sha256": "3dd853dc1d0653a7c1edb3fbac4b78e9fa506aa24ae6d955c69b714463b8380e"
     },
     {
       "path": "web/app.js",

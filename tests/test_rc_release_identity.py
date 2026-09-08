@@ -7,7 +7,7 @@ class RcReleaseIdentityTests(unittest.TestCase):
     def test_rc_identity_is_single_contract(self):
         x=load_identity()
         self.assertEqual(x.version,'1.0.0-rc.3')
-        self.assertEqual(x.package_revision,'1.0.0-rc.3-ci.3')
+        self.assertEqual(x.package_revision,'1.0.0-rc.3-ci.4')
         self.assertEqual(x.branch,'release/v1.0.0-rc.3')
         self.assertEqual(x.baseline_tag,'tested-v0.8.0-rc.1-source')
         self.assertEqual(x.baseline_commit,'8f1adfa88a1b53db1b075504c58900957e812894')
