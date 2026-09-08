@@ -271,7 +271,7 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "1.0.0-rc.3-ci.4",
+            "1.0.0-rc.3-ci.5",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
@@ -292,10 +292,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "1.0.0-rc.3-ci.4\n", encoding="utf-8", newline="\n"
+                "1.0.0-rc.3-ci.5\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "1.0.0-rc.3-ci.4",
+                "package_revision": "1.0.0-rc.3-ci.5",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -457,7 +457,13 @@ class PackageTests(unittest.TestCase):
         self.assertIn("PYTHONPATH=/app/src", dockerfile)
         docker_requirements = (PROJECT / "deploy" / "linux-web-test" / "requirements.txt").read_text(encoding="utf-8")
         source_requirements = (PROJECT / "ci" / "requirements-source-gates.txt").read_text(encoding="utf-8")
-        self.assertEqual(docker_requirements, source_requirements)
+        docker_requirement_lines = {line.strip() for line in docker_requirements.splitlines() if line.strip()}
+        source_requirement_lines = {line.strip() for line in source_requirements.splitlines() if line.strip()}
+        self.assertNotIn("PySide6==6.11.2", docker_requirement_lines)
+        self.assertEqual(
+            source_requirement_lines,
+            docker_requirement_lines | {"PySide6==6.11.2"},
+        )
         self.assertIn("COPY deploy/linux-web-test/requirements.txt /app/requirements.txt", dockerfile)
         self.assertIn("--only-binary=:all: -r /app/requirements.txt", dockerfile)
         self.assertIn("127.0.0.1:${HRM_WEB_PORT:-8080}:8080", compose)
@@ -466,7 +472,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("HRM-1.0.0-rc.3-Linux-Web-Test", workflow)
         self.assertIn("Install Linux web source dependencies", workflow)
         self.assertIn(
-            "run: |\n          python -m pip install --disable-pip-version-check --only-binary=:all: -r ci/requirements-source-gates.txt",
+            "run: |\n          python -m pip install --disable-pip-version-check --only-binary=:all: -r deploy/linux-web-test/requirements.txt",
             workflow,
         )
         self.assertNotIn(
