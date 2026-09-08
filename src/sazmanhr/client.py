@@ -23,6 +23,7 @@ from . import __version__
 from .api_client import ApiClient, ApiError
 from .branding import APP_NAME, COMPANY_NAME, PRODUCT_TITLE, logo_path
 from .config import ClientConfig, default_client_config
+from .tls import certificate_fingerprint
 
 REFERENCE_PAGE_IDS = (
     "formalChart", "statusChart", "personnelDirectory", "personnelEducation",
@@ -67,21 +68,33 @@ class PinnedPage(QWebEnginePage):
         self.allowed_host = (parsed.hostname or "").lower()
         self.allowed_port = parsed.port or (443 if parsed.scheme == "https" else 80)
         self.preflight_succeeded = False
+        self.allowed_fingerprint = ""
+        # Qt 6 exposes certificateError as a signal, not a virtual override.
+        self.certificateError.connect(self._on_certificate_error)
 
-    def certificateError(self, error):  # noqa: N802 - Qt virtual method
+    @staticmethod
+    def _normalize_fingerprint(value: str) -> str:
+        raw = "".join(ch for ch in str(value or "").upper() if ch in "0123456789ABCDEF")
+        return ":".join(raw[index:index + 2] for index in range(0, len(raw), 2))
+
+    def _on_certificate_error(self, error) -> None:
+        accept = False
         try:
             url = error.url()
             port = url.port(443 if url.scheme().lower() == "https" else 80)
             same_endpoint = url.host().lower() == self.allowed_host and port == self.allowed_port
             if self.preflight_succeeded and same_endpoint and error.isOverridable():
-                try:
-                    error.acceptCertificate()
-                except AttributeError:
-                    pass
-                return True
+                chain = error.certificateChain()
+                if chain:
+                    actual = certificate_fingerprint(bytes(chain[0].toDer()))
+                    expected = self._normalize_fingerprint(self.allowed_fingerprint)
+                    accept = bool(expected) and actual == expected
         except Exception:
-            pass
-        return False
+            accept = False
+        if accept:
+            error.acceptCertificate()
+        else:
+            error.rejectCertificate()
 
 
 class EnterpriseWebWindow(QMainWindow):
@@ -125,6 +138,7 @@ class EnterpriseWebWindow(QMainWindow):
             raise ApiError("سرور HRM آماده نیست.")
         self.config.tls_fingerprint = client.tls_fingerprint
         self.config.save(self.config_path)
+        self.page.allowed_fingerprint = client.tls_fingerprint
         self.page.preflight_succeeded = True
         self.view.load(QUrl(self.config.server_url.rstrip("/") + "/"))
 
