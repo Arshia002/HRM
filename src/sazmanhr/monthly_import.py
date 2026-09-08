@@ -16,6 +16,7 @@ from typing import Any
 
 from openpyxl import load_workbook
 
+from .compat_v49 import load_dataset
 from .database import Repository, canonical, utc_now
 
 MAX_IMPORT_BYTES = 24 * 1024 * 1024
@@ -72,11 +73,10 @@ def _split_clear_fields(raw: str) -> set[str]:
 
 
 def _load_position_catalog(repo: Repository) -> dict[str, dict[str, Any]]:
-    with repo.connect() as conn:
-        row = conn.execute("SELECT payload_json FROM ui_compat_datasets WHERE name='position-catalog'").fetchone()
-    if not row:
-        raise ValueError("فهرست معتبر پست‌ها روی سرور بارگذاری نشده است.")
-    payload = json.loads(row[0])
+    try:
+        payload = load_dataset(repo, "position-catalog")
+    except KeyError as exc:
+        raise ValueError("فهرست معتبر پست‌ها روی سرور بارگذاری نشده است.") from exc
     positions = payload.get("positions") if isinstance(payload, dict) else None
     if not isinstance(positions, list):
         raise ValueError("فهرست پست‌های سرور معتبر نیست.")

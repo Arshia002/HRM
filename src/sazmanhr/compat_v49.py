@@ -27,6 +27,68 @@ V49_DATASET_NAMES = frozenset({
     "gender-map",
 })
 
+_NO_SYNTHETIC_FALLBACK = object()
+
+# Public CI/install databases intentionally contain no private v4.9 payloads.
+# The locked frontend still requires these JSON contracts to exist.  Return
+# structurally safe, PII-free values only when the database is explicitly
+# marked synthetic and the compatibility store is completely empty.
+_SYNTHETIC_V49_FALLBACKS: dict[str, Any] = {
+    "initial-data": {
+        "summary": {},
+        "app": {"version": "4.9.0"},
+        "change_log": [],
+        "changelog": [],
+        "people": [],
+        "slides": [],
+    },
+    "position-catalog": {"positions": []},
+    "placement-models": {
+        # v4.9 mutates these two page maps unconditionally during startup.
+        "org79PptTree": {
+            "7": {"parent": {}},
+            "10": {"parent": {}},
+        },
+        "ORG97_ACTIVITY_POST_PLACEMENTS": {},
+        "ORG99_VERIFIED_MODEL": {"pages": {}},
+        "ORG101_VERIFIED_MODEL": {"pages": {}},
+        "ORG102_HEAD_MODEL": {"pages": {}},
+        "ORG104_HEAD_MODEL": {"pages": {}},
+        "ORG121_PLACEMENTS": {},
+        "ORG152_ROLE_NODES": [],
+        "ORG152_CORRECTIONS": {},
+        "ORG153_PEOPLE": {},
+    },
+    "person-education": {"meta": {"categories": []}, "byPersonId": {}},
+    "person-details": {},
+    "service-history": {"meta": {"record_count": 0}, "byPersonnelNo": {}},
+    "training-history": {"meta": {"records": 0}, "byPersonnelNo": {}},
+    "vacancy-audit": [],
+    "gender-map": {},
+}
+
+
+def _synthetic_dataset_fallback(repo: Repository, name: str) -> Any:
+    with repo.connect() as conn:
+        synthetic = conn.execute(
+            """SELECT 1 FROM metadata
+               WHERE key IN ('seed_mode','dataset_kind') AND value='synthetic-demo'
+               LIMIT 1"""
+        ).fetchone()
+        protected = conn.execute(
+            """SELECT 1 FROM metadata
+               WHERE key IN ('ui_v49_reference_version','ui_v49_private_manifest_sha256')
+               LIMIT 1"""
+        ).fetchone()
+        compat_count = int(conn.execute("SELECT COUNT(*) FROM ui_compat_datasets").fetchone()[0])
+    if not synthetic or protected or compat_count != 0:
+        return _NO_SYNTHETIC_FALLBACK
+    value = _SYNTHETIC_V49_FALLBACKS.get(name, _NO_SYNTHETIC_FALLBACK)
+    if value is _NO_SYNTHETIC_FALLBACK:
+        return value
+    # Match json.loads(payload_json): callers receive a fresh mutable object.
+    return json.loads(json.dumps(value, ensure_ascii=False))
+
 
 def legacy_permissions(repo: Repository, user: dict[str, Any]) -> dict[str, bool]:
     current = repo.permissions_for(user)
@@ -62,6 +124,9 @@ def load_dataset(repo: Repository, name: str) -> Any:
             "SELECT payload_json FROM ui_compat_datasets WHERE name=?", (name,)
         ).fetchone()
     if not row:
+        fallback = _synthetic_dataset_fallback(repo, name)
+        if fallback is not _NO_SYNTHETIC_FALLBACK:
+            return fallback
         raise KeyError(f"مجموعه داده رابط 4.9 بارگذاری نشده است: {name}")
     return json.loads(row[0])
 
