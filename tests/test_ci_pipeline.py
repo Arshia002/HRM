@@ -75,7 +75,7 @@ class CiPipelineTests(unittest.TestCase):
         self.assertIn("grep -F 'id=\"appShell\"'", workflow)
         self.assertNotIn("grep 'Linux Web Test'", workflow)
         self.assertIn("Install Linux web source dependencies", workflow)
-        self.assertIn("--only-binary=:all: -r ci/requirements-source-gates.txt", workflow)
+        self.assertIn("--only-binary=:all: -r deploy/linux-web-test/requirements.txt", workflow)
         self.assertNotIn("Install Linux web source dependency\n        run: python -m pip install --disable-pip-version-check cryptography==50.0.1", workflow)
 
     def test_source_dependency_pins_match_build_and_report_missing_modules(self):
@@ -83,7 +83,7 @@ class CiPipelineTests(unittest.TestCase):
         build = pinned_requirements(PROJECT / "build" / "windows" / "requirements-build.txt")
         self.assertEqual(
             source,
-            {"cryptography": "50.0.1", "openpyxl": "3.1.5", "xlrd": "2.0.1"},
+            {"cryptography": "50.0.1", "pyside6": "6.11.2", "openpyxl": "3.1.5", "xlrd": "2.0.1"},
         )
         self.assertTrue(all(build.get(name) == version for name, version in source.items()))
 
