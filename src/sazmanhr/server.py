@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -34,7 +35,12 @@ from .backup_package import create_package as create_backup_package, stage_datab
 from .monthly_import import MAX_IMPORT_BYTES, PREVIEW_TTL_MINUTES, apply_plan as apply_monthly_plan, preview_xlsx
 from .security import generate_temporary_password
 from .tls import ensure_self_signed_certificate, pem_fingerprint
-from .windows_service_control import stop_windows_service
+from .windows_service_control import (
+    delete_windows_service,
+    set_windows_service_binary_path,
+    start_windows_service,
+    stop_windows_service,
+)
 
 MAX_BODY = 4 * 1024 * 1024
 
@@ -771,6 +777,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--health-check", metavar="URL")
     parser.add_argument("--health-timeout", type=int, default=30)
+    parser.add_argument("--verify-service-runtime", type=Path)
+    parser.add_argument("--set-windows-service-image", metavar="NAME")
+    parser.add_argument("--service-image-executable", type=Path)
+    parser.add_argument("--delete-windows-service", metavar="NAME")
+    parser.add_argument("--start-windows-service", metavar="NAME")
+    parser.add_argument("--service-start-timeout", type=int, default=30)
     parser.add_argument("--stop-windows-service", metavar="NAME")
     parser.add_argument("--service-stop-timeout", type=int, default=30)
     parser.add_argument("--service-state-file", type=Path)
@@ -790,6 +802,97 @@ def resolve_tls(args: argparse.Namespace, config: ServerConfig) -> tuple[Path | 
             raise ValueError("Custom TLS requires valid --tls-cert and --tls-key files.")
         return cert, key, pem_fingerprint(cert)
     return ensure_self_signed_certificate(args.data_dir)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def verify_service_runtime(runtime_dir: Path) -> dict[str, Any]:
+    """Verify every file in the generated onedir manifest before SCM cutover."""
+    runtime_dir = runtime_dir.resolve()
+    manifest_path = runtime_dir / "runtime-manifest.json"
+    if not runtime_dir.is_dir() or not manifest_path.is_file():
+        raise ValueError("Windows Service runtime or runtime-manifest.json is missing.")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("schema") != 1 or not isinstance(manifest.get("files"), list):
+        raise ValueError("Windows Service runtime manifest schema is invalid.")
+
+    expected: dict[str, tuple[int, str]] = {}
+    for item in manifest["files"]:
+        if not isinstance(item, dict):
+            raise ValueError("Windows Service runtime manifest entry is invalid.")
+        relative = str(item.get("path", ""))
+        parts = relative.split("/")
+        if (
+            not relative
+            or relative.startswith("/")
+            or "\\" in relative
+            or any(part in ("", ".", "..") for part in parts)
+        ):
+            raise ValueError(f"Unsafe Windows Service runtime path: {relative!r}")
+        size = int(item.get("bytes", -1))
+        digest = str(item.get("sha256", "")).lower()
+        if size < 0 or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
+            raise ValueError(f"Invalid Windows Service runtime metadata: {relative!r}")
+        if relative in expected:
+            raise ValueError(f"Duplicate Windows Service runtime path: {relative!r}")
+        expected[relative] = (size, digest)
+
+    actual_files = {
+        path.relative_to(runtime_dir).as_posix()
+        for path in runtime_dir.rglob("*")
+        if path.is_file() and path != manifest_path
+    }
+    if actual_files != set(expected):
+        missing = sorted(set(expected) - actual_files)
+        extra = sorted(actual_files - set(expected))
+        raise ValueError(
+            f"Windows Service runtime file-set mismatch: missing={missing[:10]!r}, "
+            f"extra={extra[:10]!r}"
+        )
+    if "HRMService.exe" not in expected:
+        raise ValueError("Windows Service runtime manifest does not contain HRMService.exe.")
+    if not (runtime_dir / "_internal").is_dir():
+        raise ValueError("Windows Service onedir _internal directory is missing.")
+
+    tree = hashlib.sha256()
+    for relative in sorted(expected):
+        path = runtime_dir.joinpath(*relative.split("/"))
+        expected_size, expected_hash = expected[relative]
+        actual_size = path.stat().st_size
+        actual_hash = _sha256_file(path)
+        if actual_size != expected_size or actual_hash != expected_hash:
+            raise ValueError(
+                f"Windows Service runtime hash mismatch: {relative} "
+                f"bytes={actual_size}/{expected_size} sha256={actual_hash}/{expected_hash}"
+            )
+        tree.update(relative.encode("utf-8"))
+        tree.update(b"\0")
+        tree.update(str(actual_size).encode("ascii"))
+        tree.update(b"\0")
+        tree.update(bytes.fromhex(actual_hash))
+
+    actual_tree = tree.hexdigest()
+    expected_tree = str(manifest.get("tree_sha256", "")).lower()
+    if actual_tree != expected_tree:
+        raise ValueError(
+            f"Windows Service runtime tree digest mismatch: {actual_tree} != {expected_tree}"
+        )
+    service_hash = expected["HRMService.exe"][1]
+    if str(manifest.get("service_executable_sha256", "")).lower() != service_hash:
+        raise ValueError("Windows Service executable hash is not locked by the runtime manifest.")
+    return {
+        "ok": True,
+        "runtime": str(runtime_dir),
+        "files": len(expected),
+        "tree_sha256": actual_tree,
+        "service_executable_sha256": service_hash,
+    }
 
 
 def wait_for_health(url: str, timeout_seconds: int = 30) -> dict[str, Any]:
@@ -883,6 +986,26 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.data_dir = args.data_dir.resolve()
     try:
+        if args.verify_service_runtime:
+            state = verify_service_runtime(args.verify_service_runtime)
+            print(json.dumps(state))
+            return 0
+        if args.set_windows_service_image:
+            if not args.service_image_executable:
+                raise ValueError("--service-image-executable is required with --set-windows-service-image.")
+            state = set_windows_service_binary_path(
+                args.set_windows_service_image, args.service_image_executable
+            )
+            print(json.dumps(state))
+            return 0
+        if args.delete_windows_service:
+            state = delete_windows_service(args.delete_windows_service)
+            print(json.dumps(state))
+            return 0
+        if args.start_windows_service:
+            state = start_windows_service(args.start_windows_service, args.service_start_timeout)
+            print(json.dumps(state))
+            return 0
         if args.stop_windows_service:
             state = stop_windows_service(args.stop_windows_service, args.service_stop_timeout)
             if args.service_state_file:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import platform
 import shutil
@@ -116,6 +117,46 @@ def sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             result.update(chunk)
     return result.hexdigest()
+
+
+def write_service_runtime_manifest(runtime_dir: Path) -> tuple[str, str, Path]:
+    """Hash-lock the complete PyInstaller onedir payload."""
+    manifest_path = runtime_dir / "runtime-manifest.json"
+    manifest_path.unlink(missing_ok=True)
+    entries: list[dict[str, object]] = []
+    tree = hashlib.sha256()
+    files = sorted(
+        (path.relative_to(runtime_dir).as_posix(), path)
+        for path in runtime_dir.rglob("*")
+        if path.is_file()
+    )
+    if not files:
+        raise BuildFailure(f"Windows Service runtime is empty: {runtime_dir}")
+    for relative, path in files:
+        digest = sha256(path)
+        size = path.stat().st_size
+        entries.append({"path": relative, "bytes": size, "sha256": digest})
+        tree.update(relative.encode("utf-8"))
+        tree.update(b"\0")
+        tree.update(str(size).encode("ascii"))
+        tree.update(b"\0")
+        tree.update(bytes.fromhex(digest))
+    tree_digest = tree.hexdigest()
+    service_exe_hash = next(
+        str(item["sha256"]) for item in entries if item["path"] == "HRMService.exe"
+    )
+    payload = {
+        "schema": 1,
+        "tree_sha256": tree_digest,
+        "service_executable_sha256": service_exe_hash,
+        "files": entries,
+    }
+    manifest_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return tree_digest, service_exe_hash, manifest_path
 
 
 def find_iscc() -> Path | None:
@@ -249,7 +290,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     spec_outputs = (
         ("client.spec", "HRM.exe"),
         ("server.spec", "HRMServer.exe"),
-        ("service.spec", "HRMService.exe"),
+        ("service.spec", "HRMService/HRMService.exe"),
         ("migration.spec", "HRMMigration.exe"),
     )
     for spec_name, output_name in spec_outputs:
@@ -271,7 +312,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
         )
         expected_output = DIST_DIR / output_name
         if not expected_output.is_file():
-            produced = ", ".join(sorted(path.name for path in DIST_DIR.glob("*.exe"))) or "<none>"
+            produced = ", ".join(sorted(path.relative_to(DIST_DIR).as_posix() for path in DIST_DIR.rglob("*.exe"))) or "<none>"
             raise BuildFailure(
                 f"PyInstaller contract failed after {spec_name}: expected {expected_output}; "
                 f"produced executables: {produced}"
@@ -324,6 +365,17 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
     if sign_thumbprint:
         sign_files(log, executables, sign_thumbprint)
 
+    service_runtime_dir = DIST_DIR / "HRMService"
+    runtime_digest, service_exe_hash, runtime_manifest = write_service_runtime_manifest(
+        service_runtime_dir
+    )
+    service_runtime_generation = f"svc-{runtime_digest[:24]}"
+    log.write(
+        "PASS immutable Windows Service runtime: "
+        f"{service_runtime_generation} tree={runtime_digest} exe={service_exe_hash}"
+    )
+    log.write(f"PASS Windows Service runtime manifest: {runtime_manifest}")
+
     iscc = install_inno(log)
     log.write(f"Inno Setup: {iscc}")
     run(
@@ -332,6 +384,7 @@ def build(log: BuildLog, *, sign_thumbprint: str = "") -> str:
             iscc,
             f"/DProjectRoot={PROJECT_ROOT}",
             f"/DDistDir={DIST_DIR}",
+            f"/DServiceRuntimeGeneration={service_runtime_generation}",
             INNO_SCRIPT,
         ],
     )

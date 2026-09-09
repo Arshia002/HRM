@@ -85,6 +85,12 @@ def validate_specs() -> None:
                 f"but build/installer expects {expected!r}.exe"
             )
         print(f"PASS spec output: {spec_name} -> {expected}.exe")
+    service_spec = (PROJECT / "build" / "windows" / "service.spec").read_text(encoding="utf-8")
+    if "exclude_binaries=True" not in service_spec or "COLLECT(" not in service_spec:
+        fail("HRMService must use PyInstaller onedir for direct SCM service hosting")
+    if "pyz, a.scripts, a.binaries, a.datas, []" in service_spec:
+        fail("HRMService onefile layout is forbidden for the Windows Service host")
+    print("PASS Windows Service host uses PyInstaller onedir")
 
 
 def validate_inno_sources() -> None:
@@ -118,6 +124,9 @@ def validate_inno_sources() -> None:
     required_markers = (
         "service-stop-before-copy",
         "--stop-windows-service HRMCentralService",
+        "--start-windows-service HRMCentralService",
+        "--service-start-timeout 30",
+        "{#DistDir}\\HRMService\\*",
         "HRMCentralService",
         'obj= "NT AUTHORITY\\LocalService"',
         "sidtype HRMCentralService unrestricted",
@@ -137,6 +146,8 @@ def validate_builder_contract() -> None:
     for exe in ("HRM.exe", "HRMServer.exe", "HRMService.exe", "HRMMigration.exe"):
         if exe not in builder:
             fail(f"Builder does not validate expected output {exe}")
+    if '("service.spec", "HRMService/HRMService.exe")' not in builder:
+        fail("Builder must validate dist/HRMService/HRMService.exe for onedir service output")
     if '"--smoke-test"' not in builder:
         fail("Builder no longer smoke-tests the frozen Qt client before compiling Setup")
     if '"--ui-smoke-test"' not in builder:

@@ -4,6 +4,9 @@
 #ifndef DistDir
   #error DistDir is required
 #endif
+#ifndef ServiceRuntimeGeneration
+  #error ServiceRuntimeGeneration is required
+#endif
 
 [Setup]
 AppId={{4F82A3C7-1D55-4B80-9F21-6B3D4E7A1600}
@@ -43,7 +46,7 @@ Source: "{#DistDir}\HRMServer.exe"; DestName: "HRMServerPreflight.exe"; Componen
 Source: "{#ProjectRoot}\data\seed\sazmanhr-seed.sqlite"; DestName: "hrm-seed.sqlite"; Components: server; Flags: dontcopy noencryption
 Source: "{#DistDir}\HRM.exe"; DestDir: "{app}\Client"; Components: client; Flags: ignoreversion
 Source: "{#DistDir}\HRMServer.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
-Source: "{#DistDir}\HRMService.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
+Source: "{#DistDir}\HRMService\*"; DestDir: "{app}\ServiceRuntime\{#ServiceRuntimeGeneration}"; Components: server; Flags: recursesubdirs createallsubdirs onlyifdoesntexist
 Source: "{#DistDir}\HRMMigration.exe"; DestDir: "{app}\Server"; Components: server; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\deployment-guide-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
 Source: "{#ProjectRoot}\docs\windows-test-checklist-fa.md"; DestDir: "{app}\Docs"; Flags: ignoreversion
@@ -67,8 +70,8 @@ Name: "{group}\اطلاعات ورود اولیه"; Filename: "{commonappdata}\H
 Filename: "{app}\Client\HRM.exe"; Parameters: "--server {code:GetServerUrl}"; Components: client; Flags: nowait postinstall skipifsilent runasoriginaluser; Description: "اجرای HRM"
 
 [UninstallRun]
-Filename: "{app}\Server\HRMService.exe"; Parameters: "--wait 30 stop"; RunOnceId: "StopEnterpriseService"; Flags: runhidden waituntilterminated; Components: server
-Filename: "{app}\Server\HRMService.exe"; Parameters: "remove"; RunOnceId: "RemoveEnterpriseService"; Flags: runhidden waituntilterminated; Components: server
+Filename: "{app}\Server\HRMServer.exe"; Parameters: "--data-dir ""{commonappdata}\HRM-Kermanshah"" --stop-windows-service HRMCentralService --service-stop-timeout 30"; RunOnceId: "StopEnterpriseService"; Flags: runhidden waituntilterminated; Components: server
+Filename: "{app}\Server\HRMServer.exe"; Parameters: "--delete-windows-service HRMCentralService"; RunOnceId: "RemoveEnterpriseService"; Flags: runhidden waituntilterminated; Components: server
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""HRM Central Service 8765"""; RunOnceId: "RemoveEnterpriseFirewall"; Flags: runhidden waituntilterminated; Components: server
 
 [Code]
@@ -78,6 +81,14 @@ var
   ServiceWasRunningBeforeInstall: Boolean;
   ServiceStoppedForUpgrade: Boolean;
   PreInstallServiceHandled: Boolean;
+  ServiceCutoverAttempted: Boolean;
+  ServiceTransactionReady: Boolean;
+  ServiceTransactionCommitted: Boolean;
+  OriginalServiceImagePath: String;
+  OriginalServiceExe: String;
+  OriginalServiceStartType: Cardinal;
+  OriginalServiceObjectName: String;
+  OriginalServiceSidType: Cardinal;
   SetupCompleted: Boolean;
   ProvisionFailed: Boolean;
   LegacyServicesHandled: Boolean;
@@ -94,6 +105,129 @@ var
 function EnterpriseDataDir: String;
 begin
   Result := ExpandConstant('{commonappdata}\HRM-Kermanshah');
+end;
+
+function ServiceRuntimeDir: String;
+begin
+  Result := ExpandConstant('{app}\ServiceRuntime\{#ServiceRuntimeGeneration}');
+end;
+
+function ServiceRuntimeExe: String;
+begin
+  Result := ServiceRuntimeDir + '\HRMService.exe';
+end;
+
+function ServiceExecutableFromImagePath(ImagePath: String): String;
+var
+  Value: String;
+  Tail: String;
+  ClosingQuote: Integer;
+begin
+  Value := Trim(ImagePath);
+  Result := '';
+  if Value = '' then
+    exit;
+  if Copy(Value, 1, 1) = '"' then
+  begin
+    Tail := Copy(Value, 2, Length(Value) - 1);
+    ClosingQuote := Pos('"', Tail);
+    if ClosingQuote > 0 then
+      Result := Copy(Tail, 1, ClosingQuote - 1);
+  end
+  else
+    Result := Value;
+end;
+
+function ServiceSidTypeArgument(SidType: Cardinal): String;
+begin
+  case SidType of
+    0: Result := 'none';
+    1: Result := 'unrestricted';
+    3: Result := 'restricted';
+  else
+    Result := '';
+  end;
+end;
+
+procedure SnapshotOriginalServiceConfiguration(var FailureText: String);
+var
+  RawImage: String;
+begin
+  if not ServiceExistedBeforeInstall then
+    exit;
+
+  LogSetupStage('START', 'service-snapshot-before-copy', -1);
+  if not RegQueryStringValue(HKLM, ServiceRegistryPath('HRMCentralService'),
+    'ImagePath', OriginalServiceImagePath) then
+  begin
+    FailureText := 'مسیر اجرایی سرویس فعلی قابل خواندن نیست.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  OriginalServiceExe := ServiceExecutableFromImagePath(OriginalServiceImagePath);
+  if OriginalServiceExe = '' then
+  begin
+    FailureText := 'مسیر اجرایی سرویس فعلی قابل تفسیر نیست.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  RawImage := Trim(OriginalServiceImagePath);
+  if (RawImage <> OriginalServiceExe) and
+     (RawImage <> '"' + OriginalServiceExe + '"') then
+  begin
+    FailureText := 'ImagePath سرویس فعلی شامل آرگومان پشتیبانی‌نشده است؛ ارتقا متوقف شد.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  if not FileExists(OriginalServiceExe) then
+  begin
+    FailureText := 'فایل اجرایی سرویس فعلی وجود ندارد؛ ابتدا نصب فعلی باید بازیابی شود.';
+    LogSetupStage('FAIL', 'service-snapshot-image-missing', -1);
+    exit;
+  end;
+
+  if not RegQueryDWordValue(HKLM, ServiceRegistryPath('HRMCentralService'),
+    'Start', OriginalServiceStartType) then
+  begin
+    FailureText := 'نوع راه‌اندازی سرویس فعلی قابل خواندن نیست.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+  if (OriginalServiceStartType < 2) or (OriginalServiceStartType > 4) then
+  begin
+    FailureText := 'نوع راه‌اندازی سرویس فعلی پشتیبانی نمی‌شود.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  if not RegQueryStringValue(HKLM, ServiceRegistryPath('HRMCentralService'),
+    'ObjectName', OriginalServiceObjectName) then
+  begin
+    FailureText := 'حساب سرویس فعلی قابل خواندن نیست.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+  if Lowercase(OriginalServiceObjectName) <> 'nt authority\localservice' then
+  begin
+    FailureText := 'حساب سرویس فعلی خارج از قرارداد امن LocalService است.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  if not RegQueryDWordValue(HKLM, ServiceRegistryPath('HRMCentralService'),
+    'ServiceSidType', OriginalServiceSidType) then
+    OriginalServiceSidType := 0;
+  if ServiceSidTypeArgument(OriginalServiceSidType) = '' then
+  begin
+    FailureText := 'نوع Service SID فعلی پشتیبانی نمی‌شود.';
+    LogSetupStage('FAIL', 'service-snapshot-before-copy', -1);
+    exit;
+  end;
+
+  LogSetupStage('PASS', 'service-snapshot-before-copy', 0);
 end;
 
 procedure LogSetupStage(Status: String; StageName: String; ResultCode: Integer);
@@ -277,37 +411,132 @@ procedure RestoreOriginalServiceIfNeeded;
 var
   ResultCode: Integer;
   Started: Boolean;
+  SidArgument: String;
+  RestoreOK: Boolean;
 begin
-  if ServiceStoppedForUpgrade and ServiceExistedBeforeInstall then
+  if ServiceTransactionCommitted or (not ServiceExistedBeforeInstall) then
+    exit;
+  if not (ServiceStoppedForUpgrade or ServiceCutoverAttempted) then
+    exit;
+
+  RestoreOK := True;
+  LogSetupStage('START', 'restore-original-service-transaction', -1);
+
+  RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+    '--data-dir "' + EnterpriseDataDir +
+    '" --stop-windows-service HRMCentralService --service-stop-timeout 30');
+
+  if ServiceCutoverAttempted then
   begin
-    LogSetupStage('START', 'restore-original-service', -1);
     ResultCode := -1;
-    Started := Exec(ExpandConstant('{app}\Server\HRMService.exe'),
-      '--wait 30 start', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+      '--set-windows-service-image HRMCentralService --service-image-executable "' +
+      OriginalServiceExe + '"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+      LogSetupStage('PASS', 'restore-original-service-image', ResultCode)
+    else
+    begin
+      LogSetupStage('FAIL', 'restore-original-service-image', ResultCode);
+      RestoreOK := False;
+    end;
+
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{sys}\sc.exe'),
+      'config HRMCentralService start= ' +
+      ServiceStartModeArgument(OriginalServiceStartType),
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+      LogSetupStage('PASS', 'restore-original-service-startmode', ResultCode)
+    else
+    begin
+      LogSetupStage('FAIL', 'restore-original-service-startmode', ResultCode);
+      RestoreOK := False;
+    end;
+
+    SidArgument := ServiceSidTypeArgument(OriginalServiceSidType);
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{sys}\sc.exe'),
+      'sidtype HRMCentralService ' + SidArgument,
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+      LogSetupStage('PASS', 'restore-original-service-sidtype', ResultCode)
+    else
+    begin
+      LogSetupStage('FAIL', 'restore-original-service-sidtype', ResultCode);
+      RestoreOK := False;
+    end;
+
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{sys}\sc.exe'),
+      'config HRMCentralService obj= "NT AUTHORITY\LocalService" password= ""',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+      LogSetupStage('PASS', 'restore-original-service-account', ResultCode)
+    else
+    begin
+      LogSetupStage('FAIL', 'restore-original-service-account', ResultCode);
+      RestoreOK := False;
+    end;
+  end;
+
+  if ServiceWasRunningBeforeInstall then
+  begin
+    ResultCode := -1;
+    Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+      '--data-dir "' + EnterpriseDataDir +
+      '" --start-windows-service HRMCentralService --service-start-timeout 30',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
     if Started and (ResultCode = 0) then
     begin
-      LogSetupStage('PASS', 'restore-original-service', ResultCode);
-      ServiceStoppedForUpgrade := False;
+      LogSetupStage('PASS', 'restore-original-service-running', ResultCode);
+      ResultCode := -1;
+      Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+        '--data-dir "' + EnterpriseDataDir +
+        '" --health-check https://127.0.0.1:8765 --health-timeout 30',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if Started and (ResultCode = 0) then
+        LogSetupStage('PASS', 'restore-original-service-health', ResultCode)
+      else
+      begin
+        LogSetupStage('FAIL', 'restore-original-service-health', ResultCode);
+        RestoreOK := False;
+      end;
     end
     else
-      LogSetupStage('FAIL', 'restore-original-service', ResultCode);
+    begin
+      LogSetupStage('FAIL', 'restore-original-service-running', ResultCode);
+      RestoreOK := False;
+    end;
   end;
+
+  if RestoreOK then
+  begin
+    LogSetupStage('PASS', 'restore-original-service-transaction', 0);
+    ServiceStoppedForUpgrade := False;
+    ServiceCutoverAttempted := False;
+  end
+  else
+    LogSetupStage('FAIL', 'restore-original-service-transaction', -1);
 end;
 
 procedure RecoverServerAfterFailure;
 begin
   if ServiceExistedBeforeInstall then
-    { Keep the upgraded binary stopped while Inno rolls files back. The old
-      binary is restarted from DeinitializeSetup after rollback completes. }
-    RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), '--wait 30 stop')
-  else
+    RestoreOriginalServiceIfNeeded
+  else if ServiceCutoverAttempted then
   begin
-    RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), '--wait 30 stop');
-    RunIgnored(ExpandConstant('{app}\Server\HRMService.exe'), 'remove');
+    RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+      '--data-dir "' + EnterpriseDataDir +
+      '" --stop-windows-service HRMCentralService --service-stop-timeout 30');
+    RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+      '--delete-windows-service HRMCentralService');
     RunIgnored(ExpandConstant('{sys}\netsh.exe'),
       'advfirewall firewall delete rule name="HRM Central Service 8765"');
+    ServiceCutoverAttempted := False;
   end;
 end;
+
 
 procedure VerifyOneLegacyServiceDisabled(ServiceName: String);
 var
@@ -365,14 +594,58 @@ var
   DataDir: String;
   ServerExe: String;
   ServiceExe: String;
+  ServiceControlExe: String;
   SeedPath: String;
   DiagnosticPath: String;
+  ServiceStatePath: String;
+  ServiceStateContent: AnsiString;
+  ResultCode: Integer;
+  Started: Boolean;
 begin
   DataDir := EnterpriseDataDir;
   ServerExe := ExpandConstant('{app}\Server\HRMServer.exe');
-  ServiceExe := ExpandConstant('{app}\Server\HRMService.exe');
+  ServiceExe := ServiceRuntimeExe;
+  ServiceControlExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
   SeedPath := ExpandConstant('{tmp}\hrm-seed.sqlite');
   DiagnosticPath := DataDir + '\logs\setup-server.log';
+
+  RunRequired(ServiceControlExe,
+    '--verify-service-runtime "' + ServiceRuntimeDir +
+    '" --diagnostic-log "' + DiagnosticPath + '"',
+    'اعتبارسنجی کامل runtime سرویس');
+
+  if ServiceExistedBeforeInstall then
+  begin
+    ServiceStatePath := ExpandConstant('{tmp}\service-cutover-state.json');
+    DeleteFile(ServiceStatePath);
+    ResultCode := -1;
+    LogSetupStage('START', 'service-stop-for-cutover', ResultCode);
+    Started := Exec(ServiceControlExe,
+      '--data-dir "' + DataDir +
+      '" --stop-windows-service HRMCentralService --service-stop-timeout 30' +
+      ' --service-state-file "' + ServiceStatePath +
+      '" --diagnostic-log "' + DiagnosticPath + '"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if (not Started) or (ResultCode <> 0) then
+    begin
+      LogSetupStage('FAIL', 'service-stop-for-cutover', ResultCode);
+      ProvisionFailed := True;
+      RecoverServerAfterFailure;
+      RaiseException('HRM service cutover stop failed.');
+    end;
+    if not LoadStringFromLockedFile(ServiceStatePath, ServiceStateContent) then
+    begin
+      LogSetupStage('FAIL', 'service-cutover-state-validation', -1);
+      ProvisionFailed := True;
+      ServiceStoppedForUpgrade := True;
+      RecoverServerAfterFailure;
+      RaiseException('HRM service cutover state could not be validated.');
+    end;
+    ServiceWasRunningBeforeInstall :=
+      Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
+    ServiceStoppedForUpgrade := True;
+    LogSetupStage('PASS', 'service-stop-for-cutover', 0);
+  end;
 
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --seed "' + SeedPath +
@@ -380,10 +653,22 @@ begin
     'ساخت و اعتبارسنجی دیتابیس جدید');
 
   if ServiceExistedBeforeInstall then
-    RunRequired(ServiceExe, '--startup auto update', 'به‌روزرسانی Windows Service')
+  begin
+    ServiceCutoverAttempted := True;
+    RunRequired(ServiceControlExe,
+      '--set-windows-service-image HRMCentralService --service-image-executable "' +
+      ServiceExe + '" --diagnostic-log "' + DiagnosticPath + '"',
+      'سوئیچ تراکنشی ImagePath سرویس');
+  end
   else
+  begin
+    ServiceCutoverAttempted := True;
     RunRequired(ServiceExe, '--startup auto install', 'نصب Windows Service');
+  end;
 
+  RunRequired(ExpandConstant('{sys}\sc.exe'),
+    'config HRMCentralService start= auto',
+    'اعمال Automatic start برای سرویس');
   RunRequired(ExpandConstant('{sys}\sc.exe'),
     'sidtype HRMCentralService unrestricted',
     'فعال‌سازی Service SID اختصاصی');
@@ -404,7 +689,12 @@ begin
   RunRequired(ExpandConstant('{sys}\netsh.exe'),
     'advfirewall firewall add rule name="HRM Central Service 8765" dir=in action=allow protocol=TCP localport=8765 profile=domain,private',
     'ثبت قانون Firewall');
-  RunRequired(ServiceExe, '--wait 30 start', 'شروع Windows Service');
+
+  RunRequired(ServiceControlExe,
+    '--data-dir "' + DataDir +
+    '" --start-windows-service HRMCentralService --service-start-timeout 30' +
+    ' --diagnostic-log "' + DiagnosticPath + '"',
+    'شروع Windows Service');
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --health-check https://127.0.0.1:8765 --health-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',
@@ -424,8 +714,16 @@ begin
     '"' + DataDir + '" /verify /T',
     'اعتبارسنجی نهایی ACL');
 
-  RunRequired(ServiceExe, '--wait 30 stop', 'توقف سرویس پس از سخت‌سازی ACL');
-  RunRequired(ServiceExe, '--wait 30 start', 'راه‌اندازی مجدد سرویس پس از سخت‌سازی ACL');
+  RunRequired(ServiceControlExe,
+    '--data-dir "' + DataDir +
+    '" --stop-windows-service HRMCentralService --service-stop-timeout 30' +
+    ' --diagnostic-log "' + DiagnosticPath + '"',
+    'توقف سرویس پس از سخت‌سازی ACL');
+  RunRequired(ServiceControlExe,
+    '--data-dir "' + DataDir +
+    '" --start-windows-service HRMCentralService --service-start-timeout 30' +
+    ' --diagnostic-log "' + DiagnosticPath + '"',
+    'راه‌اندازی مجدد سرویس پس از سخت‌سازی ACL');
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --health-check https://127.0.0.1:8765 --health-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',
@@ -433,9 +731,19 @@ begin
 
   VerifyLegacyServicesDisabled;
   if ServiceExistedBeforeInstall and (not ServiceWasRunningBeforeInstall) then
-    RunRequired(ServiceExe, '--wait 30 stop', 'بازگردانی وضعیت توقف قبلی سرویس');
-  ServiceStoppedForUpgrade := False;
+  begin
+    RunRequired(ServiceControlExe,
+      '--data-dir "' + DataDir +
+      '" --stop-windows-service HRMCentralService --service-stop-timeout 30' +
+      ' --diagnostic-log "' + DiagnosticPath + '"',
+      'بازگردانی وضعیت توقف قبلی سرویس');
+    ServiceStoppedForUpgrade := False;
+  end;
+
+  ServiceTransactionReady := True;
+  LogSetupStage('PASS', 'service-runtime-transaction-ready', 0);
 end;
+
 
 procedure InitializeWizard;
 begin
@@ -444,6 +752,14 @@ begin
   ServiceWasRunningBeforeInstall := False;
   ServiceStoppedForUpgrade := False;
   PreInstallServiceHandled := False;
+  ServiceCutoverAttempted := False;
+  ServiceTransactionReady := False;
+  ServiceTransactionCommitted := False;
+  OriginalServiceImagePath := '';
+  OriginalServiceExe := '';
+  OriginalServiceStartType := 0;
+  OriginalServiceObjectName := '';
+  OriginalServiceSidType := 0;
   SetupCompleted := False;
   LegacyServicesHandled := False;
   LegacyEnterpriseExists := False;
@@ -473,9 +789,8 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   PreflightExe: String;
+  PreflightDataDir: String;
   DiagnosticPath: String;
-  ServiceStatePath: String;
-  ServiceStateContent: AnsiString;
   ResultCode: Integer;
   Started: Boolean;
 begin
@@ -491,6 +806,7 @@ begin
       ExtractTemporaryFile('HRMServerPreflight.exe');
       ExtractTemporaryFile('hrm-seed.sqlite');
       PreflightExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
+      PreflightDataDir := ExpandConstant('{tmp}\hrm-server-preflight-data');
       DiagnosticPath := EnterpriseDataDir + '\logs\setup-server.log';
 
       if not LegacyServicesHandled then
@@ -519,73 +835,41 @@ begin
       ServiceExistedBeforeInstall := RegKeyExists(HKLM,
         'SYSTEM\CurrentControlSet\Services\HRMCentralService');
 
-      { This runs before Inno checks/replaces installed files. The frozen
-        preflight helper stops the proven alpha.4 service and verifies SCM state. }
       if ServiceExistedBeforeInstall and (not PreInstallServiceHandled) then
       begin
-        ServiceStatePath := ExpandConstant('{tmp}\service-stop-state.json');
-        DeleteFile(ServiceStatePath);
-        ServiceWasRunningBeforeInstall := True;
-        ServiceStoppedForUpgrade := True;
-        ResultCode := -1;
-        LogSetupStage('START', 'service-stop-before-copy', ResultCode);
-        Started := Exec(PreflightExe,
-          '--data-dir "' + EnterpriseDataDir +
-          '" --stop-windows-service HRMCentralService --service-stop-timeout 30' +
-          ' --service-state-file "' + ServiceStatePath +
-          '" --diagnostic-log "' + DiagnosticPath + '"',
-          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-        if (not Started) or (ResultCode <> 0) then
-        begin
-          LogSetupStage('FAIL', 'service-stop-before-copy', ResultCode);
-          LogProtectedDiagnostics;
-          ProvisionFailed := True;
-          Result := 'توقف ایمن سرویس پیش از جایگزینی فایل‌ها شکست خورد (کد ' +
-            IntToStr(ResultCode) + ').';
-        end
-        else if not LoadStringFromLockedFile(ServiceStatePath, ServiceStateContent) then
-        begin
-          LogSetupStage('FAIL', 'service-stop-state-validation', -1);
-          LogProtectedDiagnostics;
-          ProvisionFailed := True;
-          Result := 'وضعیت توقف سرویس قابل اعتبارسنجی نیست؛ نصب برای حفاظت از فایل‌ها متوقف شد.';
-        end
-        else
-        begin
-          if Pos('"exists": false', Lowercase(String(ServiceStateContent))) > 0 then
-            ServiceExistedBeforeInstall := False;
-          ServiceWasRunningBeforeInstall :=
-            Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
-          ServiceStoppedForUpgrade := ServiceWasRunningBeforeInstall;
+        SnapshotOriginalServiceConfiguration(Result);
+        if Result = '' then
           PreInstallServiceHandled := True;
-          LogSetupStage('PASS', 'service-stop-before-copy', 0);
-        end;
       end
       else if not ServiceExistedBeforeInstall then
         PreInstallServiceHandled := True;
 
       if Result = '' then
       begin
+        DelTree(PreflightDataDir, True, True, True);
         ResultCode := -1;
-        LogSetupStage('START', 'server-preflight', ResultCode);
+        LogSetupStage('START', 'server-preflight-isolated', ResultCode);
         Started := Exec(PreflightExe,
-          '--data-dir "' + EnterpriseDataDir + '" --seed "' + ExpandConstant('{tmp}\hrm-seed.sqlite') +
+          '--data-dir "' + PreflightDataDir + '" --seed "' +
+          ExpandConstant('{tmp}\hrm-seed.sqlite') +
           '" --init-only --diagnostic-log "' + DiagnosticPath + '"',
           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
         if (not Started) or (ResultCode <> 0) then
         begin
-          LogSetupStage('FAIL', 'server-preflight', ResultCode);
+          LogSetupStage('FAIL', 'server-preflight-isolated', ResultCode);
           LogProtectedDiagnostics;
           ProvisionFailed := True;
-          Result := 'پیش‌آزمون سرور مرکزی شکست خورد (کد ' + IntToStr(ResultCode) + ').' + #13#10 +
+          Result := 'پیش‌آزمون ایزوله سرور مرکزی شکست خورد (کد ' +
+            IntToStr(ResultCode) + ').' + #13#10 +
             'گزارش: ' + DiagnosticPath + #13#10 +
-            'نصب متوقف شد و موفق اعلام نمی‌شود.';
+            'نصب متوقف شد و نصب فعلی دست‌نخورده می‌ماند.';
         end
         else
-          LogSetupStage('PASS', 'server-preflight', ResultCode);
+          LogSetupStage('PASS', 'server-preflight-isolated', ResultCode);
+        DelTree(PreflightDataDir, True, True, True);
       end;
     except
-      LogSetupStage('EXCEPTION', 'server-preflight', -1);
+      LogSetupStage('EXCEPTION', 'server-preflight-isolated', -1);
       LogProtectedDiagnostics;
       ProvisionFailed := True;
       Result := 'اجرای پیش‌آزمون بسته مستقل ممکن نشد: ' + GetExceptionMessage;
@@ -599,6 +883,7 @@ begin
     end;
   end;
 end;
+
 
 function GetCustomSetupExitCode: Integer;
 begin
@@ -625,7 +910,14 @@ begin
     end;
   end
   else if CurStep = ssDone then
+  begin
+    if WizardIsComponentSelected('server') and ServiceTransactionReady then
+    begin
+      ServiceTransactionCommitted := True;
+      LogSetupStage('PASS', 'service-runtime-transaction-commit', 0);
+    end;
     SetupCompleted := True;
+  end;
 end;
 
 procedure DeinitializeSetup;

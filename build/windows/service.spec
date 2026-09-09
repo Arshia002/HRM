@@ -9,7 +9,6 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(root / "data" / "seed" / "sazmanhr-seed.sqlite"), "data/seed"),
-        (str(root / "web"), "web"),
     ],
     hiddenimports=[
         "servicemanager", "win32service", "win32serviceutil", "win32event",
@@ -22,7 +21,10 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 exe = EXE(
-    pyz, a.scripts, a.binaries, a.datas, [],
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
     name="HRMService",
     debug=False,
     bootloader_ignore_signals=False,
@@ -30,4 +32,12 @@ exe = EXE(
     upx=False,
     console=False,
     icon=str(root / "assets" / "HRM.ico"),
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    name="HRMService",
 )

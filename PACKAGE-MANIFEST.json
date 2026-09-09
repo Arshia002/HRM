@@ -86,8 +86,8 @@
     },
     {
       "path": "build/windows/build_windows.py",
-      "bytes": 13525,
-      "sha256": "d4654ba77b3700706cebe285bf21f0fff0df8d98ee437654608106732f39db4e"
+      "bytes": 15560,
+      "sha256": "0929f96afa7839e16fd4d94f3d119031e29db3065cfaaad8979fc1205fda6dff"
     },
     {
       "path": "build/windows/client.spec",
@@ -116,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 26146,
-      "sha256": "39a6e71a87a8b79992316a598f02f99d731516a7f7fc32ee76a2ab3c96a5b54f"
+      "bytes": 35692,
+      "sha256": "1f30c1b85af2056598127470df7958f8f508e584f856862eb3d6550216d19e0a"
     },
     {
       "path": "build/windows/migration.spec",
@@ -136,8 +136,8 @@
     },
     {
       "path": "build/windows/service.spec",
-      "bytes": 816,
-      "sha256": "f4d8e59216d02fa4553383bab6c0c30511baa0162c938dcd68eb67baf5412c12"
+      "bytes": 905,
+      "sha256": "14e19d1c375cca25cbd32f94bd237dff0b17fce1826b1ea61914051d5eb3ed17"
     },
     {
       "path": "build/windows/smoke-install.ps1",
@@ -246,8 +246,8 @@
     },
     {
       "path": "ci/validate_package_contract.py",
-      "bytes": 23784,
-      "sha256": "bdd2b0064bd0ba573cef6f9b89ffe377a199e9204d69a6e36692fcea19baf047"
+      "bytes": 24559,
+      "sha256": "11da210aa68324e88ff877fa7638498bdb6b064e16f01cd65d0d8cf8494ddd6c"
     },
     {
       "path": "ci/validate_rc_hardening.py",
@@ -736,8 +736,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 48659,
-      "sha256": "0a5a157b6e9387e43f8474b30515f852fc8497e3b1e2a55bc553fa002a193dbb"
+      "bytes": 54163,
+      "sha256": "0c6db74fd8d3be2a30aeb2876ff2ee60a2acd671d3493dd0c78698929236a618"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -756,8 +756,8 @@
     },
     {
       "path": "src/sazmanhr/windows_service_control.py",
-      "bytes": 4135,
-      "sha256": "98b8ef79f359e94acfee2a3625f0162193e22b1b0dc63d0b23287d830b920528"
+      "bytes": 13370,
+      "sha256": "d5b3ed9dce373d0cb36874aab3ef00807955f77920fbfb242c2edcb439490187"
     },
     {
       "path": "test-evidence/alpha4-proven-baseline-manifest.json",
@@ -868,6 +868,21 @@
       "path": "tests/test_rc3_synthetic_v49_fallback.py",
       "bytes": 7214,
       "sha256": "cf9738bde57a78a0db078fc4d98cfa6b1e6114ffc2a845175993083af8b1a8e1"
+    },
+    {
+      "path": "tests/test_rc3_windows_service_host_contract.py",
+      "bytes": 4777,
+      "sha256": "976b8451c8d1b415f8f7477620a3c183a593265f396b1bda799591ba6c32ec0e"
+    },
+    {
+      "path": "tests/test_rc3_windows_service_transaction_primitives.py",
+      "bytes": 4719,
+      "sha256": "e760623f6abb28f5a7565140fe4290f1433420794553b39b4c696ba4e4c89f53"
+    },
+    {
+      "path": "tests/test_rc3_windows_service_transactional_installer.py",
+      "bytes": 4445,
+      "sha256": "ab4a92c89df731b8923986c075159ad2e21e255b57e7f413ae5b8b4ff6c4e0e0"
     },
     {
       "path": "tests/test_rc_diagnostics_privacy.py",
