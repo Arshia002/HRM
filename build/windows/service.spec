@@ -9,6 +9,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(root / "data" / "seed" / "sazmanhr-seed.sqlite"), "data/seed"),
+        (str(root / "web"), "web"),
     ],
     hiddenimports=[
         "servicemanager", "win32service", "win32serviceutil", "win32event",

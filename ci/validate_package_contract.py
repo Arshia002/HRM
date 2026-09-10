@@ -321,12 +321,24 @@ def validate_public_safe_seed() -> None:
         fail(f"Missing canonical public-safe spreadsheet: {PUBLIC_SAFE_SPREADSHEET}")
     if sha256_file(safe_spreadsheet) != PUBLIC_SAFE_SPREADSHEET_SHA256:
         fail(f"Canonical public-safe spreadsheet hash mismatch: {PUBLIC_SAFE_SPREADSHEET}")
+    def is_approved_public_spreadsheet_copy(path: Path) -> bool:
+        if path.resolve() == safe_spreadsheet.resolve():
+            return True
+        try:
+            relative = path.relative_to(PROJECT).as_posix()
+        except ValueError:
+            return False
+        return (
+            relative.endswith("/" + PUBLIC_SAFE_SPREADSHEET)
+            and sha256_file(path) == PUBLIC_SAFE_SPREADSHEET_SHA256
+        )
+
     for pattern in ("*.xls", "*.xlsx", "*.csv"):
         matches = [
             p for p in PROJECT.rglob(pattern)
             if p.is_file()
             and ".git" not in p.parts
-            and p.resolve() != safe_spreadsheet.resolve()
+            and not is_approved_public_spreadsheet_copy(p)
         ]
         if matches:
             fail(f"Public CI package contains forbidden data file(s): {matches}")

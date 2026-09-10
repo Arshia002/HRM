@@ -774,6 +774,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--backup-now", action="store_true")
     parser.add_argument("--restore", type=Path)
     parser.add_argument("--verify-database", action="store_true")
+    parser.add_argument("--upgrade-legacy-database", action="store_true")
+    parser.add_argument("--restore-legacy-database-upgrade", action="store_true")
+    parser.add_argument("--database-upgrade-state-file", type=Path)
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--health-check", metavar="URL")
     parser.add_argument("--health-timeout", type=int, default=30)
@@ -940,6 +943,20 @@ def run_server(args: argparse.Namespace) -> int:
 
 
 def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logger: logging.Logger) -> int:
+    database_upgrade_actions = int(bool(args.upgrade_legacy_database)) + int(bool(args.restore_legacy_database_upgrade))
+    if database_upgrade_actions:
+        if database_upgrade_actions != 1:
+            raise ValueError("Choose exactly one database upgrade action.")
+        if args.database_upgrade_state_file is None:
+            raise ValueError("--database-upgrade-state-file is required for database upgrade actions.")
+        from .legacy_upgrade import restore_legacy_database_upgrade, upgrade_legacy_database
+        if args.upgrade_legacy_database:
+            result = upgrade_legacy_database(args.data_dir, args.database_upgrade_state_file)
+        else:
+            result = restore_legacy_database_upgrade(args.database_upgrade_state_file)
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
+
     db_path = ensure_database(args.data_dir, args.seed)
     if args.restore:
         safety = restore_database(db_path, args.restore.resolve())

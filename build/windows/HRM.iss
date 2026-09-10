@@ -84,6 +84,8 @@ var
   ServiceCutoverAttempted: Boolean;
   ServiceTransactionReady: Boolean;
   ServiceTransactionCommitted: Boolean;
+  DatabaseUpgradeAttempted: Boolean;
+  DatabaseUpgradeStatePath: String;
   OriginalServiceImagePath: String;
   OriginalServiceExe: String;
   OriginalServiceStartType: Cardinal;
@@ -148,6 +150,10 @@ begin
     Result := '';
   end;
 end;
+
+procedure LogSetupStage(Status: String; StageName: String; ResultCode: Integer); forward;
+
+function ServiceRegistryPath(ServiceName: String): String; forward;
 
 procedure SnapshotOriginalServiceConfiguration(var FailureText: String);
 var
@@ -407,6 +413,35 @@ begin
   LogSetupStage('PASS', 'legacy-service-disable-before-copy-' + ServiceName, 0);
 end;
 
+function RestoreDatabaseUpgradeIfNeeded: Boolean;
+var
+  ResultCode: Integer;
+  Started: Boolean;
+begin
+  Result := True;
+  if not DatabaseUpgradeAttempted then
+    exit;
+
+  ResultCode := -1;
+  LogSetupStage('START', 'restore-database-upgrade', ResultCode);
+  Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+    '--data-dir "' + EnterpriseDataDir +
+    '" --restore-legacy-database-upgrade --database-upgrade-state-file "' +
+    DatabaseUpgradeStatePath + '"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Started and (ResultCode = 0) then
+  begin
+    LogSetupStage('PASS', 'restore-database-upgrade', ResultCode);
+    DatabaseUpgradeAttempted := False;
+  end
+  else
+  begin
+    LogSetupStage('FAIL', 'restore-database-upgrade', ResultCode);
+    Result := False;
+  end;
+end;
+
+
 procedure RestoreOriginalServiceIfNeeded;
 var
   ResultCode: Integer;
@@ -425,6 +460,9 @@ begin
   RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
     '--data-dir "' + EnterpriseDataDir +
     '" --stop-windows-service HRMCentralService --service-stop-timeout 30');
+
+  if not RestoreDatabaseUpgradeIfNeeded then
+    RestoreOK := False;
 
   if ServiceCutoverAttempted then
   begin
@@ -480,7 +518,7 @@ begin
     end;
   end;
 
-  if ServiceWasRunningBeforeInstall then
+  if ServiceWasRunningBeforeInstall and RestoreOK then
   begin
     ResultCode := -1;
     Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
@@ -524,16 +562,23 @@ procedure RecoverServerAfterFailure;
 begin
   if ServiceExistedBeforeInstall then
     RestoreOriginalServiceIfNeeded
-  else if ServiceCutoverAttempted then
+  else
   begin
-    RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
-      '--data-dir "' + EnterpriseDataDir +
-      '" --stop-windows-service HRMCentralService --service-stop-timeout 30');
-    RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
-      '--delete-windows-service HRMCentralService');
-    RunIgnored(ExpandConstant('{sys}\netsh.exe'),
-      'advfirewall firewall delete rule name="HRM Central Service 8765"');
-    ServiceCutoverAttempted := False;
+    if ServiceCutoverAttempted then
+      RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+        '--data-dir "' + EnterpriseDataDir +
+        '" --stop-windows-service HRMCentralService --service-stop-timeout 30');
+
+    RestoreDatabaseUpgradeIfNeeded;
+
+    if ServiceCutoverAttempted then
+    begin
+      RunIgnored(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+        '--delete-windows-service HRMCentralService');
+      RunIgnored(ExpandConstant('{sys}\netsh.exe'),
+        'advfirewall firewall delete rule name="HRM Central Service 8765"');
+      ServiceCutoverAttempted := False;
+    end;
   end;
 end;
 
@@ -608,6 +653,7 @@ begin
   ServiceControlExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
   SeedPath := ExpandConstant('{tmp}\hrm-seed.sqlite');
   DiagnosticPath := DataDir + '\logs\setup-server.log';
+  DatabaseUpgradeStatePath := DataDir + '\backups\upgrade-transactions\installer-upgrade-state.json';
 
   RunRequired(ServiceControlExe,
     '--verify-service-runtime "' + ServiceRuntimeDir +
@@ -645,6 +691,18 @@ begin
       Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
     ServiceStoppedForUpgrade := True;
     LogSetupStage('PASS', 'service-stop-for-cutover', 0);
+  end;
+
+  if FileExists(DataDir + '\hrm.sqlite') then
+  begin
+    DeleteFile(DatabaseUpgradeStatePath);
+    DatabaseUpgradeAttempted := True;
+    RunRequired(ServiceControlExe,
+      '--data-dir "' + DataDir +
+      '" --upgrade-legacy-database --database-upgrade-state-file "' +
+      DatabaseUpgradeStatePath +
+      '" --diagnostic-log "' + DiagnosticPath + '"',
+      'database-upgrade-alpha4');
   end;
 
   RunRequired(ServerExe,
@@ -914,6 +972,7 @@ begin
     if WizardIsComponentSelected('server') and ServiceTransactionReady then
     begin
       ServiceTransactionCommitted := True;
+  DatabaseUpgradeAttempted := False;
       LogSetupStage('PASS', 'service-runtime-transaction-commit', 0);
     end;
     SetupCompleted := True;
