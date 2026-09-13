@@ -395,6 +395,134 @@ def build_initial_enterprise_candidate(
         raise
 
 
+def _validate_initial_candidate_for_promotion(
+    database_path: Path,
+    expected_personnel: int,
+) -> dict[str, object]:
+    validate_database_identity(database_path)
+    ok, detail = sqlite_integrity(database_path)
+    if not ok:
+        raise RuntimeError(f"Candidate database integrity failed: {detail}")
+
+    with contextlib.closing(sqlite3.connect(database_path)) as conn:
+        foreign_keys = conn.execute("PRAGMA foreign_key_check").fetchall()
+        if foreign_keys:
+            raise RuntimeError(
+                f"Candidate database foreign-key validation failed: {len(foreign_keys)} violation(s)."
+            )
+        actual_personnel = int(
+            conn.execute("SELECT COUNT(*) FROM personnel").fetchone()[0]
+        )
+        if actual_personnel != expected_personnel:
+            raise ValueError(
+                f"Personnel count mismatch: candidate={actual_personnel}, expected={expected_personnel}."
+            )
+        metadata = dict(
+            conn.execute(
+                "SELECT key,value FROM metadata "
+                "WHERE key IN ('dataset_kind','seed_mode','dataset_personnel_count')"
+            )
+        )
+
+    if metadata.get("dataset_kind") != "protected-real-data-candidate":
+        raise ValueError(
+            "Candidate database is not marked as a protected real-data candidate."
+        )
+    if metadata.get("seed_mode") == "synthetic-demo":
+        raise ValueError("Synthetic-demo database cannot be promoted as real production data.")
+    declared_count = metadata.get("dataset_personnel_count")
+    if declared_count is not None and str(declared_count) != str(expected_personnel):
+        raise ValueError(
+            "Candidate dataset_personnel_count metadata does not match the expected personnel count."
+        )
+
+    return {
+        "personnel": actual_personnel,
+        "integrity": "ok",
+        "foreign_key_errors": 0,
+        "dataset_kind": metadata.get("dataset_kind"),
+    }
+
+
+def promote_initial_enterprise_candidate(
+    candidate_database: Path,
+    database_path: Path,
+    backup_dir: Path,
+    *,
+    expected_personnel: int = 1356,
+) -> dict[str, object]:
+    """Atomically promote a validated offline candidate into the live DB path.
+
+    The caller must ensure the HRM service and all writers are stopped before
+    promotion. The candidate is copied to a staged file in the live directory,
+    verified, atomically replaced into the canonical path, and postflight-
+    verified. Any failure after the live backup exists restores that backup.
+    """
+    candidate_database = candidate_database.resolve()
+    database_path = database_path.resolve()
+    backup_dir = backup_dir.resolve()
+
+    if candidate_database == database_path:
+        raise ValueError("Candidate and live database paths must be different.")
+    if expected_personnel <= 0:
+        raise ValueError("expected_personnel must be positive.")
+
+    candidate_preflight = _validate_initial_candidate_for_promotion(
+        candidate_database,
+        expected_personnel,
+    )
+    candidate_digest = sha256_file(candidate_database)
+
+    validate_database_identity(database_path)
+    live_ok, live_detail = sqlite_integrity(database_path)
+    if not live_ok:
+        raise RuntimeError(f"Live database integrity failed before promotion: {live_detail}")
+
+    staged = database_path.with_name(f".{database_path.name}.initial-promotion-staged")
+    if staged.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite stale promotion staging file: {staged}"
+        )
+
+    backup: Path | None = None
+    backup_digest = ""
+    try:
+        backup, backup_digest = create_verified_backup(database_path, backup_dir)
+
+        shutil.copy2(candidate_database, staged)
+        if sha256_file(staged) != candidate_digest:
+            raise RuntimeError("Staged candidate hash verification failed.")
+        _validate_initial_candidate_for_promotion(staged, expected_personnel)
+
+        replace_with_retry(staged, database_path)
+        for suffix in ("-wal", "-shm"):
+            database_path.with_name(database_path.name + suffix).unlink(missing_ok=True)
+
+        postflight = _validate_initial_candidate_for_promotion(
+            database_path,
+            expected_personnel,
+        )
+        promoted_digest = sha256_file(database_path)
+        if promoted_digest != candidate_digest:
+            raise RuntimeError("Promoted database hash does not match the validated candidate.")
+
+        return {
+            "backup_file": backup.name,
+            "backup_sha256": backup_digest,
+            "promoted_sha256": promoted_digest,
+            "personnel": postflight["personnel"],
+            "integrity": postflight["integrity"],
+            "foreign_key_errors": postflight["foreign_key_errors"],
+            "candidate_preflight": candidate_preflight,
+        }
+    except Exception:
+        staged.unlink(missing_ok=True)
+        if backup is not None:
+            restore_verified_backup(database_path, backup, backup_digest)
+        raise
+    finally:
+        staged.unlink(missing_ok=True)
+
 def apply_to_enterprise(
     ds: Dataset,
     database_path: Path,

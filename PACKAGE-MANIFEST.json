@@ -940,6 +940,11 @@
       "sha256": "1f928f9da7b8455f75f941b0e7015a3ac799e26ff0e93e353892fabc18ba11fa"
     },
     {
+      "path": "tests/test_real_data_candidate_promotion.py",
+      "bytes": 6223,
+      "sha256": "21d0dcbd9988a3519290c4b6f7eadfa1a6b51d777bd529b87a8b6b8ed5089a5d"
+    },
+    {
       "path": "tests/test_real_data_initial_provisioning.py",
       "bytes": 6010,
       "sha256": "52c77dac607c3653e15e3a47dc4e09e7f7ee652e0b3523fa28b1608c24295b50"
@@ -1096,8 +1101,8 @@
     },
     {
       "path": "tools/real_data_migration/production.py",
-      "bytes": 18581,
-      "sha256": "6bb5eb5b374daedbe50b250a62a0f1843475cf9201f5a0646707e35715fb8fbe"
+      "bytes": 23652,
+      "sha256": "68faa0a2efe0774974f46ed65abf8660f6cecd988ba2593efaa418fb7388844c"
     },
     {
       "path": "tools/real_data_migration/readers.py",
