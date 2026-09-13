@@ -765,6 +765,7 @@ from .windows_service_control import (
     mark_service_cutover_committed,
     recover_windows_service_cutover,
 )
+from .legacy_upgrade import commit_legacy_database_upgrade
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -784,6 +785,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--verify-database", action="store_true")
     parser.add_argument("--upgrade-legacy-database", action="store_true")
     parser.add_argument("--restore-legacy-database-upgrade", action="store_true")
+    parser.add_argument("--commit-legacy-database-upgrade", action="store_true")
     parser.add_argument("--database-upgrade-state-file", type=Path)
     parser.add_argument("--init-only", action="store_true")
     parser.add_argument("--health-check", metavar="URL")
@@ -959,7 +961,11 @@ def run_server(args: argparse.Namespace) -> int:
 
 
 def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logger: logging.Logger) -> int:
-    database_upgrade_actions = int(bool(args.upgrade_legacy_database)) + int(bool(args.restore_legacy_database_upgrade))
+    database_upgrade_actions = (
+        int(bool(args.upgrade_legacy_database))
+        + int(bool(args.restore_legacy_database_upgrade))
+        + int(bool(args.commit_legacy_database_upgrade))
+    )
     if database_upgrade_actions:
         if database_upgrade_actions != 1:
             raise ValueError("Choose exactly one database upgrade action.")
@@ -968,8 +974,10 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
         from .legacy_upgrade import restore_legacy_database_upgrade, upgrade_legacy_database
         if args.upgrade_legacy_database:
             result = upgrade_legacy_database(args.data_dir, args.database_upgrade_state_file)
-        else:
+        elif args.restore_legacy_database_upgrade:
             result = restore_legacy_database_upgrade(args.database_upgrade_state_file)
+        else:
+            result = commit_legacy_database_upgrade(args.database_upgrade_state_file)
         print(json.dumps(result, ensure_ascii=False))
         return 0
 

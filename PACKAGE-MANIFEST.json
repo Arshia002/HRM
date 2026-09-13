@@ -751,8 +751,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 57520,
-      "sha256": "3bf60e1613740452aee9b00d8efd16d5e1bb0ad48fcdfbca7aacf6f35d8cba31"
+      "bytes": 57878,
+      "sha256": "f5165c7ae422751f7f47b39fbd607426505b18ae80a4ac59df7404970b721020"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -833,6 +833,11 @@
       "path": "tests/test_alpha4_legacy_upgrade_commit.py",
       "bytes": 5184,
       "sha256": "de4dbd4592a86c2bcabff32a06f5394c20ecfb8bf517e531abf92d83e94566df"
+    },
+    {
+      "path": "tests/test_alpha4_legacy_upgrade_commit_cli.py",
+      "bytes": 2785,
+      "sha256": "b33bad4586b944118911f0769eaff4bd11868e8fef53a404b0e04e5cf2d574dd"
     },
     {
       "path": "tests/test_api.py",
