@@ -420,6 +420,11 @@
       "sha256": "61bb3cb11f5ba60a2ab0203c072665837d7d2988865848e56bc7d7b3f86d3f5c"
     },
     {
+      "path": "docs/ACCEPTANCE-MATRIX.md",
+      "bytes": 10880,
+      "sha256": "cfd19cdc7cbdaa429c3db0ec685c586076b96f85594fe4b89ad0a93fefc4c74e"
+    },
+    {
       "path": "docs/API.md",
       "bytes": 1945,
       "sha256": "fead446ed9ae6ec1576f8d7a0e4f3bf1eeb18ab6e42406f98267c80d9968294d"
@@ -453,6 +458,11 @@
       "path": "docs/production-operations-fa.md",
       "bytes": 923,
       "sha256": "f35b7c1dcac7fcdd7b66c08ec272d290693b6f6434edcf90e91dfda73d1cba94"
+    },
+    {
+      "path": "docs/PRODUCTION-READINESS-ROADMAP.md",
+      "bytes": 8429,
+      "sha256": "c125c26ecb6ac2d16b0057ee634ef2a7886ae17c31ac0fec4e2ba256b974dc87"
     },
     {
       "path": "docs/reference/REFERENCE-V4.9-AUDIT.md",
@@ -930,6 +940,11 @@
       "sha256": "1f928f9da7b8455f75f941b0e7015a3ac799e26ff0e93e353892fabc18ba11fa"
     },
     {
+      "path": "tests/test_real_data_initial_provisioning.py",
+      "bytes": 6010,
+      "sha256": "52c77dac607c3653e15e3a47dc4e09e7f7ee652e0b3523fa28b1608c24295b50"
+    },
+    {
       "path": "tests/test_repository.py",
       "bytes": 8716,
       "sha256": "f8a77431ca3bd4eea14a5ce34c489ae9f9056862be8f61621e29cd332feb4de1"
@@ -1081,8 +1096,8 @@
     },
     {
       "path": "tools/real_data_migration/production.py",
-      "bytes": 11289,
-      "sha256": "911370ef1fe1c04b47a371c693cec8c75e29ba0edca2c71ad41a6a444d3d0f90"
+      "bytes": 18581,
+      "sha256": "6bb5eb5b374daedbe50b250a62a0f1843475cf9201f5a0646707e35715fb8fbe"
     },
     {
       "path": "tools/real_data_migration/readers.py",

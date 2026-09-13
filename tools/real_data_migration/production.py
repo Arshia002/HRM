@@ -17,7 +17,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 from sazmanhr.config import validate_database_identity  # noqa: E402
-from sazmanhr.database import Repository  # noqa: E402
+from sazmanhr.database import Repository, utc_now  # noqa: E402
 from sazmanhr.operations import sqlite_integrity  # noqa: E402
 
 from .models import Dataset, Issue  # noqa: E402
@@ -203,6 +203,196 @@ def restore_verified_backup(database_path: Path, backup_path: Path, expected_dig
     replace_with_retry(staged, database_path)
     for suffix in ("-wal", "-shm"):
         database_path.with_name(database_path.name + suffix).unlink(missing_ok=True)
+
+
+def _initial_person_id(personnel_no: str) -> str:
+    """Return a deterministic opaque id for the private initial candidate."""
+    return "initial-person-" + hashlib.sha256(personnel_no.encode("utf-8")).hexdigest()[:20]
+
+
+def _remove_sqlite_family(database_path: Path) -> None:
+    for suffix in ("", "-wal", "-shm"):
+        database_path.with_name(database_path.name + suffix).unlink(missing_ok=True)
+
+
+def build_initial_enterprise_candidate(
+    ds: Dataset,
+    seed_database: Path,
+    candidate_database: Path,
+    backup_dir: Path,
+    *,
+    confirmation: str,
+    expected_personnel: int = 1356,
+    expected_chart_fixed: int = 536,
+    expected_chart_named: int = 32,
+    expected_chart_total: int = 568,
+    expected_page_16_total: int = 24,
+    actor_id: str | None = None,
+) -> dict[str, object]:
+    """Build a private production-shaped candidate from the public clean seed.
+
+    The bundled seed intentionally contains synthetic personnel. The normal
+    production import cannot bootstrap from it because apply_real_data_import()
+    requires exact source/target personnel-number set equality. This function
+    creates that exact set only in an offline candidate database, then delegates
+    the existing production refresh/validation/backup/audit behavior to
+    apply_to_enterprise().
+
+    The live database is never modified here. Any incomplete candidate is
+    removed on failure.
+    """
+    if confirmation != CONFIRMATION:
+        raise PermissionError(
+            f"Initial production provisioning requires confirmation token {CONFIRMATION!r}."
+        )
+    if any(issue.severity == "error" for issue in ds.issues):
+        raise ValueError(
+            "Initial production provisioning is blocked while reconciliation has errors."
+        )
+    if len(ds.persons) != expected_personnel:
+        raise ValueError(
+            f"Personnel count mismatch: imported={len(ds.persons)}, expected={expected_personnel}."
+        )
+
+    personnel_numbers = [str(person.personnel_no or "").strip() for person in ds.persons]
+    if (
+        not personnel_numbers
+        or any(not number for number in personnel_numbers)
+        or len(set(personnel_numbers)) != len(personnel_numbers)
+    ):
+        raise ValueError(
+            "Initial production provisioning requires unique, non-empty personnel numbers."
+        )
+
+    seed_database = seed_database.resolve()
+    candidate_database = candidate_database.resolve()
+    backup_dir = backup_dir.resolve()
+
+    if seed_database == candidate_database:
+        raise ValueError(
+            "Initial production candidate must not overwrite the bundled seed database."
+        )
+    if candidate_database.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite an existing candidate database: {candidate_database}"
+        )
+
+    validate_database_identity(seed_database)
+    candidate_database.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        shutil.copy2(seed_database, candidate_database)
+        validate_database_identity(candidate_database)
+
+        repo = Repository(candidate_database)
+        now = utc_now()
+
+        with repo.write() as conn:
+            existing_tables = {
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }
+
+            for table in (
+                "personnel_movements",
+                "personnel_assignments",
+                "positions",
+                "organizational_units",
+                "personnel",
+                "import_batches",
+                "audit_log",
+                "change_feed",
+                "ui_monthly_assignments",
+                "ui_status_snapshots",
+                "ui_compat_datasets",
+            ):
+                if table in existing_tables:
+                    conn.execute(f"DELETE FROM {table}")
+
+            conn.execute(
+                """UPDATE chart_pages
+                   SET approved_fixed_posts=?,approved_named_posts=?,approved_total_posts=?
+                   WHERE page_no=1""",
+                (expected_chart_fixed, expected_chart_named, expected_chart_total),
+            )
+            conn.execute(
+                "UPDATE chart_pages SET approved_total_posts=? WHERE page_no=16",
+                (expected_page_16_total,),
+            )
+            conn.execute("DELETE FROM metadata WHERE key='seed_mode'")
+            conn.execute(
+                "INSERT OR REPLACE INTO metadata(key,value) "
+                "VALUES('dataset_kind','protected-real-data-candidate')"
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO metadata(key,value) "
+                "VALUES('dataset_personnel_count',?)",
+                (str(expected_personnel),),
+            )
+
+            for index, person in enumerate(ds.persons, start=1):
+                personnel_no = str(person.personnel_no).strip()
+                position_no = str(person.position_no or "").strip()
+                position_title = str(person.position_title or "").strip()
+                org_unit = str(person.org_unit or "").strip()
+                location = str(person.location or "").strip()
+                conn.execute(
+                    """INSERT INTO personnel(
+                       id,personnel_no,first_name,last_name,full_name,gender,organizational_unit,
+                       position_code,position_title,employment_group,employment_subtype,status,
+                       activity_area,actual_location,company,chart_page_no,chart_node_id,extra_json,
+                       row_version,updated_at,updated_by)
+                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        _initial_person_id(personnel_no),
+                        personnel_no,
+                        "",
+                        "",
+                        f"initial-provision-{index}",
+                        "",
+                        org_unit,
+                        position_no,
+                        position_title,
+                        "",
+                        "",
+                        "",
+                        "",
+                        location,
+                        "",
+                        None,
+                        "",
+                        "{}",
+                        1,
+                        now,
+                        actor_id,
+                    ),
+                )
+
+        repo.initialize()
+
+        result = apply_to_enterprise(
+            ds,
+            candidate_database,
+            backup_dir,
+            confirmation=confirmation,
+            expected_personnel=expected_personnel,
+            expected_chart_fixed=expected_chart_fixed,
+            expected_chart_named=expected_chart_named,
+            expected_chart_total=expected_chart_total,
+            expected_page_16_total=expected_page_16_total,
+            actor_id=actor_id,
+        )
+        return {
+            **result,
+            "candidate_file": candidate_database.name,
+            "candidate_sha256": sha256_file(candidate_database),
+            "provisioned_personnel": expected_personnel,
+        }
+    except Exception:
+        _remove_sqlite_family(candidate_database)
+        raise
 
 
 def apply_to_enterprise(
