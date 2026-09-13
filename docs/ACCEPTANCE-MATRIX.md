@@ -13,9 +13,9 @@ This matrix is the management contract for organizational deployment.
 
 | ID | Requirement | Current status | Evidence / PASS criterion | Owner |
 |---|---|---|---|---|
-| A-001 | Clean Git checkpoint exists | PASS | commit `ceea1a9` | Technical lead |
-| A-002 | Full regression passes at checkpoint | PASS | 215/215 tests PASS | Technical lead |
-| A-003 | Working tree clean at checkpoint | PASS | `git status --short` empty | Technical lead |
+| A-001 | Clean Git checkpoint exists | PASS | commit `1966a68` | Technical lead |
+| A-002 | Full regression passes at checkpoint | PASS | 223/223 tests PASS at commit `1966a68` | Technical lead |
+| A-003 | Working tree clean at checkpoint | PASS | `git status --short` empty after commit `1966a68` | Technical lead |
 | A-004 | Official Windows build completes | PASS | official builder completed | Technical lead |
 | A-005 | Package contract passes | PASS | package contract PASS | Technical lead |
 | A-006 | Final release artifact built from final accepted source | NOT-TESTED | final RC build | Technical lead |
@@ -52,7 +52,7 @@ This matrix is the management contract for organizational deployment.
 | D-001 | Authoritative real-data source identified | BLOCKED | source owner/path/hash recorded privately | Project owner / HR |
 | D-002 | Actual real personnel row count equals 1356 | BLOCKED | actual SQL count = 1356 | HR / Technical lead |
 | D-003 | Dataset is not synthetic/demo | BLOCKED | provenance confirmed | HR |
-| D-004 | Real-data validator exists in Git | NOT-TESTED | validator + tests committed | Technical lead |
+| D-004 | Real-data validator exists in Git | PASS | protected validator + regression tests committed; candidate provisioning `365beb4`; atomic promotion `a5efda7` | Technical lead |
 | D-005 | Verified pre-migration backup exists | NOT-TESTED | backup hash + integrity verification | Technical lead |
 | D-006 | Migration/import first succeeds on a copy | NOT-TESTED | sanitized report PASS | Technical lead |
 | D-007 | Final target still contains exactly 1356 personnel | NOT-TESTED | post-operation SQL count = 1356 | Technical lead / HR |
@@ -68,26 +68,26 @@ This matrix is the management contract for organizational deployment.
 | ID | Requirement | Current status | Evidence / PASS criterion | Owner |
 |---|---|---|---|---|
 | E-001 | Six intended admin roles/accounts defined | NOT-TESTED | approved role/account matrix | Project owner / HR / IT |
-| E-002 | Six independent concurrent sessions work | NOT-TESTED | acceptance test PASS | Technical lead |
-| E-003 | Allowed actions succeed per role | NOT-TESTED | positive RBAC tests PASS | Technical lead |
-| E-004 | Forbidden actions fail per role | NOT-TESTED | negative RBAC tests PASS | Technical lead |
-| E-005 | Authorization enforced server-side | NOT-TESTED | API denial tests PASS | Technical lead |
-| E-006 | Audit actor is correct for each admin | NOT-TESTED | audit assertions PASS | Technical lead |
-| E-007 | Concurrent edit conflict is controlled | NOT-TESTED | no silent overwrite | Technical lead |
+| E-002 | Six independent concurrent sessions work | PASS | six authenticated pinned-TLS sessions + concurrent writes; `c2edbc4` | Technical lead |
+| E-003 | Allowed actions succeed per role | PASS | 2 Super Admin / 4 HR Admin positive RBAC acceptance; `c2edbc4` | Technical lead |
+| E-004 | Forbidden actions fail per role | PASS | HR Admin privileged action denied; `c2edbc4` | Technical lead |
+| E-005 | Authorization enforced server-side | PASS | API-level movement/reversal permission boundary verified; `c2edbc4` | Technical lead |
+| E-006 | Audit actor is correct for each admin | PASS | `audit_log.user_id` attribution asserted for all six writers; `c2edbc4` | Technical lead |
+| E-007 | Concurrent edit conflict is controlled | PASS | stale `row_version` rejected; no silent overwrite; `c2edbc4` | Technical lead |
 | E-008 | Service remains healthy under six-admin workload | NOT-TESTED | health + integrity PASS | Technical lead |
 
 ## F. HR Business Workflows
 
 | ID | Requirement | Current status | Evidence / PASS criterion | Owner |
 |---|---|---|---|---|
-| F-001 | Personnel lookup workflow | NOT-TESTED | end-to-end scenario PASS | HR |
-| F-002 | Personnel detail workflow | NOT-TESTED | end-to-end scenario PASS | HR |
-| F-003 | Personnel edit workflow | NOT-TESTED | authorized edit + audit PASS | HR |
-| F-004 | Unit/position assignment workflow | NOT-TESTED | relationship/history PASS | HR |
-| F-005 | Personnel movement/transfer workflow | NOT-TESTED | movement + resulting state PASS | HR |
-| F-006 | Movement/history review | NOT-TESTED | history complete/correct | HR |
-| F-007 | Permission-aware workflow behavior | NOT-TESTED | allowed/denied actions match matrix | HR / Technical lead |
-| F-008 | Audit review workflow | NOT-TESTED | actor/action/time/object correct | HR / Technical lead |
+| F-001 | Personnel lookup workflow | PASS | automated end-to-end acceptance; `1966a68` | HR |
+| F-002 | Personnel detail workflow | PASS | automated end-to-end acceptance; `1966a68` | HR |
+| F-003 | Personnel edit workflow | PASS | authorized non-structural edit + audit; `1966a68` | HR |
+| F-004 | Unit/position assignment workflow | PASS | prior assignment retained; one active primary assignment; `1966a68` | HR |
+| F-005 | Personnel movement/transfer workflow | PASS | transfer through movement boundary + resulting state; `1966a68` | HR |
+| F-006 | Movement/history review | PASS | movement retained through review and reversal; `1966a68` | HR |
+| F-007 | Permission-aware workflow behavior | PASS | HR Admin allowed transfer / denied reversal; Super Admin reversal allowed; `1966a68` | HR / Technical lead |
+| F-008 | Audit review workflow | PASS | actor/action/time/object presence + audit-chain verification; `1966a68` | HR / Technical lead |
 | F-009 | Required report/export workflow | BLOCKED | v1 report scope approved | HR |
 | F-010 | Import/reconciliation workflow, if in v1 | BLOCKED | v1 scope decision | HR / Project owner |
 
@@ -148,10 +148,10 @@ This matrix is the management contract for organizational deployment.
 
 | Gate | Status |
 |---|---|
-| G7 Acceptance Contract | READY FOR REVIEW |
+| G7 Acceptance Contract | PASS - acceptance contract committed at `8499702` |
 | G8 Real Data 1356 | BLOCKED |
-| G9 Six Admins / RBAC / Concurrency | NOT-TESTED |
-| G10 HR Business Workflows | NOT-TESTED |
+| G9 Six Admins / RBAC / Concurrency | PARTIAL — automated acceptance PASS; intended account approval + Windows service workload pending |
+| G10 HR Business Workflows | PARTIAL — F-001..F-008 PASS; F-009/F-010 scope decisions pending |
 | G11 Backup / Restore / Recovery | NOT-TESTED |
 | G12 Final Windows & Security Acceptance | NOT-TESTED |
 | G13 Controlled Pilot & Release | BLOCKED |

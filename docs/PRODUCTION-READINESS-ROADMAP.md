@@ -79,9 +79,12 @@ PASS criteria:
 ### G8 — Real Data 1356
 **Goal:** Prove that the real organizational dataset can be validated and accepted without data loss.
 
-Required implementation:
-- `tools/acceptance/validate_real_data.py`
-- `tests/test_real_data_acceptance.py`
+Implemented acceptance components:
+- `ci/validate_v060b1_real_data.py`
+- `tests/test_v060b1_real_data_ci.py`
+- `tools/real_data_migration/production.py`
+- `tests/test_real_data_initial_provisioning.py`
+- `tests/test_real_data_candidate_promotion.py`
 
 Mandatory validation:
 - actual `SELECT COUNT(*) FROM personnel` equals `1356`
@@ -103,6 +106,12 @@ Hard FAIL:
 - unapproved duplicate identity/personnel number
 - acceptance based only on metadata
 
+Current evidence:
+- protected real-data validator and regression contract exist in Git
+- fresh public seed -> offline protected-data candidate is regression-tested (`365beb4`)
+- candidate -> live database atomic promotion with verified rollback is regression-tested (`a5efda7`)
+- actual protected execution proving SQL `COUNT(*) = 1356` is still blocked and must not be inferred from metadata or synthetic fixtures
+
 ### G9 — Six Administrators / RBAC / Concurrency
 **Goal:** Prove that six independent administrators can use the system safely.
 
@@ -118,6 +127,11 @@ Required coverage:
 - no silent overwrite of a newer record
 - service remains healthy during the acceptance workload
 
+Current evidence:
+- automated mixed-role acceptance for `2 Super Admin + 4 HR Admin` is committed at `c2edbc4`
+- six pinned-TLS sessions, independent writes, positive/negative RBAC, audit attribution and stale-write rejection are covered
+- the Windows SCM service itself has not yet been exercised under the six-admin acceptance workload; that evidence remains pending
+
 ### G10 — HR Business Workflow Acceptance
 **Goal:** Prove that the software completes the real daily HR workflows required for v1.
 
@@ -132,6 +146,12 @@ Minimum workflow candidates:
 8. audit review
 9. required report/export
 10. import/reconciliation workflow if it is part of v1 scope
+
+Current evidence:
+- F-001 through F-008 are covered by the end-to-end HR workflow acceptance committed at `1966a68`
+- the accepted scenario verifies assignment history, movement boundary, reversal, RBAC, audit-chain validity, SQLite integrity and zero FK errors
+- report/export scope (F-009) remains a business-scope decision
+- import/reconciliation inclusion in v1 (F-010) remains a business-scope decision even though monthly-import regression coverage already exists
 
 ### G11 — Backup / Restore / Failure Recovery
 **Goal:** Prove that operational failure does not cause unrecoverable service or data state.
