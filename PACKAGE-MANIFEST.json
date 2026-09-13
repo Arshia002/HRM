@@ -751,8 +751,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 55217,
-      "sha256": "62dbd95301d8c8783b4f837aa19834ce7300ca82992a0185e45dc5915639366a"
+      "bytes": 57240,
+      "sha256": "4398dfb58d6c0beda40cddaef3d8ea5de926a1d333e76abdb3aa4034c11a2240"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -913,6 +913,11 @@
       "path": "tests/test_rc3_organization_overrides.py",
       "bytes": 2497,
       "sha256": "1e466610a57841a8b01eeb198aedf360fab227e36ad19988b6e105c5395022d3"
+    },
+    {
+      "path": "tests/test_rc3_service_cutover_cli.py",
+      "bytes": 4637,
+      "sha256": "3937175b116ec7ab1df3872fae52afddf0ca5e7b2a19bbfc69e8d5fd6df9f189"
     },
     {
       "path": "tests/test_rc3_service_cutover_journal.py",

@@ -759,6 +759,13 @@ def ensure_initial_owner(repo: Repository, username: str, display_name: str, pas
     return temporary
 
 
+from .windows_service_control import (
+    advance_service_cutover_journal,
+    create_windows_service_cutover_journal,
+    mark_service_cutover_committed,
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="HRM central LAN service")
     parser.add_argument("--host")
@@ -789,6 +796,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stop-windows-service", metavar="NAME")
     parser.add_argument("--service-stop-timeout", type=int, default=30)
     parser.add_argument("--service-state-file", type=Path)
+    parser.add_argument("--prepare-service-cutover", metavar="NAME")
+    parser.add_argument(
+        "--advance-service-cutover",
+        choices=("service_stopped", "image_switched", "service_started", "ready"),
+    )
+    parser.add_argument("--commit-service-cutover", action="store_true")
+    parser.add_argument("--service-cutover-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
     parser.add_argument("--web-root", type=Path, help="Serve the optional browser test UI from this directory.")
     return parser
@@ -1003,6 +1017,41 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.data_dir = args.data_dir.resolve()
     try:
+        service_cutover_actions = (
+            int(bool(args.prepare_service_cutover))
+            + int(bool(args.advance_service_cutover))
+            + int(bool(args.commit_service_cutover))
+        )
+        if service_cutover_actions:
+            if service_cutover_actions != 1:
+                raise ValueError("Choose exactly one service cutover journal action.")
+            if args.service_cutover_state_file is None:
+                raise ValueError(
+                    "--service-cutover-state-file is required for service cutover journal actions."
+                )
+
+            state_path = args.service_cutover_state_file.resolve()
+            if args.prepare_service_cutover:
+                if args.service_image_executable is None:
+                    raise ValueError(
+                        "--service-image-executable is required with --prepare-service-cutover."
+                    )
+                state = create_windows_service_cutover_journal(
+                    state_path,
+                    args.prepare_service_cutover,
+                    args.service_image_executable.resolve(),
+                )
+            elif args.advance_service_cutover:
+                state = advance_service_cutover_journal(
+                    state_path,
+                    args.advance_service_cutover,
+                )
+            else:
+                state = mark_service_cutover_committed(state_path)
+
+            print(json.dumps(state, ensure_ascii=False))
+            return 0
+
         if args.verify_service_runtime:
             state = verify_service_runtime(args.verify_service_runtime)
             print(json.dumps(state))
