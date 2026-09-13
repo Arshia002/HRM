@@ -850,6 +850,11 @@
       "sha256": "2cdaba9eeabcbf14c57453488248daf2dafae8932b4919a101b2f635a03143d6"
     },
     {
+      "path": "tests/test_g9_six_admin_acceptance.py",
+      "bytes": 8826,
+      "sha256": "21222ec9f1021a8060a70635e42cb904b4fe018e3557efcec6580142971f7169"
+    },
+    {
       "path": "tests/test_inno_pascal_declaration_order.py",
       "bytes": 2056,
       "sha256": "a29b9a1c5711d57be9e2d14e3e9e8b81a2f356c36833387b2204f05bab2b0e3a"
