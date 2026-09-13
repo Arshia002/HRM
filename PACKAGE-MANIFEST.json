@@ -756,8 +756,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 57878,
-      "sha256": "f5165c7ae422751f7f47b39fbd607426505b18ae80a4ac59df7404970b721020"
+      "bytes": 60310,
+      "sha256": "0a43540a45ab1f4b00213e34829455d8692e598f827152de3592a2674725381a"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -918,6 +918,11 @@
       "path": "tests/test_rc3_installer_upgrade_transaction.py",
       "bytes": 8781,
       "sha256": "31e2ac53c759f13d554453458a11c1ab3909edc13bc8293f60e90fc2735d3453"
+    },
+    {
+      "path": "tests/test_rc3_installer_upgrade_transaction_cli.py",
+      "bytes": 6239,
+      "sha256": "7fde28c0ef49bf316a0975daa9dc6835f40e61afa6682dd7b200b0a70b48c999"
     },
     {
       "path": "tests/test_rc3_legacy_service_migration.py",

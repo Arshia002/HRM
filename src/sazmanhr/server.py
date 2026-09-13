@@ -765,6 +765,10 @@ from .windows_service_control import (
     mark_service_cutover_committed,
     recover_windows_service_cutover,
 )
+from .installer_transaction import (
+    commit_upgrade_transaction,
+    recover_upgrade_transaction,
+)
 from .legacy_upgrade import commit_legacy_database_upgrade
 
 
@@ -806,6 +810,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--commit-service-cutover", action="store_true")
     parser.add_argument("--recover-service-cutover", action="store_true")
+    parser.add_argument("--recover-installer-upgrade", action="store_true")
+    parser.add_argument("--commit-installer-upgrade", action="store_true")
     parser.add_argument("--service-cutover-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
     parser.add_argument("--web-root", type=Path, help="Serve the optional browser test UI from this directory.")
@@ -1027,6 +1033,54 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     args.data_dir = args.data_dir.resolve()
     try:
+        installer_upgrade_actions = (
+            int(bool(args.recover_installer_upgrade))
+            + int(bool(args.commit_installer_upgrade))
+        )
+        if installer_upgrade_actions:
+            if installer_upgrade_actions != 1:
+                raise ValueError("Choose exactly one installer upgrade coordinator action.")
+            if args.service_cutover_state_file is None:
+                raise ValueError(
+                    "--service-cutover-state-file is required for installer upgrade coordinator actions."
+                )
+            if args.database_upgrade_state_file is None:
+                raise ValueError(
+                    "--database-upgrade-state-file is required for installer upgrade coordinator actions."
+                )
+
+            low_level_service_actions = (
+                int(bool(args.prepare_service_cutover))
+                + int(bool(args.advance_service_cutover))
+                + int(bool(args.commit_service_cutover))
+                + int(bool(args.recover_service_cutover))
+            )
+            low_level_database_actions = (
+                int(bool(args.upgrade_legacy_database))
+                + int(bool(args.restore_legacy_database_upgrade))
+                + int(bool(args.commit_legacy_database_upgrade))
+            )
+            if low_level_service_actions or low_level_database_actions:
+                raise ValueError(
+                    "Installer upgrade coordinator actions cannot be combined with low-level "
+                    "service or database transaction actions."
+                )
+
+            service_state_path = args.service_cutover_state_file.resolve()
+            database_state_path = args.database_upgrade_state_file.resolve()
+            if args.recover_installer_upgrade:
+                state = recover_upgrade_transaction(
+                    service_state_path,
+                    database_state_path,
+                )
+            else:
+                state = commit_upgrade_transaction(
+                    service_state_path,
+                    database_state_path,
+                )
+            print(json.dumps(state, ensure_ascii=False))
+            return 0
+
         service_cutover_actions = (
             int(bool(args.prepare_service_cutover))
             + int(bool(args.advance_service_cutover))
