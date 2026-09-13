@@ -725,6 +725,11 @@
       "sha256": "33078f91c6ab2a1c1e3fadcca6f952e6eeb8e1f343ebb658e5f9d6b5bf743533"
     },
     {
+      "path": "src/sazmanhr/installer_transaction.py",
+      "bytes": 4372,
+      "sha256": "4a4642d832249dc7f9f91c50b54b32619a0331b6edec42959d7110365d85f582"
+    },
+    {
       "path": "src/sazmanhr/legacy_upgrade.py",
       "bytes": 13769,
       "sha256": "4117e0148a32ea89c5908fa08bb5d7f1b56ffeb920c3fd308d3e31530f30f53a"
@@ -908,6 +913,11 @@
       "path": "tests/test_rc3_desktop_tls_pin.py",
       "bytes": 3992,
       "sha256": "9eba4db93cf15113d70dafff9fee7ad6c0f841cb81c1f77c5f496449e3f58a71"
+    },
+    {
+      "path": "tests/test_rc3_installer_upgrade_transaction.py",
+      "bytes": 8781,
+      "sha256": "31e2ac53c759f13d554453458a11c1ab3909edc13bc8293f60e90fc2735d3453"
     },
     {
       "path": "tests/test_rc3_legacy_service_migration.py",
