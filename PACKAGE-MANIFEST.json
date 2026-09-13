@@ -771,8 +771,8 @@
     },
     {
       "path": "src/sazmanhr/windows_service_control.py",
-      "bytes": 13370,
-      "sha256": "d5b3ed9dce373d0cb36874aab3ef00807955f77920fbfb242c2edcb439490187"
+      "bytes": 25489,
+      "sha256": "3e521004c44aa3c1b908d50fed1cd098e4666b117b43a689b73bacc6425795ed"
     },
     {
       "path": "test-evidence/alpha4-proven-baseline-manifest.json",
@@ -913,6 +913,16 @@
       "path": "tests/test_rc3_organization_overrides.py",
       "bytes": 2497,
       "sha256": "1e466610a57841a8b01eeb198aedf360fab227e36ad19988b6e105c5395022d3"
+    },
+    {
+      "path": "tests/test_rc3_service_cutover_journal.py",
+      "bytes": 5023,
+      "sha256": "18615bfb7ff92f613980f4d72e2cd06752da2174534182e95576213f616ef496"
+    },
+    {
+      "path": "tests/test_rc3_service_cutover_journal_integration.py",
+      "bytes": 4105,
+      "sha256": "bc76132732223abc9b3e068132828d873ecab47e4679ba854ea76956a3347df0"
     },
     {
       "path": "tests/test_rc3_synthetic_v49_fallback.py",

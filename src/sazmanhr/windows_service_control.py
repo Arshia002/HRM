@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import locale
 import ntpath
 import os
@@ -24,6 +25,208 @@ STATE_PATTERN = re.compile(r"(?m)^\s*[^:\r\n]+:\s*([1-7])\s{2,}[^\r\n]*$")
 ScRunner = Callable[[str, str], tuple[int, str]]
 ServiceImageReader = Callable[[str], str | None]
 ServiceImageChanger = Callable[[str, str], None]
+ServiceConfigurationReader = Callable[[str], dict[str, object]]
+ServiceStateReader = Callable[[str], int | None]
+
+SERVICE_CUTOVER_JOURNAL_SCHEMA = 1
+SERVICE_CUTOVER_PHASES = (
+    "snapshotted",
+    "service_stopped",
+    "image_switched",
+    "service_started",
+    "ready",
+    "committed",
+)
+_SERVICE_CUTOVER_REQUIRED_FIELDS = (
+    "schema",
+    "service_name",
+    "original_image_path",
+    "original_executable",
+    "original_start_type",
+    "original_object_name",
+    "original_sid_type",
+    "was_running",
+    "target_executable",
+    "phase",
+    "committed",
+)
+
+
+def _validate_service_cutover_journal(payload: object) -> dict[str, object]:
+    if not isinstance(payload, dict):
+        raise RuntimeError("Service cutover journal is invalid.")
+    missing = [name for name in _SERVICE_CUTOVER_REQUIRED_FIELDS if name not in payload]
+    if missing:
+        raise RuntimeError(
+            "Service cutover journal is incomplete: missing " + ", ".join(missing)
+        )
+
+    if payload.get("schema") != SERVICE_CUTOVER_JOURNAL_SCHEMA:
+        raise RuntimeError("Service cutover journal schema is invalid.")
+
+    service_name = payload.get("service_name")
+    if not isinstance(service_name, str) or not SERVICE_NAME_PATTERN.fullmatch(service_name):
+        raise RuntimeError("Service cutover journal service name is invalid.")
+
+    for field in (
+        "original_image_path",
+        "original_executable",
+        "original_object_name",
+        "target_executable",
+    ):
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip() or "\r" in value or "\n" in value:
+            raise RuntimeError(f"Service cutover journal field {field!r} is invalid.")
+
+    for field in ("original_executable", "target_executable"):
+        value = str(payload[field]).strip()
+        if not ntpath.isabs(value) or '"' in value:
+            raise RuntimeError(
+                f"Service cutover journal field {field!r} must be an absolute unquoted path."
+            )
+
+    start_type = payload.get("original_start_type")
+    if isinstance(start_type, bool) or not isinstance(start_type, int) or start_type not in (2, 3, 4):
+        raise RuntimeError("Service cutover journal original start type is invalid.")
+
+    sid_type = payload.get("original_sid_type")
+    if isinstance(sid_type, bool) or not isinstance(sid_type, int) or sid_type < 0:
+        raise RuntimeError("Service cutover journal original SID type is invalid.")
+
+    if not isinstance(payload.get("was_running"), bool):
+        raise RuntimeError("Service cutover journal running-state flag is invalid.")
+
+    phase = payload.get("phase")
+    if phase not in SERVICE_CUTOVER_PHASES:
+        raise RuntimeError("Service cutover journal phase is invalid.")
+
+    committed = payload.get("committed")
+    if not isinstance(committed, bool):
+        raise RuntimeError("Service cutover journal commit flag is invalid.")
+    if committed != (phase == "committed"):
+        raise RuntimeError("Service cutover journal commit state is invalid.")
+
+    return dict(payload)
+
+
+def _replace_state_file(staged: Path, destination: Path) -> None:
+    if os.name != "nt":
+        os.replace(staged, destination)
+        return
+
+    import ctypes
+
+    MOVEFILE_REPLACE_EXISTING = 0x1
+    MOVEFILE_WRITE_THROUGH = 0x8
+    kernel32 = ctypes.WinDLL("Kernel32.dll", use_last_error=True)
+    kernel32.MoveFileExW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint]
+    kernel32.MoveFileExW.restype = ctypes.c_int
+    if not kernel32.MoveFileExW(
+        str(staged),
+        str(destination),
+        MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+
+def _write_service_cutover_journal(
+    state_path: Path,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    state_path = Path(state_path).resolve()
+    validated = _validate_service_cutover_journal(payload)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    staged = state_path.with_suffix(state_path.suffix + ".staged")
+    staged.unlink(missing_ok=True)
+
+    raw = json.dumps(
+        validated,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+    ) + "\n"
+    try:
+        with staged.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(raw)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _replace_state_file(staged, state_path)
+        with state_path.open("r+b") as handle:
+            os.fsync(handle.fileno())
+    finally:
+        staged.unlink(missing_ok=True)
+
+    return validated
+
+
+def load_service_cutover_journal(state_path: Path) -> dict[str, object]:
+    state_path = Path(state_path).resolve()
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError("Service cutover journal is invalid.") from exc
+    return _validate_service_cutover_journal(payload)
+
+
+def create_service_cutover_journal(
+    state_path: Path,
+    snapshot: dict[str, object],
+) -> dict[str, object]:
+    state_path = Path(state_path).resolve()
+    if state_path.exists():
+        existing = load_service_cutover_journal(state_path)
+        if not bool(existing["committed"]):
+            raise RuntimeError(
+                "Refusing to overwrite an uncommitted service cutover journal."
+            )
+
+    payload = dict(snapshot)
+    payload.update(
+        {
+            "schema": SERVICE_CUTOVER_JOURNAL_SCHEMA,
+            "phase": "snapshotted",
+            "committed": False,
+        }
+    )
+    return _write_service_cutover_journal(state_path, payload)
+
+
+def advance_service_cutover_journal(
+    state_path: Path,
+    phase: str,
+) -> dict[str, object]:
+    state = load_service_cutover_journal(state_path)
+    if bool(state["committed"]):
+        raise RuntimeError("Service cutover journal transition is invalid after commit.")
+    if phase == "committed" or phase not in SERVICE_CUTOVER_PHASES:
+        raise RuntimeError("Service cutover journal transition is invalid.")
+
+    current = str(state["phase"])
+    current_index = SERVICE_CUTOVER_PHASES.index(current)
+    target_index = SERVICE_CUTOVER_PHASES.index(phase)
+    if target_index != current_index + 1:
+        raise RuntimeError(
+            f"Service cutover journal transition is invalid: {current!r} -> {phase!r}."
+        )
+
+    updated = dict(state)
+    updated["phase"] = phase
+    return _write_service_cutover_journal(state_path, updated)
+
+
+def mark_service_cutover_committed(state_path: Path) -> dict[str, object]:
+    state = load_service_cutover_journal(state_path)
+    if bool(state["committed"]):
+        return state
+    if state["phase"] != "ready":
+        raise RuntimeError(
+            f"Service cutover journal transition is invalid: {state['phase']!r} -> 'committed'."
+        )
+
+    updated = dict(state)
+    updated["phase"] = "committed"
+    updated["committed"] = True
+    return _write_service_cutover_journal(state_path, updated)
 
 
 def _sc_executable() -> str:
@@ -94,6 +297,127 @@ def _read_service_image_path(service_name: str) -> str | None:
             f"Windows Service {service_name!r} ImagePath has unexpected registry type {value_type}."
         )
     return str(value)
+
+
+def _read_service_configuration(service_name: str) -> dict[str, object]:
+    if os.name != "nt":
+        raise RuntimeError("Windows Service configuration is only available on Windows.")
+    if not SERVICE_NAME_PATTERN.fullmatch(service_name):
+        raise ValueError("Windows Service name is invalid.")
+
+    import winreg
+
+    key_path = rf"SYSTEM\CurrentControlSet\Services\{service_name}"
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            image_path, image_type = winreg.QueryValueEx(key, "ImagePath")
+            start_type, start_value_type = winreg.QueryValueEx(key, "Start")
+            object_name, object_value_type = winreg.QueryValueEx(key, "ObjectName")
+            try:
+                sid_type, sid_value_type = winreg.QueryValueEx(key, "ServiceSidType")
+            except FileNotFoundError:
+                sid_type, sid_value_type = 0, winreg.REG_DWORD
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Windows Service {service_name!r} does not exist.") from exc
+
+    if image_type not in (winreg.REG_SZ, winreg.REG_EXPAND_SZ):
+        raise RuntimeError("Windows Service configuration ImagePath type is invalid.")
+    if start_value_type != winreg.REG_DWORD:
+        raise RuntimeError("Windows Service configuration Start type is invalid.")
+    if object_value_type not in (winreg.REG_SZ, winreg.REG_EXPAND_SZ):
+        raise RuntimeError("Windows Service configuration ObjectName type is invalid.")
+    if sid_value_type != winreg.REG_DWORD:
+        raise RuntimeError("Windows Service configuration ServiceSidType type is invalid.")
+
+    return {
+        "image_path": str(image_path),
+        "start_type": int(start_type),
+        "object_name": str(object_name),
+        "sid_type": int(sid_type),
+    }
+
+
+def create_windows_service_cutover_journal(
+    state_path: Path,
+    service_name: str,
+    target_executable: str | Path,
+    *,
+    configuration_reader: ServiceConfigurationReader | None = None,
+    state_reader: ServiceStateReader | None = None,
+) -> dict[str, object]:
+    if not SERVICE_NAME_PATTERN.fullmatch(service_name):
+        raise ValueError("Windows Service name is invalid.")
+
+    target = str(target_executable).strip()
+    if (
+        not target
+        or not ntpath.isabs(target)
+        or '"' in target
+        or "\r" in target
+        or "\n" in target
+    ):
+        raise ValueError("Windows Service target executable must be an absolute unquoted path.")
+
+    configuration_reader = configuration_reader or _read_service_configuration
+    if state_reader is None:
+        if os.name != "nt":
+            raise RuntimeError("Windows Service control is only available on Windows.")
+        state_reader = lambda name: _query_state(name, _run_sc)
+
+    state = state_reader(service_name)
+    if state is None:
+        raise RuntimeError(f"Windows Service {service_name!r} does not exist.")
+    if state not in (SERVICE_STOPPED, SERVICE_RUNNING):
+        raise RuntimeError(
+            f"Windows Service {service_name!r} must be stable before cutover snapshot "
+            f"(state {state})."
+        )
+
+    try:
+        config = configuration_reader(service_name)
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError("Windows Service configuration could not be read.") from exc
+
+    if not isinstance(config, dict):
+        raise RuntimeError("Windows Service configuration is invalid.")
+
+    image_path = config.get("image_path")
+    start_type = config.get("start_type")
+    object_name = config.get("object_name")
+    sid_type = config.get("sid_type")
+
+    if not isinstance(image_path, str) or not image_path.strip():
+        raise RuntimeError("Windows Service configuration ImagePath is invalid.")
+    original_executable = _service_executable_from_image_path(image_path)
+    if (
+        not original_executable
+        or not ntpath.isabs(original_executable)
+        or '"' in original_executable
+        or "\r" in original_executable
+        or "\n" in original_executable
+    ):
+        raise RuntimeError("Windows Service configuration executable is invalid.")
+
+    if isinstance(start_type, bool) or not isinstance(start_type, int) or start_type not in (2, 3, 4):
+        raise RuntimeError("Windows Service configuration Start value is invalid.")
+    if not isinstance(object_name, str) or not object_name.strip():
+        raise RuntimeError("Windows Service configuration ObjectName is invalid.")
+    if isinstance(sid_type, bool) or not isinstance(sid_type, int) or sid_type < 0:
+        raise RuntimeError("Windows Service configuration ServiceSidType is invalid.")
+
+    snapshot = {
+        "service_name": service_name,
+        "original_image_path": image_path,
+        "original_executable": original_executable,
+        "original_start_type": start_type,
+        "original_object_name": object_name,
+        "original_sid_type": sid_type,
+        "was_running": state == SERVICE_RUNNING,
+        "target_executable": target,
+    }
+    return create_service_cutover_journal(Path(state_path), snapshot)
 
 
 def _change_service_image_path(service_name: str, image_path: str) -> None:
