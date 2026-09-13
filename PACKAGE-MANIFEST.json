@@ -855,6 +855,11 @@
       "sha256": "6a03114a4086c4cf24fc95191097d6534589e98de06bd48ba18bb9f29ba5fa59"
     },
     {
+      "path": "tests/test_g11_backup_restore_acceptance.py",
+      "bytes": 8573,
+      "sha256": "d682065d98a97018e28e2a5236edb515cefc4127df3b7d33164ee4fff42bf3fd"
+    },
+    {
       "path": "tests/test_g9_six_admin_acceptance.py",
       "bytes": 8826,
       "sha256": "21222ec9f1021a8060a70635e42cb904b4fe018e3557efcec6580142971f7169"
