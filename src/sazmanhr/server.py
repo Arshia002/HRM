@@ -763,6 +763,7 @@ from .windows_service_control import (
     advance_service_cutover_journal,
     create_windows_service_cutover_journal,
     mark_service_cutover_committed,
+    recover_windows_service_cutover,
 )
 
 
@@ -802,6 +803,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("service_stopped", "image_switched", "service_started", "ready"),
     )
     parser.add_argument("--commit-service-cutover", action="store_true")
+    parser.add_argument("--recover-service-cutover", action="store_true")
     parser.add_argument("--service-cutover-state-file", type=Path)
     parser.add_argument("--diagnostic-log", type=Path)
     parser.add_argument("--web-root", type=Path, help="Serve the optional browser test UI from this directory.")
@@ -1021,6 +1023,7 @@ def main(argv: list[str] | None = None) -> int:
             int(bool(args.prepare_service_cutover))
             + int(bool(args.advance_service_cutover))
             + int(bool(args.commit_service_cutover))
+            + int(bool(args.recover_service_cutover))
         )
         if service_cutover_actions:
             if service_cutover_actions != 1:
@@ -1046,6 +1049,8 @@ def main(argv: list[str] | None = None) -> int:
                     state_path,
                     args.advance_service_cutover,
                 )
+            elif args.recover_service_cutover:
+                state = recover_windows_service_cutover(state_path)
             else:
                 state = mark_service_cutover_committed(state_path)
 

@@ -751,8 +751,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 57240,
-      "sha256": "4398dfb58d6c0beda40cddaef3d8ea5de926a1d333e76abdb3aa4034c11a2240"
+      "bytes": 57520,
+      "sha256": "3bf60e1613740452aee9b00d8efd16d5e1bb0ad48fcdfbca7aacf6f35d8cba31"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -933,6 +933,11 @@
       "path": "tests/test_rc3_service_cutover_recovery.py",
       "bytes": 7492,
       "sha256": "7d1a9f2a24ae5fd21e149f993c2927c285bf8b37a7ba6255128f657f4a7208f3"
+    },
+    {
+      "path": "tests/test_rc3_service_cutover_recovery_cli.py",
+      "bytes": 2751,
+      "sha256": "b21796e88d8c17380ebc95356410ac7fda6919c455f635be0d0d5ded5a60fbb6"
     },
     {
       "path": "tests/test_rc3_synthetic_v49_fallback.py",
