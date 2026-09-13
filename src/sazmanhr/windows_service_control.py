@@ -36,6 +36,7 @@ SERVICE_CUTOVER_PHASES = (
     "service_started",
     "ready",
     "committed",
+    "recovered",
 )
 _SERVICE_CUTOVER_REQUIRED_FIELDS = (
     "schema",
@@ -90,7 +91,11 @@ def _validate_service_cutover_journal(payload: object) -> dict[str, object]:
         raise RuntimeError("Service cutover journal original start type is invalid.")
 
     sid_type = payload.get("original_sid_type")
-    if isinstance(sid_type, bool) or not isinstance(sid_type, int) or sid_type < 0:
+    if (
+        isinstance(sid_type, bool)
+        or not isinstance(sid_type, int)
+        or sid_type not in (0, 1, 3)
+    ):
         raise RuntimeError("Service cutover journal original SID type is invalid.")
 
     if not isinstance(payload.get("was_running"), bool):
@@ -175,7 +180,7 @@ def create_service_cutover_journal(
     state_path = Path(state_path).resolve()
     if state_path.exists():
         existing = load_service_cutover_journal(state_path)
-        if not bool(existing["committed"]):
+        if not bool(existing["committed"]) and existing["phase"] != "recovered":
             raise RuntimeError(
                 "Refusing to overwrite an uncommitted service cutover journal."
             )
@@ -198,7 +203,7 @@ def advance_service_cutover_journal(
     state = load_service_cutover_journal(state_path)
     if bool(state["committed"]):
         raise RuntimeError("Service cutover journal transition is invalid after commit.")
-    if phase == "committed" or phase not in SERVICE_CUTOVER_PHASES:
+    if phase in ("committed", "recovered") or phase not in SERVICE_CUTOVER_PHASES:
         raise RuntimeError("Service cutover journal transition is invalid.")
 
     current = str(state["phase"])
@@ -404,7 +409,15 @@ def create_windows_service_cutover_journal(
         raise RuntimeError("Windows Service configuration Start value is invalid.")
     if not isinstance(object_name, str) or not object_name.strip():
         raise RuntimeError("Windows Service configuration ObjectName is invalid.")
-    if isinstance(sid_type, bool) or not isinstance(sid_type, int) or sid_type < 0:
+    if object_name.strip().lower() != r"nt authority\localservice":
+        raise RuntimeError(
+            "Windows Service configuration account is unsupported for transactional recovery."
+        )
+    if (
+        isinstance(sid_type, bool)
+        or not isinstance(sid_type, int)
+        or sid_type not in (0, 1, 3)
+    ):
         raise RuntimeError("Windows Service configuration ServiceSidType is invalid.")
 
     snapshot = {
@@ -521,6 +534,130 @@ def set_windows_service_binary_path(
         "image_path_after": after,
         "executable": actual,
     }
+
+
+def restore_windows_service_configuration(
+    service_name: str,
+    *,
+    start_type: int,
+    object_name: str,
+    sid_type: int,
+) -> dict[str, object]:
+    if not SERVICE_NAME_PATTERN.fullmatch(service_name):
+        raise ValueError("Windows Service name is invalid.")
+    if start_type not in (2, 3, 4):
+        raise ValueError("Windows Service start type is invalid.")
+    if object_name.strip().lower() != r"nt authority\localservice":
+        raise ValueError(
+            "Only NT AUTHORITY\\LocalService is supported for transactional recovery."
+        )
+    if sid_type not in (0, 1, 3):
+        raise ValueError("Windows Service SID type is invalid.")
+    if os.name != "nt":
+        raise RuntimeError("Windows Service configuration is only available on Windows.")
+
+    start_mode = {2: "auto", 3: "demand", 4: "disabled"}[start_type]
+    sid_mode = {0: "none", 1: "unrestricted", 3: "restricted"}[sid_type]
+
+    config = subprocess.run(
+        [
+            _sc_executable(),
+            "config",
+            service_name,
+            "start=",
+            start_mode,
+            "obj=",
+            r"NT AUTHORITY\LocalService",
+            "password=",
+            "",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding=locale.getpreferredencoding(False) or "utf-8",
+        errors="replace",
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    if config.returncode:
+        raise RuntimeError(
+            f"Unable to restore Windows Service configuration {service_name!r} "
+            f"(exit {config.returncode}): {config.stdout.strip()[-1000:]}"
+        )
+
+    sid = subprocess.run(
+        [_sc_executable(), "sidtype", service_name, sid_mode],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding=locale.getpreferredencoding(False) or "utf-8",
+        errors="replace",
+        check=False,
+        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+    )
+    if sid.returncode:
+        raise RuntimeError(
+            f"Unable to restore Windows Service SID type {service_name!r} "
+            f"(exit {sid.returncode}): {sid.stdout.strip()[-1000:]}"
+        )
+
+    actual = _read_service_configuration(service_name)
+    if int(actual["start_type"]) != start_type:
+        raise RuntimeError("Windows Service start type verification failed after recovery.")
+    if str(actual["object_name"]).strip().lower() != r"nt authority\localservice":
+        raise RuntimeError("Windows Service account verification failed after recovery.")
+    if int(actual["sid_type"]) != sid_type:
+        raise RuntimeError("Windows Service SID type verification failed after recovery.")
+
+    return {
+        "ok": True,
+        "service_name": service_name,
+        "start_type": start_type,
+        "object_name": str(actual["object_name"]),
+        "sid_type": sid_type,
+    }
+
+
+def recover_windows_service_cutover(
+    state_path: Path,
+    *,
+    stopper=None,
+    image_setter=None,
+    configuration_restorer=None,
+    starter=None,
+) -> dict[str, object]:
+    state_path = Path(state_path).resolve()
+    state = load_service_cutover_journal(state_path)
+
+    if bool(state["committed"]) or state["phase"] == "committed":
+        return state
+    if state["phase"] == "recovered":
+        return state
+
+    stopper = stopper or stop_windows_service
+    image_setter = image_setter or set_windows_service_binary_path
+    configuration_restorer = configuration_restorer or restore_windows_service_configuration
+    starter = starter or start_windows_service
+
+    service_name = str(state["service_name"])
+    original_executable = str(state["original_executable"])
+
+    stopper(service_name)
+    image_setter(service_name, original_executable)
+    configuration_restorer(
+        service_name,
+        start_type=int(state["original_start_type"]),
+        object_name=str(state["original_object_name"]),
+        sid_type=int(state["original_sid_type"]),
+    )
+
+    if bool(state["was_running"]):
+        starter(service_name)
+
+    recovered = dict(state)
+    recovered["phase"] = "recovered"
+    recovered["committed"] = False
+    return _write_service_cutover_journal(state_path, recovered)
 
 
 def delete_windows_service(
