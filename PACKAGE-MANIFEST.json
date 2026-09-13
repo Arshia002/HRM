@@ -726,8 +726,8 @@
     },
     {
       "path": "src/sazmanhr/legacy_upgrade.py",
-      "bytes": 12528,
-      "sha256": "164adf09fa5c8ad8d79d4e0b73c55f157436baa5fef3ebcf4c511a2a4052e454"
+      "bytes": 13769,
+      "sha256": "4117e0148a32ea89c5908fa08bb5d7f1b56ffeb920c3fd308d3e31530f30f53a"
     },
     {
       "path": "src/sazmanhr/migrations.py",
@@ -828,6 +828,11 @@
       "path": "tests/test_alpha4_legacy_upgrade.py",
       "bytes": 6189,
       "sha256": "90b9576c1ba41a44d96bc582af4e09c559a294cef55496752d32753474c99233"
+    },
+    {
+      "path": "tests/test_alpha4_legacy_upgrade_commit.py",
+      "bytes": 5184,
+      "sha256": "de4dbd4592a86c2bcabff32a06f5394c20ecfb8bf517e531abf92d83e94566df"
     },
     {
       "path": "tests/test_api.py",

@@ -178,6 +178,8 @@ def restore_legacy_database_upgrade(state_path: Path) -> dict[str, object]:
         return {"ok": True, "restored": False, "reason": "state_missing"}
 
     state = _load_state(state_path)
+    if bool(state.get("committed", False)):
+        return {"ok": True, "restored": False, "reason": "transaction_committed"}
     if not state.get("performed"):
         return {"ok": True, "restored": False, "reason": "migration_not_performed"}
 
@@ -224,6 +226,39 @@ def restore_legacy_database_upgrade(state_path: Path) -> dict[str, object]:
         "database": str(database_path),
         "backup": str(backup_path),
         "backup_sha256": expected_digest,
+    }
+
+
+def commit_legacy_database_upgrade(state_path: Path) -> dict[str, object]:
+    state_path = Path(state_path).resolve()
+    state = _load_state(state_path)
+
+    if not bool(state.get("performed")):
+        raise LegacyUpgradeError(
+            "Database upgrade transaction cannot be committed because no migration was performed."
+        )
+    if state.get("status") != "upgraded":
+        raise LegacyUpgradeError(
+            "Database upgrade transaction can only be committed after status is upgraded."
+        )
+
+    if bool(state.get("committed", False)):
+        return {
+            "ok": True,
+            "committed": True,
+            "database": str(state.get("database", "")),
+            "backup": str(state.get("backup", "")),
+            "backup_sha256": str(state.get("backup_sha256", "")),
+        }
+
+    state["committed"] = True
+    _write_state(state_path, state)
+    return {
+        "ok": True,
+        "committed": True,
+        "database": str(state.get("database", "")),
+        "backup": str(state.get("backup", "")),
+        "backup_sha256": str(state.get("backup_sha256", "")),
     }
 
 
