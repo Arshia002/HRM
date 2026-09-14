@@ -155,6 +155,7 @@ end;
 procedure LogSetupStage(Status: String; StageName: String; ResultCode: Integer); forward;
 
 function ServiceRegistryPath(ServiceName: String): String; forward;
+function ServiceExistsInScm(ServiceName: String): Boolean; forward;
 
 procedure SnapshotOriginalServiceConfiguration(var FailureText: String);
 var
@@ -273,6 +274,29 @@ function ServiceRegistryPath(ServiceName: String): String;
 begin
   Result := 'SYSTEM\CurrentControlSet\Services\' + ServiceName;
 end;
+
+function ServiceExistsInScm(ServiceName: String): Boolean;
+var
+  ResultCode: Integer;
+  Started: Boolean;
+begin
+  ResultCode := -1;
+  Started := Exec(ExpandConstant('{sys}\sc.exe'),
+    'query ' + ServiceName,
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  if not Started then
+    RaiseException('SCM query could not be started for service ' + ServiceName + '.');
+
+  if ResultCode = 0 then
+    Result := True
+  else if ResultCode = 1060 then
+    Result := False
+  else
+    RaiseException('SCM query failed for service ' + ServiceName +
+      ' with exit code ' + IntToStr(ResultCode) + '.');
+end;
+
 
 function ServiceStartModeArgument(StartType: Cardinal): String;
 begin
@@ -991,8 +1015,7 @@ begin
         end;
       end;
 
-      ServiceExistedBeforeInstall := RegKeyExists(HKLM,
-        'SYSTEM\CurrentControlSet\Services\HRMCentralService');
+      ServiceExistedBeforeInstall := ServiceExistsInScm('HRMCentralService');
 
       if ServiceExistedBeforeInstall and (not PreInstallServiceHandled) then
       begin

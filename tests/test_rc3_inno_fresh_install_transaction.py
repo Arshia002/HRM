@@ -12,6 +12,32 @@ class Rc3InnoFreshInstallTransactionTests(unittest.TestCase):
         end = cls.script.index("procedure InitializeWizard;", start)
         cls.provision = cls.script[start:end]
 
+    def test_service_existence_detection_uses_scm_not_registry(self) -> None:
+        prepare_start = self.script.index("function PrepareToInstall(var NeedsRestart: Boolean): String;")
+        prepare_end = self.script.index("function GetCustomSetupExitCode: Integer;", prepare_start)
+        prepare = self.script[prepare_start:prepare_end]
+
+        self.assertNotIn(
+            "ServiceExistedBeforeInstall := RegKeyExists",
+            prepare,
+        )
+        self.assertIn(
+            "ServiceExistedBeforeInstall := ServiceExistsInScm('HRMCentralService')",
+            prepare,
+        )
+        self.assertIn(
+            "function ServiceExistsInScm(ServiceName: String): Boolean;",
+            self.script,
+        )
+        self.assertIn(
+            "else if ResultCode = 1060 then",
+            self.script,
+        )
+        self.assertIn(
+            "RaiseException('SCM query failed for service ' + ServiceName +",
+            self.script,
+        )
+
     def test_fresh_install_prepares_durable_journal_before_service_creation(self) -> None:
         prepare = self.provision.index("--prepare-service-install HRMCentralService")
         install = self.provision.index("--startup auto install")

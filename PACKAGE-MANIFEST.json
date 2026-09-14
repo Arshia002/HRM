@@ -116,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 43952,
-      "sha256": "76b9e3d530f6552dd8e4ab7f55c4a8f50b98185b6ab4b0485a442ff70776048f"
+      "bytes": 44586,
+      "sha256": "31f54351aadd7816d06a72fd408829f8431d54106f87bafd096daf1d76fb4da3"
     },
     {
       "path": "build/windows/migration.spec",
@@ -936,8 +936,8 @@
     },
     {
       "path": "tests/test_rc3_inno_fresh_install_transaction.py",
-      "bytes": 2236,
-      "sha256": "44b7223e0a886928d00b793945b652b1f36abbacdf4b171e7c7c1cd872196f65"
+      "bytes": 3208,
+      "sha256": "c16f816c271c2b4297768d9b0c2c6192c90d896ac66eb78e5038b9a179ac709e"
     },
     {
       "path": "tests/test_rc3_installer_upgrade_transaction.py",
