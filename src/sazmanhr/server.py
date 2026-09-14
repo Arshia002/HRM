@@ -762,6 +762,7 @@ def ensure_initial_owner(repo: Repository, username: str, display_name: str, pas
 from .windows_service_control import (
     advance_service_cutover_journal,
     create_windows_service_cutover_journal,
+    create_windows_service_install_journal,
     mark_service_cutover_committed,
     recover_windows_service_cutover,
 )
@@ -804,6 +805,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--service-stop-timeout", type=int, default=30)
     parser.add_argument("--service-state-file", type=Path)
     parser.add_argument("--prepare-service-cutover", metavar="NAME")
+    parser.add_argument("--prepare-service-install", metavar="NAME")
     parser.add_argument(
         "--advance-service-cutover",
         choices=("service_stopped", "image_switched", "service_started", "ready"),
@@ -1051,6 +1053,7 @@ def main(argv: list[str] | None = None) -> int:
 
             low_level_service_actions = (
                 int(bool(args.prepare_service_cutover))
+                + int(bool(args.prepare_service_install))
                 + int(bool(args.advance_service_cutover))
                 + int(bool(args.commit_service_cutover))
                 + int(bool(args.recover_service_cutover))
@@ -1083,6 +1086,7 @@ def main(argv: list[str] | None = None) -> int:
 
         service_cutover_actions = (
             int(bool(args.prepare_service_cutover))
+            + int(bool(args.prepare_service_install))
             + int(bool(args.advance_service_cutover))
             + int(bool(args.commit_service_cutover))
             + int(bool(args.recover_service_cutover))
@@ -1104,6 +1108,16 @@ def main(argv: list[str] | None = None) -> int:
                 state = create_windows_service_cutover_journal(
                     state_path,
                     args.prepare_service_cutover,
+                    args.service_image_executable.resolve(),
+                )
+            elif args.prepare_service_install:
+                if args.service_image_executable is None:
+                    raise ValueError(
+                        "--service-image-executable is required with --prepare-service-install."
+                    )
+                state = create_windows_service_install_journal(
+                    state_path,
+                    args.prepare_service_install,
                     args.service_image_executable.resolve(),
                 )
             elif args.advance_service_cutover:

@@ -86,6 +86,7 @@ var
   ServiceTransactionCommitted: Boolean;
   DatabaseUpgradeAttempted: Boolean;
   DatabaseUpgradeStatePath: String;
+  ServiceCutoverStatePath: String;
   OriginalServiceImagePath: String;
   OriginalServiceExe: String;
   OriginalServiceStartType: Cardinal;
@@ -559,7 +560,33 @@ begin
 end;
 
 procedure RecoverServerAfterFailure;
+var
+  ResultCode: Integer;
+  Started: Boolean;
 begin
+  if (ServiceCutoverStatePath <> '') and FileExists(ServiceCutoverStatePath) then
+  begin
+    ResultCode := -1;
+    LogSetupStage('START', 'recover-durable-installer-transaction', ResultCode);
+    Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+      '--data-dir "' + EnterpriseDataDir +
+      '" --recover-installer-upgrade --service-cutover-state-file "' +
+      ServiceCutoverStatePath + '" --database-upgrade-state-file "' +
+      DatabaseUpgradeStatePath + '"',
+      '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if Started and (ResultCode = 0) then
+    begin
+      LogSetupStage('PASS', 'recover-durable-installer-transaction', ResultCode);
+      ServiceStoppedForUpgrade := False;
+      ServiceCutoverAttempted := False;
+      ServiceTransactionReady := False;
+      DatabaseUpgradeAttempted := False;
+    end
+    else
+      LogSetupStage('FAIL', 'recover-durable-installer-transaction', ResultCode);
+    exit;
+  end;
+
   if ServiceExistedBeforeInstall then
     RestoreOriginalServiceIfNeeded
   else
@@ -654,6 +681,7 @@ begin
   SeedPath := ExpandConstant('{tmp}\hrm-seed.sqlite');
   DiagnosticPath := DataDir + '\logs\setup-server.log';
   DatabaseUpgradeStatePath := DataDir + '\backups\upgrade-transactions\installer-upgrade-state.json';
+  ServiceCutoverStatePath := DataDir + '\backups\upgrade-transactions\service-cutover-state.json';
 
   RunRequired(ServiceControlExe,
     '--verify-service-runtime "' + ServiceRuntimeDir +
@@ -662,6 +690,13 @@ begin
 
   if ServiceExistedBeforeInstall then
   begin
+    RunRequired(ServiceControlExe,
+      '--data-dir "' + DataDir +
+      '" --prepare-service-cutover HRMCentralService --service-image-executable "' +
+      ServiceExe + '" --service-cutover-state-file "' + ServiceCutoverStatePath +
+      '" --diagnostic-log "' + DiagnosticPath + '"',
+      'ثبت durable snapshot سرویس پیش از cutover');
+
     ServiceStatePath := ExpandConstant('{tmp}\service-cutover-state.json');
     DeleteFile(ServiceStatePath);
     ResultCode := -1;
@@ -691,6 +726,24 @@ begin
       Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
     ServiceStoppedForUpgrade := True;
     LogSetupStage('PASS', 'service-stop-for-cutover', 0);
+
+    RunRequired(ServiceControlExe,
+      '--advance-service-cutover service_stopped --service-cutover-state-file "' +
+      ServiceCutoverStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+      'ثبت durable phase توقف سرویس');
+  end
+  else
+  begin
+    RunRequired(ServiceControlExe,
+      '--data-dir "' + DataDir +
+      '" --prepare-service-install HRMCentralService --service-image-executable "' +
+      ServiceExe + '" --service-cutover-state-file "' + ServiceCutoverStatePath +
+      '" --diagnostic-log "' + DiagnosticPath + '"',
+      'ثبت durable transaction نصب سرویس جدید');
+    RunRequired(ServiceControlExe,
+      '--advance-service-cutover service_stopped --service-cutover-state-file "' +
+      ServiceCutoverStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+      'ثبت durable phase نبود سرویس قبلی');
   end;
 
   if FileExists(DataDir + '\hrm.sqlite') then
@@ -724,6 +777,11 @@ begin
     RunRequired(ServiceExe, '--startup auto install', 'نصب Windows Service');
   end;
 
+  RunRequired(ServiceControlExe,
+    '--advance-service-cutover image_switched --service-cutover-state-file "' +
+    ServiceCutoverStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+    'ثبت durable phase فعال‌سازی نسل سرویس');
+
   RunRequired(ExpandConstant('{sys}\sc.exe'),
     'config HRMCentralService start= auto',
     'اعمال Automatic start برای سرویس');
@@ -753,6 +811,10 @@ begin
     '" --start-windows-service HRMCentralService --service-start-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',
     'شروع Windows Service');
+  RunRequired(ServiceControlExe,
+    '--advance-service-cutover service_started --service-cutover-state-file "' +
+    ServiceCutoverStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+    'ثبت durable phase شروع سرویس');
   RunRequired(ServerExe,
     '--data-dir "' + DataDir + '" --health-check https://127.0.0.1:8765 --health-timeout 30' +
     ' --diagnostic-log "' + DiagnosticPath + '"',
@@ -798,6 +860,11 @@ begin
     ServiceStoppedForUpgrade := False;
   end;
 
+  RunRequired(ServiceControlExe,
+    '--advance-service-cutover ready --service-cutover-state-file "' +
+    ServiceCutoverStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+    'ثبت durable phase آمادگی transaction');
+
   ServiceTransactionReady := True;
   LogSetupStage('PASS', 'service-runtime-transaction-ready', 0);
 end;
@@ -813,6 +880,8 @@ begin
   ServiceCutoverAttempted := False;
   ServiceTransactionReady := False;
   ServiceTransactionCommitted := False;
+  DatabaseUpgradeStatePath := EnterpriseDataDir + '\backups\upgrade-transactions\installer-upgrade-state.json';
+  ServiceCutoverStatePath := EnterpriseDataDir + '\backups\upgrade-transactions\service-cutover-state.json';
   OriginalServiceImagePath := '';
   OriginalServiceExe := '';
   OriginalServiceStartType := 0;
@@ -866,6 +935,38 @@ begin
       PreflightExe := ExpandConstant('{tmp}\HRMServerPreflight.exe');
       PreflightDataDir := ExpandConstant('{tmp}\hrm-server-preflight-data');
       DiagnosticPath := EnterpriseDataDir + '\logs\setup-server.log';
+      DatabaseUpgradeStatePath := EnterpriseDataDir +
+        '\backups\upgrade-transactions\installer-upgrade-state.json';
+      ServiceCutoverStatePath := EnterpriseDataDir +
+        '\backups\upgrade-transactions\service-cutover-state.json';
+
+      if FileExists(ServiceCutoverStatePath) then
+      begin
+        ResultCode := -1;
+        LogSetupStage('START', 'recover-previous-installer-transaction', ResultCode);
+        Started := Exec(PreflightExe,
+          '--data-dir "' + EnterpriseDataDir +
+          '" --recover-installer-upgrade --service-cutover-state-file "' +
+          ServiceCutoverStatePath + '" --database-upgrade-state-file "' +
+          DatabaseUpgradeStatePath + '" --diagnostic-log "' + DiagnosticPath + '"',
+          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        if (not Started) or (ResultCode <> 0) then
+        begin
+          LogSetupStage('FAIL', 'recover-previous-installer-transaction', ResultCode);
+          LogProtectedDiagnostics;
+          ProvisionFailed := True;
+          Result := 'بازیابی transaction ناتمام نصب قبلی شکست خورد (کد ' +
+            IntToStr(ResultCode) + '). نصب جدید بدون بازیابی ایمن ادامه پیدا نمی‌کند.';
+          exit;
+        end;
+        LogSetupStage('PASS', 'recover-previous-installer-transaction', ResultCode);
+        ServiceStoppedForUpgrade := False;
+        ServiceCutoverAttempted := False;
+        ServiceTransactionReady := False;
+        ServiceTransactionCommitted := False;
+        DatabaseUpgradeAttempted := False;
+        PreInstallServiceHandled := False;
+      end;
 
       if not LegacyServicesHandled then
       begin
@@ -971,8 +1072,15 @@ begin
   begin
     if WizardIsComponentSelected('server') and ServiceTransactionReady then
     begin
+      RunRequired(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+        '--data-dir "' + EnterpriseDataDir +
+        '" --commit-installer-upgrade --service-cutover-state-file "' +
+        ServiceCutoverStatePath + '" --database-upgrade-state-file "' +
+        DatabaseUpgradeStatePath + '" --diagnostic-log "' +
+        EnterpriseDataDir + '\logs\setup-server.log"',
+        'ثبت durable commit نهایی installer transaction');
       ServiceTransactionCommitted := True;
-  DatabaseUpgradeAttempted := False;
+      DatabaseUpgradeAttempted := False;
       LogSetupStage('PASS', 'service-runtime-transaction-commit', 0);
     end;
     SetupCompleted := True;
@@ -980,10 +1088,36 @@ begin
 end;
 
 procedure DeinitializeSetup;
+var
+  ResultCode: Integer;
+  Started: Boolean;
 begin
   if not SetupCompleted then
   begin
-    RestoreOriginalServiceIfNeeded;
+    if WizardIsComponentSelected('server') and
+       (ServiceCutoverStatePath <> '') and FileExists(ServiceCutoverStatePath) then
+    begin
+      ResultCode := -1;
+      LogSetupStage('START', 'deinitialize-durable-installer-recovery', ResultCode);
+      Started := Exec(ExpandConstant('{tmp}\HRMServerPreflight.exe'),
+        '--data-dir "' + EnterpriseDataDir +
+        '" --recover-installer-upgrade --service-cutover-state-file "' +
+        ServiceCutoverStatePath + '" --database-upgrade-state-file "' +
+        DatabaseUpgradeStatePath + '"',
+        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      if Started and (ResultCode = 0) then
+      begin
+        LogSetupStage('PASS', 'deinitialize-durable-installer-recovery', ResultCode);
+        ServiceStoppedForUpgrade := False;
+        ServiceCutoverAttempted := False;
+        ServiceTransactionReady := False;
+        DatabaseUpgradeAttempted := False;
+      end
+      else
+        LogSetupStage('FAIL', 'deinitialize-durable-installer-recovery', ResultCode);
+    end
+    else
+      RestoreOriginalServiceIfNeeded;
     RestoreLegacyServicesIfNeeded;
   end;
 end;

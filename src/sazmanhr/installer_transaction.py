@@ -74,13 +74,17 @@ def recover_upgrade_transaction(
 
     # Rollback order is deliberate: an old service must never be started
     # against a database that failed to return to its old generation.
-    database_result = restore_database(database_state_path)
+    database_recovered = False
+    if database_state_path.is_file():
+        database_result = restore_database(database_state_path)
+        database_recovered = bool(database_result.get("restored", False))
+
     service_result = recover_service(service_state_path)
 
     return {
         "ok": True,
         "decision": "rollback",
-        "database_recovered": bool(database_result.get("restored", False)),
+        "database_recovered": database_recovered,
         "database_committed": False,
         "service_recovered": service_result.get("phase") == "recovered",
     }

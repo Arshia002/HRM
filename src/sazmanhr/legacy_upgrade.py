@@ -233,16 +233,25 @@ def commit_legacy_database_upgrade(state_path: Path) -> dict[str, object]:
     state_path = Path(state_path).resolve()
     state = _load_state(state_path)
 
-    if not bool(state.get("performed")):
+    performed = state.get("performed")
+    status = state.get("status")
+    committed = state.get("committed", False)
+
+    if not isinstance(performed, bool):
+        raise LegacyUpgradeError("Database upgrade transaction performed flag is invalid.")
+    if not isinstance(committed, bool):
+        raise LegacyUpgradeError("Database upgrade transaction committed flag is invalid.")
+
+    terminal_state = (
+        (performed and status == "upgraded")
+        or ((not performed) and status == "current")
+    )
+    if not terminal_state:
         raise LegacyUpgradeError(
-            "Database upgrade transaction cannot be committed because no migration was performed."
-        )
-    if state.get("status") != "upgraded":
-        raise LegacyUpgradeError(
-            "Database upgrade transaction can only be committed after status is upgraded."
+            "Database upgrade transaction can only be committed from upgraded or current state."
         )
 
-    if bool(state.get("committed", False)):
+    if committed:
         return {
             "ok": True,
             "committed": True,

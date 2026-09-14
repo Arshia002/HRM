@@ -116,8 +116,8 @@
     },
     {
       "path": "build/windows/HRM.iss",
-      "bytes": 37466,
-      "sha256": "b898fa096946746ddb0990c87f904b0883e2a3becdb8cedff100e6d5a5cef9a8"
+      "bytes": 43952,
+      "sha256": "76b9e3d530f6552dd8e4ab7f55c4a8f50b98185b6ab4b0485a442ff70776048f"
     },
     {
       "path": "build/windows/migration.spec",
@@ -726,13 +726,13 @@
     },
     {
       "path": "src/sazmanhr/installer_transaction.py",
-      "bytes": 4372,
-      "sha256": "4a4642d832249dc7f9f91c50b54b32619a0331b6edec42959d7110365d85f582"
+      "bytes": 4494,
+      "sha256": "daafa752a2420f2cc2bb6494e732499c4c54d415bb1629d0077c9fd096bd319e"
     },
     {
       "path": "src/sazmanhr/legacy_upgrade.py",
-      "bytes": 13769,
-      "sha256": "4117e0148a32ea89c5908fa08bb5d7f1b56ffeb920c3fd308d3e31530f30f53a"
+      "bytes": 14061,
+      "sha256": "b5df4a1371d1d9959e5b056cf12d902f655cc6b5aab99fa0e06f52b6cb56602f"
     },
     {
       "path": "src/sazmanhr/migrations.py",
@@ -756,8 +756,8 @@
     },
     {
       "path": "src/sazmanhr/server.py",
-      "bytes": 60310,
-      "sha256": "0a43540a45ab1f4b00213e34829455d8692e598f827152de3592a2674725381a"
+      "bytes": 61022,
+      "sha256": "88802fc4fdf9e04fb03a25f894560cd964b758580fffdaf080f3ba43f77cfa92"
     },
     {
       "path": "src/sazmanhr/tls.py",
@@ -776,8 +776,8 @@
     },
     {
       "path": "src/sazmanhr/windows_service_control.py",
-      "bytes": 30122,
-      "sha256": "3799d803a934de5e269106fda2c2b3e4c399f01afc0b1189a2f9d3deabcc936b"
+      "bytes": 33466,
+      "sha256": "ada7d446f614fa334be32564a12a40c82f554389dfbc784efd85677c38942b38"
     },
     {
       "path": "test-evidence/alpha4-proven-baseline-manifest.json",
@@ -885,6 +885,11 @@
       "sha256": "a29b9a1c5711d57be9e2d14e3e9e8b81a2f356c36833387b2204f05bab2b0e3a"
     },
     {
+      "path": "tests/test_legacy_upgrade_current_commit.py",
+      "bytes": 2603,
+      "sha256": "e551cf34857636e9696597ebd352366e1356ea56b0f34f0107a484ba0f3ec245"
+    },
+    {
       "path": "tests/test_manifest_eol_portability.py",
       "bytes": 2011,
       "sha256": "0ec3539e2a335f3f143858d4335aed1bffafac0c07c65f5f95e498a1cb34f576"
@@ -913,6 +918,26 @@
       "path": "tests/test_rc3_desktop_tls_pin.py",
       "bytes": 3992,
       "sha256": "9eba4db93cf15113d70dafff9fee7ad6c0f841cb81c1f77c5f496449e3f58a71"
+    },
+    {
+      "path": "tests/test_rc3_fresh_install_transaction.py",
+      "bytes": 9442,
+      "sha256": "b7a0cb103aefd8360f3a230627f2cd915e11b3ee82901b0549bb6963e38eac21"
+    },
+    {
+      "path": "tests/test_rc3_fresh_install_transaction_cli.py",
+      "bytes": 4575,
+      "sha256": "073d267a434309db71dc3e81648b9bdbb3d7e47802fc6dbf91faf4574eb55e37"
+    },
+    {
+      "path": "tests/test_rc3_inno_durable_installer_transaction.py",
+      "bytes": 4807,
+      "sha256": "a49bd7710ce8bbaf33b5fc0b10d4436cf2dbe2832e8c638046068f3e724708ce"
+    },
+    {
+      "path": "tests/test_rc3_inno_fresh_install_transaction.py",
+      "bytes": 2236,
+      "sha256": "44b7223e0a886928d00b793945b652b1f36abbacdf4b171e7c7c1cd872196f65"
     },
     {
       "path": "tests/test_rc3_installer_upgrade_transaction.py",
