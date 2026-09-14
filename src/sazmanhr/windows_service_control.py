@@ -709,6 +709,53 @@ def restore_windows_service_configuration(
     }
 
 
+FRESH_INSTALL_FIREWALL_RULE_NAME = "HRM Central Service 8765"
+
+
+def cleanup_fresh_install_firewall() -> None:
+    delete_result = subprocess.run(
+        [
+            "netsh.exe",
+            "advfirewall",
+            "firewall",
+            "delete",
+            "rule",
+            f"name={FRESH_INSTALL_FIREWALL_RULE_NAME}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    verify_result = subprocess.run(
+        [
+            "netsh.exe",
+            "advfirewall",
+            "firewall",
+            "show",
+            "rule",
+            f"name={FRESH_INSTALL_FIREWALL_RULE_NAME}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    verify_output = verify_result.stdout or ""
+    if FRESH_INSTALL_FIREWALL_RULE_NAME not in verify_output:
+        return
+
+    delete_detail = (delete_result.stdout or "").strip()
+    verify_detail = verify_output.strip()
+    detail = verify_detail or delete_detail
+    raise RuntimeError(
+        "Fresh-install firewall cleanup failed"
+        + (f": {detail}" if detail else "")
+    )
+
+
 def recover_windows_service_cutover(
     state_path: Path,
     *,
@@ -717,6 +764,7 @@ def recover_windows_service_cutover(
     image_setter=None,
     configuration_restorer=None,
     starter=None,
+    fresh_cleanup=None,
 ) -> dict[str, object]:
     state_path = Path(state_path).resolve()
     state = load_service_cutover_journal(state_path)
@@ -731,12 +779,14 @@ def recover_windows_service_cutover(
     image_setter = image_setter or set_windows_service_binary_path
     configuration_restorer = configuration_restorer or restore_windows_service_configuration
     starter = starter or start_windows_service
+    fresh_cleanup = fresh_cleanup or cleanup_fresh_install_firewall
 
     service_name = str(state["service_name"])
     stopper(service_name)
 
     if not bool(state["service_existed_before"]):
         deleter(service_name)
+        fresh_cleanup()
     else:
         image_setter(service_name, str(state["original_executable"]))
         configuration_restorer(

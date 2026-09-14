@@ -776,8 +776,8 @@
     },
     {
       "path": "src/sazmanhr/windows_service_control.py",
-      "bytes": 33466,
-      "sha256": "ada7d446f614fa334be32564a12a40c82f554389dfbc784efd85677c38942b38"
+      "bytes": 34820,
+      "sha256": "54fa19ecc01e29d6af17c7170e5b00c25062d43f8eae18f9074d79749f832ccf"
     },
     {
       "path": "test-evidence/alpha4-proven-baseline-manifest.json",
@@ -921,8 +921,8 @@
     },
     {
       "path": "tests/test_rc3_fresh_install_transaction.py",
-      "bytes": 9442,
-      "sha256": "b7a0cb103aefd8360f3a230627f2cd915e11b3ee82901b0549bb6963e38eac21"
+      "bytes": 14917,
+      "sha256": "eb1b5b729b37494fa3b4c660cb1c35ad84533509a828c81d511b0d6b6cd33bf2"
     },
     {
       "path": "tests/test_rc3_fresh_install_transaction_cli.py",

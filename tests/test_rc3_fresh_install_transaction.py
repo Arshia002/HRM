@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 from sazmanhr.installer_transaction import (
@@ -11,6 +12,7 @@ from sazmanhr.installer_transaction import (
 )
 from sazmanhr.windows_service_control import (
     SERVICE_RUNNING,
+    cleanup_fresh_install_firewall,
     advance_service_cutover_journal,
     create_service_cutover_journal,
     create_windows_service_install_journal,
@@ -88,6 +90,7 @@ class Rc3FreshInstallTransactionTests(unittest.TestCase):
                 image_setter=lambda *args: events.append("image") or {},
                 configuration_restorer=lambda *args, **kwargs: events.append("config") or {},
                 starter=lambda name: events.append(f"start:{name}") or {},
+                fresh_cleanup=lambda: None,
             )
 
             self.assertEqual(
@@ -103,6 +106,121 @@ class Rc3FreshInstallTransactionTests(unittest.TestCase):
 
             persisted = load_service_cutover_journal(state_path)
             self.assertEqual(persisted["phase"], "recovered")
+
+    def test_firewall_cleanup_is_idempotent_when_rule_is_already_absent(self) -> None:
+        delete_result = Mock(returncode=1, stdout="No rules match the specified criteria.")
+        verify_result = Mock(returncode=1, stdout="No rules match the specified criteria.")
+
+        with patch(
+            "sazmanhr.windows_service_control.subprocess.run",
+            side_effect=[delete_result, verify_result],
+        ):
+            cleanup_fresh_install_firewall()
+
+    def test_firewall_cleanup_fails_closed_when_rule_remains(self) -> None:
+        delete_result = Mock(returncode=1, stdout="synthetic delete failure")
+        verify_result = Mock(
+            returncode=0,
+            stdout="Rule Name: HRM Central Service 8765\nEnabled: Yes\n",
+        )
+
+        with patch(
+            "sazmanhr.windows_service_control.subprocess.run",
+            side_effect=[delete_result, verify_result],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "firewall cleanup failed"):
+                cleanup_fresh_install_firewall()
+
+    def test_fresh_install_recovery_cleans_firewall_before_marking_recovered(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_path = Path(td) / "service-cutover-state.json"
+            self._fresh_state(state_path)
+            for phase in ("service_stopped", "image_switched", "service_started"):
+                advance_service_cutover_journal(state_path, phase)
+            events: list[str] = []
+
+            recovered = recover_windows_service_cutover(
+                state_path,
+                stopper=lambda name: events.append(f"stop:{name}") or {"exists": True},
+                deleter=lambda name: events.append(f"delete:{name}") or {
+                    "exists": True,
+                    "deleted": True,
+                },
+                fresh_cleanup=lambda: events.append("firewall-cleanup"),
+            )
+
+            self.assertEqual(
+                events,
+                [
+                    "stop:HRMCentralService",
+                    "delete:HRMCentralService",
+                    "firewall-cleanup",
+                ],
+            )
+            self.assertEqual(recovered["phase"], "recovered")
+            self.assertFalse(recovered["committed"])
+
+    def test_fresh_install_firewall_cleanup_failure_does_not_mark_recovered(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_path = Path(td) / "service-cutover-state.json"
+            self._fresh_state(state_path)
+            for phase in ("service_stopped", "image_switched", "service_started"):
+                advance_service_cutover_journal(state_path, phase)
+
+            def fail_cleanup() -> None:
+                raise RuntimeError("synthetic firewall cleanup failure")
+
+            with self.assertRaisesRegex(RuntimeError, "firewall cleanup failure"):
+                recover_windows_service_cutover(
+                    state_path,
+                    stopper=lambda _name: {"exists": True},
+                    deleter=lambda _name: {"exists": True, "deleted": True},
+                    fresh_cleanup=fail_cleanup,
+                )
+
+            persisted = load_service_cutover_journal(state_path)
+            self.assertEqual(persisted["phase"], "service_started")
+            self.assertFalse(persisted["committed"])
+
+    def test_existing_service_recovery_does_not_run_fresh_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            state_path = Path(td) / "service-cutover-state.json"
+            snapshot = {
+                "service_name": "HRMCentralService",
+                "original_image_path": r'"C:\Program Files\SazmanHR Enterprise\ServiceRuntime\svc-old\HRMService.exe"',
+                "original_executable": r"C:\Program Files\SazmanHR Enterprise\ServiceRuntime\svc-old\HRMService.exe",
+                "original_start_type": 2,
+                "original_object_name": r"NT AUTHORITY\LocalService",
+                "original_sid_type": 1,
+                "was_running": True,
+                "target_executable": self._target(),
+            }
+            create_service_cutover_journal(state_path, snapshot)
+            advance_service_cutover_journal(state_path, "service_stopped")
+            advance_service_cutover_journal(state_path, "image_switched")
+            events: list[str] = []
+
+            recovered = recover_windows_service_cutover(
+                state_path,
+                stopper=lambda name: events.append(f"stop:{name}") or {"exists": True},
+                deleter=lambda name: events.append(f"delete:{name}") or {},
+                image_setter=lambda name, image: events.append(f"image:{name}") or {},
+                configuration_restorer=lambda name, **kwargs: events.append(f"config:{name}") or {},
+                starter=lambda name: events.append(f"start:{name}") or {},
+                fresh_cleanup=lambda: events.append("firewall-cleanup"),
+            )
+
+            self.assertEqual(
+                events,
+                [
+                    "stop:HRMCentralService",
+                    "image:HRMCentralService",
+                    "config:HRMCentralService",
+                    "start:HRMCentralService",
+                ],
+            )
+            self.assertEqual(recovered["phase"], "recovered")
+            self.assertFalse(recovered["committed"])
 
     def test_fresh_install_delete_failure_does_not_mark_recovered(self) -> None:
         with tempfile.TemporaryDirectory() as td:
