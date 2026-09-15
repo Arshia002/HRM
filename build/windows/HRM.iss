@@ -714,13 +714,6 @@ begin
 
   if ServiceExistedBeforeInstall then
   begin
-    RunRequired(ServiceControlExe,
-      '--data-dir "' + DataDir +
-      '" --prepare-service-cutover HRMCentralService --service-image-executable "' +
-      ServiceExe + '" --service-cutover-state-file "' + ServiceCutoverStatePath +
-      '" --diagnostic-log "' + DiagnosticPath + '"',
-      'ثبت durable snapshot سرویس پیش از cutover');
-
     ServiceStatePath := ExpandConstant('{tmp}\service-cutover-state.json');
     DeleteFile(ServiceStatePath);
     ResultCode := -1;
@@ -746,8 +739,6 @@ begin
       RecoverServerAfterFailure;
       RaiseException('HRM service cutover state could not be validated.');
     end;
-    ServiceWasRunningBeforeInstall :=
-      Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
     ServiceStoppedForUpgrade := True;
     LogSetupStage('PASS', 'service-stop-for-cutover', 0);
 
@@ -942,6 +933,7 @@ var
   PreflightExe: String;
   PreflightDataDir: String;
   DiagnosticPath: String;
+  ServiceStateContent: AnsiString;
   ResultCode: Integer;
   Started: Boolean;
 begin
@@ -964,7 +956,7 @@ begin
       ServiceCutoverStatePath := EnterpriseDataDir +
         '\backups\upgrade-transactions\service-cutover-state.json';
 
-      if FileExists(ServiceCutoverStatePath) then
+      if FileExists(ServiceCutoverStatePath) and (not PreInstallServiceHandled) then
       begin
         ResultCode := -1;
         LogSetupStage('START', 'recover-previous-installer-transaction', ResultCode);
@@ -1021,7 +1013,44 @@ begin
       begin
         SnapshotOriginalServiceConfiguration(Result);
         if Result = '' then
-          PreInstallServiceHandled := True;
+        begin
+          ResultCode := -1;
+          LogSetupStage('START', 'prepare-existing-service-cutover-before-copy', ResultCode);
+          Started := Exec(PreflightExe,
+            '--data-dir "' + EnterpriseDataDir +
+            '" --prepare-service-cutover HRMCentralService --service-image-executable "' +
+            ServiceRuntimeExe + '" --service-cutover-state-file "' + ServiceCutoverStatePath +
+            '" --diagnostic-log "' + DiagnosticPath + '"',
+            '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+          if (not Started) or (ResultCode <> 0) then
+          begin
+            LogSetupStage('FAIL', 'prepare-existing-service-cutover-before-copy', ResultCode);
+            ProvisionFailed := True;
+            Result := 'ثبت snapshot پایدار سرویس فعلی پیش از RestartManager شکست خورد (کد ' +
+              IntToStr(ResultCode) + ').';
+          end
+          else if not LoadStringFromLockedFile(ServiceCutoverStatePath, ServiceStateContent) then
+          begin
+            LogSetupStage('FAIL', 'prepare-existing-service-cutover-state-validation', -1);
+            ProvisionFailed := True;
+            Result := 'وضعیت پایدار سرویس فعلی پس از snapshot قابل اعتبارسنجی نیست.';
+          end
+          else if
+            (Pos('"was_running": true', Lowercase(String(ServiceStateContent))) = 0) and
+            (Pos('"was_running": false', Lowercase(String(ServiceStateContent))) = 0) then
+          begin
+            LogSetupStage('FAIL', 'prepare-existing-service-cutover-state-validation', -1);
+            ProvisionFailed := True;
+            Result := 'فیلد was_running در snapshot پایدار سرویس فعلی معتبر نیست.';
+          end
+          else
+          begin
+            ServiceWasRunningBeforeInstall :=
+              Pos('"was_running": true', Lowercase(String(ServiceStateContent))) > 0;
+            PreInstallServiceHandled := True;
+            LogSetupStage('PASS', 'prepare-existing-service-cutover-before-copy', 0);
+          end;
+        end;
       end
       else if not ServiceExistedBeforeInstall then
         PreInstallServiceHandled := True;

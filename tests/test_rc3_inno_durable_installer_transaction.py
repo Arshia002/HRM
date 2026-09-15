@@ -36,13 +36,35 @@ class Rc3InnoDurableInstallerTransactionTests(unittest.TestCase):
         self.assertIn("--service-cutover-state-file", section)
         self.assertIn("--database-upgrade-state-file", section)
 
-    def test_existing_service_is_journaled_before_stop_and_each_cutover_phase_is_durable(self) -> None:
+    def test_existing_service_durable_journal_is_created_during_prepare_to_install(self) -> None:
+        prepare_section = self._section(
+            "function PrepareToInstall(var NeedsRestart: Boolean): String;",
+            "function GetCustomSetupExitCode: Integer;",
+        )
+        recover = prepare_section.index("--recover-installer-upgrade")
+        durable_snapshot = prepare_section.index("--prepare-service-cutover HRMCentralService")
+        self.assertLess(recover, durable_snapshot)
+        self.assertIn("--service-cutover-state-file", prepare_section)
+        self.assertIn("--service-image-executable", prepare_section)
+        self.assertIn(
+            "LoadStringFromLockedFile(ServiceCutoverStatePath, ServiceStateContent)",
+            prepare_section,
+        )
+        self.assertIn("ServiceWasRunningBeforeInstall :=", prepare_section)
+        self.assertIn(
+            "if FileExists(ServiceCutoverStatePath) and (not PreInstallServiceHandled) then",
+            prepare_section,
+        )
+
+    def test_existing_service_is_not_rejournaled_after_restart_manager_shutdown(self) -> None:
         section = self._section(
             "procedure ProvisionEnterpriseServer;",
             "procedure InitializeWizard;",
         )
 
-        prepare = section.index("--prepare-service-cutover HRMCentralService")
+        self.assertNotIn("--prepare-service-cutover HRMCentralService", section)
+        self.assertNotIn("ServiceWasRunningBeforeInstall :=", section)
+
         stop = section.index("--stop-windows-service HRMCentralService")
         stopped = section.index("--advance-service-cutover service_stopped")
         db_upgrade = section.index("--upgrade-legacy-database")
@@ -53,7 +75,6 @@ class Rc3InnoDurableInstallerTransactionTests(unittest.TestCase):
         final_health_stage = section.index("'آزمون نهایی TLS و سرویس پس از سخت‌سازی ACL'")
         ready = section.index("--advance-service-cutover ready")
 
-        self.assertLess(prepare, stop)
         self.assertLess(stop, stopped)
         self.assertLess(stopped, db_upgrade)
         self.assertLess(db_upgrade, image_switch)
@@ -62,9 +83,6 @@ class Rc3InnoDurableInstallerTransactionTests(unittest.TestCase):
         self.assertLess(service_start, service_started)
         self.assertLess(service_started, final_health_stage)
         self.assertLess(final_health_stage, ready)
-
-        self.assertIn("--service-cutover-state-file", section)
-        self.assertIn("--service-image-executable", section)
 
     def test_failure_recovery_uses_persistent_transaction_coordinator(self) -> None:
         section = self._section(

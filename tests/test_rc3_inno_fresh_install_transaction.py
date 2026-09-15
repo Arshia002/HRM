@@ -46,12 +46,21 @@ class Rc3InnoFreshInstallTransactionTests(unittest.TestCase):
         self.assertIn("--service-image-executable", self.provision)
 
     def test_existing_and_fresh_paths_share_the_persistent_service_journal(self) -> None:
-        self.assertIn("--prepare-service-cutover HRMCentralService", self.provision)
+        prepare_start = self.script.index("function PrepareToInstall(var NeedsRestart: Boolean): String;")
+        prepare_end = self.script.index("function GetCustomSetupExitCode: Integer;", prepare_start)
+        prepare = self.script[prepare_start:prepare_end]
+
+        self.assertIn("--prepare-service-cutover HRMCentralService", prepare)
+        self.assertNotIn("--prepare-service-cutover HRMCentralService", self.provision)
         self.assertIn("--prepare-service-install HRMCentralService", self.provision)
+
+        self.assertIn("--service-cutover-state-file", prepare)
+        self.assertIn("ServiceCutoverStatePath", prepare)
         self.assertGreaterEqual(
             self.provision.count("ServiceCutoverStatePath"),
-            6,
+            5,
         )
+        self.assertNotIn("DeleteFile(ServiceCutoverStatePath)", prepare)
         self.assertNotIn("DeleteFile(ServiceCutoverStatePath)", self.provision)
 
     def test_fresh_install_enters_shared_phase_machine_before_database_work(self) -> None:
