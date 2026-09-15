@@ -63,12 +63,12 @@ jobs:
           & python .\ci\validate_v100rc1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
           $candidateExit = $LASTEXITCODE
           if ($candidateExit -ne 0) {
-            $tail = (Get-Content -LiteralPath .\candidate-validation.log -Tail 160 -ErrorAction SilentlyContinue) -join "`n"
+            $tail = (Get-Content -LiteralPath .\candidate-validation.log -Tail 80 -ErrorAction SilentlyContinue) -join "`n"
             if ([string]::IsNullOrWhiteSpace($tail)) {
               $tail = 'candidate-validation.log is empty.'
             }
-            if ($tail.Length -gt 12000) {
-              $tail = $tail.Substring($tail.Length - 12000)
+            if ($tail.Length -gt 3500) {
+              $tail = $tail.Substring($tail.Length - 3500)
             }
             $tail = $tail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
             Write-Host "::error title=Candidate validator failure::$tail"
