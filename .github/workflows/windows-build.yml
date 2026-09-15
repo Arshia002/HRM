@@ -58,8 +58,29 @@ jobs:
       - name: Validate v1.0.0 rc.3 ci.1 final production candidate
         shell: pwsh
         run: |
+          & python -c "import locale, os, platform, sys; import cryptography, openpyxl, PySide6, xlrd; print('python=' + sys.version.replace(chr(10), ' ')); print('executable=' + sys.executable); print('platform=' + platform.platform()); print('filesystem_encoding=' + sys.getfilesystemencoding()); print('preferred_encoding=' + locale.getpreferredencoding(False)); print('cwd=' + os.getcwd()); print('PySide6=' + PySide6.__version__); print('cryptography=' + cryptography.__version__); print('openpyxl=' + openpyxl.__version__); print('xlrd=' + xlrd.__version__)" 2>&1 | Tee-Object -FilePath .\candidate-environment.log
+          & python -m pip freeze 2>&1 | Tee-Object -FilePath .\candidate-pip-freeze.log
           & python .\ci\validate_v100rc1_candidate.py 2>&1 | Tee-Object -FilePath .\candidate-validation.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $candidateExit = $LASTEXITCODE
+          if ($candidateExit -ne 0) {
+            $tail = (Get-Content -LiteralPath .\candidate-validation.log -Tail 160 -ErrorAction SilentlyContinue) -join "`n"
+            if ([string]::IsNullOrWhiteSpace($tail)) {
+              $tail = 'candidate-validation.log is empty.'
+            }
+            if ($tail.Length -gt 12000) {
+              $tail = $tail.Substring($tail.Length - 12000)
+            }
+            $tail = $tail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Candidate validator failure::$tail"
+
+            $environmentText = ((Get-Content -LiteralPath .\candidate-environment.log -ErrorAction SilentlyContinue) + (Get-Content -LiteralPath .\candidate-pip-freeze.log -ErrorAction SilentlyContinue)) -join "`n"
+            if ($environmentText.Length -gt 6000) {
+              $environmentText = $environmentText.Substring(0, 6000)
+            }
+            $environmentText = $environmentText.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::notice title=Candidate runner environment::$environmentText"
+            exit $candidateExit
+          }
 
       - name: Validate RC network, DR and diagnostics hardening
         shell: pwsh
