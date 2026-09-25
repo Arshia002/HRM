@@ -141,8 +141,8 @@
     },
     {
       "path": "build/windows/smoke-install.ps1",
-      "bytes": 21964,
-      "sha256": "47e10ec0212a1ac805907ad6e57f4dce3b3de95b4f53f9a1a9c908a47acad196"
+      "bytes": 22959,
+      "sha256": "546d83e1c72ae356fef132ab9237694aa064bb4ca732ac2ef0d3ebf94a335752"
     },
     {
       "path": "build/windows/smoke-upgrade-from-beta.ps1",
@@ -901,8 +901,8 @@
     },
     {
       "path": "tests/test_package.py",
-      "bytes": 28385,
-      "sha256": "7c7c2396902d46e9004706d5de1248c80fe4fd883d5c7aab52e6065fdede79d2"
+      "bytes": 28793,
+      "sha256": "4da3bca99a8c3a0ef0db50e982a8466789c7529167d3947fdb45e100ad46fbfe"
     },
     {
       "path": "tests/test_provisioning.py",

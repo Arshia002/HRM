@@ -421,8 +421,16 @@ class PackageTests(unittest.TestCase):
         self.assertIn("--stop-windows-service hrmcentralservice", script)
         self.assertIn('config hrmcentralservice obj= "nt authority\\localservice" password= ""', script)
         self.assertIn("sidtype hrmcentralservice unrestricted", script)
-        self.assertIn("service-stop-before-copy", smoke)
+        self.assertIn("service-snapshot-before-copy", smoke)
+        self.assertIn("prepare-existing-service-cutover-before-copy", smoke)
+        self.assertIn("service-stop-for-cutover", smoke)
+        self.assertIn("service-runtime-transaction-ready", smoke)
+        self.assertIn("durablesnapshotindex", smoke)
         self.assertIn("firstfileentryindex", smoke)
+        self.assertNotIn(
+            "an hrm process still held an installed file when the upgrade copy phase started.",
+            smoke,
+        )
         self.assertIn("nt authority\\localservice", smoke)
         self.assertNotIn("hrmcentral obj= localsystem", script)
 

@@ -349,15 +349,37 @@ try {
         -Stage 'Silent in-place upgrade installation' -TimeoutSeconds 260
 
     $UpgradeSetupText = Get-Content -LiteralPath $UpgradeLog -Raw
-    $StopBeforeCopyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-stop-before-copy')
+    $SnapshotBeforeCopyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-snapshot-before-copy')
+    $DurableSnapshotIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|prepare-existing-service-cutover-before-copy')
     $FirstFileEntryIndex = $UpgradeSetupText.IndexOf('-- File entry --')
-    if ($StopBeforeCopyIndex -lt 0 -or $FirstFileEntryIndex -lt 0 -or $StopBeforeCopyIndex -gt $FirstFileEntryIndex) {
-        throw 'Upgrade did not prove the existing service stopped before Setup replaced files.'
+    $StopForCutoverIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-stop-for-cutover')
+    $TransactionReadyIndex = $UpgradeSetupText.IndexOf('HRM_STAGE|PASS|service-runtime-transaction-ready')
+
+    if (
+        $SnapshotBeforeCopyIndex -lt 0 -or
+        $DurableSnapshotIndex -lt 0 -or
+        $FirstFileEntryIndex -lt 0 -or
+        $SnapshotBeforeCopyIndex -gt $FirstFileEntryIndex -or
+        $DurableSnapshotIndex -gt $FirstFileEntryIndex
+    ) {
+        throw 'Upgrade did not prove canonical service state was durably captured before Setup file processing.'
     }
+
+    if (
+        $StopForCutoverIndex -lt 0 -or
+        $TransactionReadyIndex -lt 0 -or
+        $StopForCutoverIndex -gt $TransactionReadyIndex
+    ) {
+        throw 'Upgrade did not prove the canonical service stopped before the transactional cutover became ready.'
+    }
+
+    $RestartManagerIndex = $UpgradeSetupText.IndexOf('RestartManager found an application using one of our files: HRM')
+    if ($RestartManagerIndex -ge 0 -and $RestartManagerIndex -lt $DurableSnapshotIndex) {
+        throw 'RestartManager observed an HRM process before the durable canonical service snapshot was captured.'
+    }
+
+    Write-Host "[$(Get-Date -Format o)] PASS: canonical service snapshot and transactional cutover ordering"
     Assert-LegacyMigrationLoggedBeforeCopy -UpgradeSetupText $UpgradeSetupText
-    if ($UpgradeSetupText -match 'RestartManager found an application using one of our files: HRM') {
-        throw 'An HRM process still held an installed file when the upgrade copy phase started.'
-    }
     if (Test-Path (Join-Path $Target 'Server\data\seed\sazmanhr-seed.sqlite')) {
         throw 'Synthetic seed was persisted in Program Files during in-place upgrade.'
     }
