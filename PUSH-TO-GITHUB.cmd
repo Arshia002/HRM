@@ -92,7 +92,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-git commit -m "release: prepare final production candidate v1.0.0-rc.3"
+git commit -m "release: prepare final production candidate v1.0.0-rc.4"
 if errorlevel 1 exit /b 1
 
 git push -u origin %HRM_PILOT_BRANCH%

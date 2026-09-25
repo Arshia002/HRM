@@ -18,9 +18,9 @@ class CiPipelineTests(unittest.TestCase):
         manifest = (PROJECT / "ci" / "write-ci-manifest.ps1").read_text(encoding="utf-8")
 
         self.assertIn("feat/native-v49-shell", workflow)
-        self.assertIn("HRM-1.0.0-rc.3-Tested-Setup", workflow)
-        self.assertIn("HRM-1.0.0-rc.3-Failure-Logs", workflow)
-        self.assertIn("release/v1.0.0-rc.3", workflow)
+        self.assertIn("HRM-1.0.0-rc.4-Tested-Setup", workflow)
+        self.assertIn("HRM-1.0.0-rc.4-Failure-Logs", workflow)
+        self.assertIn("release/v1.0.0-rc.4", workflow)
         self.assertIn("write-ci-manifest.ps1", workflow)
         self.assertIn("Validate packaging contract", workflow)
         self.assertIn("validate_package_contract.py", workflow)

@@ -16,14 +16,19 @@ SEED = PROJECT / "data" / "seed" / "sazmanhr-seed.sqlite"
 
 
 class TlsIntegrationTests(unittest.TestCase):
-    def test_pinned_tls_health_and_login(self):
+    def test_tls_health_and_login_without_fingerprint_pinning(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             db = root / "sazmanhr.sqlite"
             shutil.copy2(SEED, db)
             repo = Repository(db)
-            cert, key, fingerprint = ensure_self_signed_certificate(root)
-            ensure_initial_owner(repo, "arshia.shahbazi", "ارشیا شهبازی", "Initial!Password1500", fingerprint)
+            cert, key = ensure_self_signed_certificate(root)
+            ensure_initial_owner(
+                repo,
+                "arshia.shahbazi",
+                "Arshia Shahbazi",
+                "Initial!Password1500",
+            )
             server = ApiServer(("127.0.0.1", 0), repo, tls_enabled=True)
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(cert, key)
@@ -31,8 +36,18 @@ class TlsIntegrationTests(unittest.TestCase):
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
-                client = ApiClient(f"https://127.0.0.1:{server.server_address[1]}", tls_fingerprint=fingerprint)
-                self.assertEqual(client.health()["status"], "ok")
-                self.assertTrue(client.login("arshia.shahbazi", "Initial!Password1500")["token"])
+                client = ApiClient(f"https://127.0.0.1:{server.server_address[1]}")
+                health = client.health()
+                self.assertEqual(health["status"], "ok")
+                self.assertTrue(health["tls"])
+                self.assertTrue(
+                    client.login("arshia.shahbazi", "Initial!Password1500")["token"]
+                )
             finally:
-                server.shutdown(); server.server_close(); thread.join(timeout=3)
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=3)
+
+
+if __name__ == "__main__":
+    unittest.main()

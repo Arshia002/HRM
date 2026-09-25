@@ -726,18 +726,15 @@ class SettingsPage(V49Page):
     page_key = "settings"
 
     def __init__(self, window):
-        super().__init__(window, "تنظیمات", "نشانی سرور، فاصله همگام‌سازی و اثر انگشت گواهی مورد اعتماد")
+        super().__init__(window, "تنظیمات", "نشانی سرور و فاصله همگام‌سازی")
         card = QFrame()
         card.setObjectName("card")
         form = QFormLayout(card)
         self.server = QLineEdit()
         self.poll = QSpinBox()
         self.poll.setRange(2, 60)
-        self.fingerprint = QLineEdit()
-        self.fingerprint.setReadOnly(True)
         form.addRow("نشانی سرور مرکزی:", self.server)
         form.addRow("همگام‌سازی (ثانیه):", self.poll)
-        form.addRow("اثر انگشت TLS:", self.fingerprint)
         save = QPushButton("ذخیره تنظیمات")
         save.clicked.connect(self.save)
         form.addRow(save)
@@ -751,7 +748,6 @@ class SettingsPage(V49Page):
         config = self.window.config
         self.server.setText(config.server_url)
         self.poll.setValue(config.poll_seconds)
-        self.fingerprint.setText(config.tls_fingerprint or "در اتصال نخست تأیید می‌شود")
 
     def save(self) -> None:
         server = self.server.text().strip().rstrip("/")

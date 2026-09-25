@@ -34,7 +34,7 @@ from .operations import BackupScheduler, close_logging, configure_logging, resto
 from .backup_package import create_package as create_backup_package, stage_database as stage_backup_database
 from .monthly_import import MAX_IMPORT_BYTES, PREVIEW_TTL_MINUTES, apply_plan as apply_monthly_plan, preview_xlsx
 from .security import generate_temporary_password
-from .tls import ensure_self_signed_certificate, pem_fingerprint
+from .tls import ensure_self_signed_certificate, remove_legacy_tls_identity_artifacts
 from .windows_service_control import (
     delete_windows_service,
     set_windows_service_binary_path,
@@ -733,8 +733,12 @@ class ApiHandler(BaseHTTPRequestHandler):
             self.logger.warning("client_disconnected", extra={"request_id": getattr(self, "request_id", "")})
 
 
-def ensure_initial_owner(repo: Repository, username: str, display_name: str, password: str | None,
-                         tls_fingerprint: str = "") -> str | None:
+def ensure_initial_owner(
+    repo: Repository,
+    username: str,
+    display_name: str,
+    password: str | None,
+) -> str | None:
     if repo.has_users():
         return None
     temporary = password or generate_temporary_password()
@@ -748,7 +752,6 @@ def ensure_initial_owner(repo: Repository, username: str, display_name: str, pas
     notice.write_text(
         "HRM - اطلاعات ورود یک‌بارمصرف\n"
         f"Server: https://127.0.0.1:8765\nUsername: {username}\nPassword: {temporary}\n"
-        f"TLS SHA-256: {tls_fingerprint}\n"
         "در نخستین ورود، تغییر رمز عبور اجباری است. پس از تغییر رمز این فایل حذف می‌شود.\n",
         encoding="utf-8",
     )
@@ -820,16 +823,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def resolve_tls(args: argparse.Namespace, config: ServerConfig) -> tuple[Path | None, Path | None, str]:
+def resolve_tls(args: argparse.Namespace, config: ServerConfig) -> tuple[Path | None, Path | None]:
+    remove_legacy_tls_identity_artifacts(args.data_dir)
     mode = args.tls_mode or config.tls_mode
     if mode == "off":
-        return None, None, ""
+        return None, None
     cert = args.tls_cert or (Path(config.tls_cert) if config.tls_cert else None)
     key = args.tls_key or (Path(config.tls_key) if config.tls_key else None)
     if mode == "custom":
         if not cert or not key or not cert.is_file() or not key.is_file():
             raise ValueError("Custom TLS requires valid --tls-cert and --tls-key files.")
-        return cert, key, pem_fingerprint(cert)
+        return cert, key
     return ensure_self_signed_certificate(args.data_dir)
 
 
@@ -997,9 +1001,9 @@ def run_server_with_logger(args: argparse.Namespace, config: ServerConfig, logge
         ok, detail = sqlite_integrity(db_path)
         print(json.dumps({"ok": ok, "detail": detail, "database": str(db_path)}, ensure_ascii=False))
         return 0 if ok else 2
-    cert, key, fingerprint = resolve_tls(args, config)
+    cert, key = resolve_tls(args, config)
     repo = Repository(db_path)
-    temporary = ensure_initial_owner(repo, args.initial_user, args.initial_display_name, args.initial_password, fingerprint)
+    temporary = ensure_initial_owner(repo, args.initial_user, args.initial_display_name, args.initial_password)
     repo.record_operational("INFO", "server", "startup", "Server initialization completed",
                             {"version": __version__, "tls": bool(cert)})
     if temporary:

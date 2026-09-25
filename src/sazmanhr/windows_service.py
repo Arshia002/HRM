@@ -17,7 +17,7 @@ from .config import ServerConfig, default_data_dir, ensure_database
 from .database import Repository
 from .operations import BackupScheduler, close_logging, configure_logging
 from .server import ApiServer, ensure_initial_owner, write_startup_failure
-from .tls import ensure_self_signed_certificate
+from .tls import ensure_self_signed_certificate, remove_legacy_tls_identity_artifacts
 
 
 def _service_web_root() -> Path:
@@ -65,16 +65,18 @@ class SazmanHRService(win32serviceutil.ServiceFramework):
             config = ServerConfig.load(data_dir)
             logger = configure_logging(data_dir, config.log_level)
             repository = Repository(ensure_database(data_dir))
+            remove_legacy_tls_identity_artifacts(data_dir)
             cert = key = None
-            fingerprint = ""
             if config.tls_mode == "auto":
-                cert, key, fingerprint = ensure_self_signed_certificate(data_dir)
+                cert, key = ensure_self_signed_certificate(data_dir)
             elif config.tls_mode == "custom":
                 cert, key = __import__("pathlib").Path(config.tls_cert), __import__("pathlib").Path(config.tls_key)
-                from .tls import pem_fingerprint
-                fingerprint = pem_fingerprint(cert)
-            ensure_initial_owner(repository, "arshia.shahbazi", "ارشیا شهبازی",
-                                 os.environ.get("SAZMANHR_INITIAL_PASSWORD"), fingerprint)
+            ensure_initial_owner(
+                repository,
+                "arshia.shahbazi",
+                "ارشیا شهبازی",
+                os.environ.get("SAZMANHR_INITIAL_PASSWORD"),
+            )
             self.httpd = ApiServer(
                 (config.host, config.port), repository, logger,
                 tls_enabled=bool(cert), web_root=_service_web_root(),

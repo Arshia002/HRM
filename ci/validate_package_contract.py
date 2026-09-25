@@ -164,7 +164,7 @@ def validate_branding_contract() -> None:
     branding = (PROJECT / "src" / "sazmanhr" / "branding.py").read_text(encoding="utf-8")
     client_spec = (PROJECT / "build" / "windows" / "client.spec").read_text(encoding="utf-8")
     html = (PROJECT / "web" / "index.html").read_text(encoding="utf-8")
-    required_client = ("QWebEngineView", "PinnedPage", "ApiClient(", "certificateError", "--ui-smoke-test")
+    required_client = ("QWebEngineView", "PrivateTlsPage", "ApiClient(", "certificateError", "preflight_succeeded", "same_endpoint", "--ui-smoke-test")
     for item in required_client:
         if item not in client:
             fail(f"Exact v4.9 web shell marker missing from client.py: {item}")

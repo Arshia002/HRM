@@ -24,7 +24,7 @@ Reference RC3 Windows evidence already observed:
 - SCM PID matched the PID listening on port `8765`
 - service ImagePath pointed to versioned runtime generation `svc-bcfcec0b060ba72c3b7f91e6`
 - `/api/health` returned HTTP 200
-- reported version: `1.0.0-rc.3`
+- reported version: `1.0.0-rc.4`
 - TLS: `true`
 - migrated DB identity: `product_id=sazmanhr-enterprise`, `schema_generation=16`, `schema_version=9`
 - SQLite integrity: `ok`

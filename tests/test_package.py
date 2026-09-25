@@ -63,7 +63,9 @@ class PackageTests(unittest.TestCase):
         client = (PROJECT / "src" / "sazmanhr" / "client.py").read_text(encoding="utf-8")
         spec = (PROJECT / "build" / "windows" / "client.spec").read_text(encoding="utf-8")
         self.assertIn("QWebEngineView", client)
-        self.assertIn("PinnedPage", client)
+        self.assertIn("PrivateTlsPage", client)
+        self.assertIn("preflight_succeeded", client)
+        self.assertIn("same_endpoint", client)
         self.assertIn("ApiClient", client)
         self.assertIn("PySide6.QtWebEngineWidgets", spec)
         self.assertIn('str(root / "web")', spec)
@@ -244,7 +246,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("nt service", lowered)
         self.assertIn("filesystemrights]::modify", lowered)
         self.assertIn("database -ne 'ready'", lowered)
-        self.assertIn("version -ne '1.0.0-rc.3'", lowered)
+        self.assertIn("version -ne '1.0.0-rc.4'", lowered)
         self.assertNotIn("frozen database verification", lowered)
         self.assertNotIn("--verify-database", lowered)
         self.assertLess(lowered.index("stop-transcript"), lowered.index("copy-item -force $serverlog"))
@@ -271,7 +273,7 @@ class PackageTests(unittest.TestCase):
     def test_corrected_beta_package_has_distinct_ci_revision(self):
         self.assertEqual(
             (PROJECT / "CI-PACKAGE-VERSION").read_text(encoding="utf-8").strip(),
-            "1.0.0-rc.3-ci.5",
+            "1.0.0-rc.4-ci.1",
         )
         builder = (PROJECT / "tools" / "build_release.py").read_text(encoding="utf-8")
         self.assertIn("PACKAGE_REVISION", builder)
@@ -292,10 +294,10 @@ class PackageTests(unittest.TestCase):
             payload.write_text("ci.5 payload\n", encoding="utf-8", newline="\n")
             raw = payload.read_bytes()
             (root / "CI-PACKAGE-VERSION").write_text(
-                "1.0.0-rc.3-ci.5\n", encoding="utf-8", newline="\n"
+                "1.0.0-rc.4-ci.1\n", encoding="utf-8", newline="\n"
             )
             manifest = {
-                "package_revision": "1.0.0-rc.3-ci.5",
+                "package_revision": "1.0.0-rc.4-ci.1",
                 "files": [{
                     "path": "payload.txt", "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest(),
@@ -477,7 +479,7 @@ class PackageTests(unittest.TestCase):
         self.assertIn("127.0.0.1:${HRM_WEB_PORT:-8080}:8080", compose)
         self.assertIn("linux-web-test-not-for-production", builder)
         self.assertIn("docker build -f deploy/linux-web-test/Dockerfile", workflow)
-        self.assertIn("HRM-1.0.0-rc.3-Linux-Web-Test", workflow)
+        self.assertIn("HRM-1.0.0-rc.4-Linux-Web-Test", workflow)
         self.assertIn("Install Linux web source dependencies", workflow)
         self.assertIn(
             "run: |\n          python -m pip install --disable-pip-version-check --only-binary=:all: -r deploy/linux-web-test/requirements.txt",

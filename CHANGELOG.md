@@ -1,3 +1,10 @@
+## v1.0.0-rc.4-ci.1
+
+- Removed client TLS certificate fingerprint pinning, fingerprint prompts, persistence, and display while retaining HTTPS/TLS.
+- Removed active server fingerprint artifacts and added cleanup for legacy fingerprint files/notices.
+- Kept desktop certificate-error handling scoped to the configured endpoint and gated by a successful HTTPS API preflight.
+- Added regression coverage for certificate replacement without pinning, reconnect, TLS concurrency, and legacy fingerprint cleanup.
+
 ## v1.0.0-rc.3-ci.1
 
 - Restored canonical v4.9 presentation assets and CSP compatibility.

@@ -1,12 +1,10 @@
-"""TLS certificate generation and fingerprint helpers."""
+"""TLS certificate generation for the private HRM HTTPS endpoint."""
 
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import ipaddress
 import socket
-import ssl
 from pathlib import Path
 
 from cryptography import x509
@@ -15,24 +13,35 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 
-def certificate_fingerprint(cert_der: bytes) -> str:
-    raw = hashlib.sha256(cert_der).hexdigest().upper()
-    return ":".join(raw[i:i + 2] for i in range(0, len(raw), 2))
+def remove_legacy_tls_identity_artifacts(data_dir: Path) -> None:
+    """Delete obsolete certificate-pin artifacts left by older installations."""
+    legacy_pin_file = data_dir / "tls" / "fingerprint.txt"
+    legacy_pin_file.unlink(missing_ok=True)
+
+    notice = data_dir / "FIRST_LOGIN.txt"
+    if notice.is_file():
+        text = notice.read_text(encoding="utf-8")
+        cleaned = "\n".join(
+            line for line in text.splitlines()
+            if not line.startswith("TLS SHA-256:")
+        )
+        if text.endswith("\n"):
+            cleaned += "\n"
+        if cleaned != text:
+            notice.write_text(cleaned, encoding="utf-8")
 
 
-def pem_fingerprint(cert_path: Path) -> str:
-    cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
-    return certificate_fingerprint(cert.public_bytes(serialization.Encoding.DER))
-
-
-def ensure_self_signed_certificate(data_dir: Path, hostnames: list[str] | None = None) -> tuple[Path, Path, str]:
+def ensure_self_signed_certificate(
+    data_dir: Path,
+    hostnames: list[str] | None = None,
+) -> tuple[Path, Path]:
+    remove_legacy_tls_identity_artifacts(data_dir)
     tls_dir = data_dir / "tls"
     tls_dir.mkdir(parents=True, exist_ok=True)
     cert_path, key_path = tls_dir / "server.crt", tls_dir / "server.key"
     if cert_path.exists() and key_path.exists():
-        fingerprint = pem_fingerprint(cert_path)
-        (tls_dir / "fingerprint.txt").write_text(fingerprint + "\n", encoding="ascii")
-        return cert_path, key_path, fingerprint
+        return cert_path, key_path
+
     key = rsa.generate_private_key(public_exponent=65537, key_size=3072)
     names = {"localhost", socket.gethostname(), *(hostnames or [])}
     san: list[x509.GeneralName] = [x509.DNSName(name) for name in sorted(names) if name]
@@ -55,22 +64,13 @@ def ensure_self_signed_certificate(data_dir: Path, hostnames: list[str] | None =
         .sign(key, hashes.SHA256())
     )
     key_path.write_bytes(key.private_bytes(
-        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
     ))
     cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
     try:
         key_path.chmod(0o600)
     except OSError:
         pass
-    fingerprint = pem_fingerprint(cert_path)
-    (tls_dir / "fingerprint.txt").write_text(fingerprint + "\n", encoding="ascii")
-    return cert_path, key_path, fingerprint
-
-
-def remote_fingerprint(host: str, port: int, timeout: float = 8.0) -> str:
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    with socket.create_connection((host, port), timeout=timeout) as raw:
-        with context.wrap_socket(raw, server_hostname=host) as wrapped:
-            return certificate_fingerprint(wrapped.getpeercert(binary_form=True))
+    return cert_path, key_path

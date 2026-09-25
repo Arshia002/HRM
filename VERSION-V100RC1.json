@@ -1,11 +1,11 @@
 {
   "product": "HRM",
-  "version": "1.0.0-rc.3",
-  "package_revision": "1.0.0-rc.3-ci.5",
+  "version": "1.0.0-rc.4",
+  "package_revision": "1.0.0-rc.4-ci.1",
   "candidate_kind": "v49-exact-ui-enterprise-integration-release-candidate-and-linux-web-test",
   "baseline_tag": "tested-v0.8.0-rc.1-source",
   "baseline_commit": "8f1adfa88a1b53db1b075504c58900957e812894",
-  "pilot_branch": "release/v1.0.0-rc.3",
+  "pilot_branch": "release/v1.0.0-rc.4",
   "expected_personnel": 1356,
   "expected_source_assignments": {
     "county_enrichments": 590,
@@ -56,7 +56,7 @@
     "linux-web-smoke",
     "six-client-tls-concurrency",
     "disconnect-reconnect",
-    "tls-mismatch-rejection",
+    "tls-certificate-replacement-without-fingerprint-pinning",
     "secondary-destination-backup-restore",
     "corrupt-backup-rejection",
     "privacy-safe-diagnostics",
@@ -72,7 +72,7 @@
     "legacy-service-port-conflict-preflight",
     "windows-service-serves-exact-v49-ui"
   ],
-  "parent_tested_commit": "391ff7d3b36faddee871e883d8011a7adbed344c",
+  "parent_tested_commit": "0fb559b4f5053901fc86bc196361be63257715be",
   "ui_reference": {
     "product": "SazmanHR",
     "version": "4.9.0",

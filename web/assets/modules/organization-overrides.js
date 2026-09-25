@@ -1,6 +1,6 @@
 (function(global){
 'use strict';
-const VERSION='1.0.0-rc.3';
+const VERSION='1.0.0-rc.4';
 const PUBLISHER_FA='ارشیا شهبازی';
 const PUBLISHER_EN='Arshia Shahbazi';
 const REPORTS_ISSUE_SELECTOR='#org450Kpis [data-org450-action="issue"]';

@@ -23,7 +23,6 @@ from . import __version__
 from .api_client import ApiClient, ApiError
 from .branding import APP_NAME, COMPANY_NAME, PRODUCT_TITLE, logo_path
 from .config import ClientConfig, default_client_config
-from .tls import certificate_fingerprint
 
 REFERENCE_PAGE_IDS = (
     "formalChart", "statusChart", "personnelDirectory", "personnelEducation",
@@ -59,8 +58,8 @@ def _verify_reference_assets() -> None:
         raise RuntimeError(f"v4.9 page coverage failed: {absent}")
 
 
-class PinnedPage(QWebEnginePage):
-    """Accept a private/self-signed TLS certificate only after API pin preflight."""
+class PrivateTlsPage(QWebEnginePage):
+    """Allow the configured HRM HTTPS endpoint to use its private/self-signed certificate."""
 
     def __init__(self, profile: QWebEngineProfile, allowed_origin: str, parent=None):
         super().__init__(profile, parent)
@@ -68,14 +67,7 @@ class PinnedPage(QWebEnginePage):
         self.allowed_host = (parsed.hostname or "").lower()
         self.allowed_port = parsed.port or (443 if parsed.scheme == "https" else 80)
         self.preflight_succeeded = False
-        self.allowed_fingerprint = ""
-        # Qt 6 exposes certificateError as a signal, not a virtual override.
         self.certificateError.connect(self._on_certificate_error)
-
-    @staticmethod
-    def _normalize_fingerprint(value: str) -> str:
-        raw = "".join(ch for ch in str(value or "").upper() if ch in "0123456789ABCDEF")
-        return ":".join(raw[index:index + 2] for index in range(0, len(raw), 2))
 
     def _on_certificate_error(self, error) -> None:
         accept = False
@@ -83,12 +75,9 @@ class PinnedPage(QWebEnginePage):
             url = error.url()
             port = url.port(443 if url.scheme().lower() == "https" else 80)
             same_endpoint = url.host().lower() == self.allowed_host and port == self.allowed_port
-            if self.preflight_succeeded and same_endpoint and error.isOverridable():
-                chain = error.certificateChain()
-                if chain:
-                    actual = certificate_fingerprint(bytes(chain[0].toDer()))
-                    expected = self._normalize_fingerprint(self.allowed_fingerprint)
-                    accept = bool(expected) and actual == expected
+            accept = bool(
+                self.preflight_succeeded and same_endpoint and error.isOverridable()
+            )
         except Exception:
             accept = False
         if accept:
@@ -110,35 +99,16 @@ class EnterpriseWebWindow(QMainWindow):
         self.view = QWebEngineView(self)
         profile = QWebEngineProfile.defaultProfile()
         profile.setPersistentCookiesPolicy(QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
-        self.page = PinnedPage(profile, config.server_url, self.view)
+        self.page = PrivateTlsPage(profile, config.server_url, self.view)
         self.view.setPage(self.page)
         self.setCentralWidget(self.view)
 
-    def _certificate_prompt(self, fingerprint: str) -> bool:
-        message = (
-            "این نخستین اتصال این کلاینت به سرور HRM است.\n\n"
-            "اثر انگشت TLS زیر را با FIRST_LOGIN.txt سرور مقایسه کنید:\n\n"
-            f"{fingerprint}\n\n"
-            "آیا این گواهی متعلق به سرور سازمان است؟"
-        )
-        return QMessageBox.question(
-            self, "تأیید هویت سرور", message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        ) == QMessageBox.StandardButton.Yes
-
     def connect_and_load(self) -> None:
-        client = ApiClient(
-            self.config.server_url,
-            tls_fingerprint=self.config.tls_fingerprint,
-            certificate_prompt=self._certificate_prompt,
-        )
+        client = ApiClient(self.config.server_url)
         health = client.health()
         if health.get("status") != "ok" or health.get("database") != "ready":
             raise ApiError("سرور HRM آماده نیست.")
-        self.config.tls_fingerprint = client.tls_fingerprint
         self.config.save(self.config_path)
-        self.page.allowed_fingerprint = client.tls_fingerprint
         self.page.preflight_succeeded = True
         self.view.load(QUrl(self.config.server_url.rstrip("/") + "/"))
 
@@ -146,7 +116,6 @@ class EnterpriseWebWindow(QMainWindow):
 def _parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="HRM v4.9-compatible enterprise desktop shell")
     parser.add_argument("--server")
-    parser.add_argument("--tls-fingerprint", default="")
     parser.add_argument("--config")
     parser.add_argument("--smoke-test", action="store_true")
     parser.add_argument("--ui-smoke-test", action="store_true")
@@ -179,8 +148,6 @@ def main(argv: list[str] | None = None) -> int:
     config = ClientConfig.load(config_path)
     if args.server:
         config.server_url = args.server.rstrip("/")
-    if args.tls_fingerprint:
-        config.tls_fingerprint = args.tls_fingerprint.upper().strip()
 
     window = EnterpriseWebWindow(config, config_path)
     try:

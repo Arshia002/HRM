@@ -95,7 +95,6 @@ def ensure_database(data_dir: Path, explicit_seed: Path | None = None) -> Path:
 class ClientConfig:
     server_url: str = "https://127.0.0.1:8765"
     poll_seconds: int = 3
-    tls_fingerprint: str = ""
 
     @classmethod
     def load(cls, path: Path | None = None) -> "ClientConfig":
@@ -106,7 +105,6 @@ class ClientConfig:
         return cls(
             server_url=str(data.get("server_url", cls.server_url)).rstrip("/"),
             poll_seconds=max(2, min(60, int(data.get("poll_seconds", 3)))),
-            tls_fingerprint=str(data.get("tls_fingerprint", "")).upper(),
         )
 
     def save(self, path: Path | None = None) -> Path:
@@ -114,8 +112,7 @@ class ClientConfig:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(
             json.dumps(
-                {"server_url": self.server_url.rstrip("/"), "poll_seconds": self.poll_seconds,
-                 "tls_fingerprint": self.tls_fingerprint},
+                {"server_url": self.server_url.rstrip("/"), "poll_seconds": self.poll_seconds},
                 ensure_ascii=False,
                 indent=2,
             ),

@@ -10,7 +10,7 @@ on:
       - feat/real-data-import-v040a2
       - feat/full-v49-ui-v050a1
       - feat/production-history-web-v080rc1
-      - release/v1.0.0-rc.3
+      - release/v1.0.0-rc.4
     tags:
       - "v*"
 
@@ -115,7 +115,7 @@ jobs:
           Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'HRM-Kermanshah') -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force (Join-Path $env:ProgramData 'SazmanHR') -ErrorAction SilentlyContinue
 
-      - name: Prove real v0.8.0-rc.1 to v1.0.0-rc.3 installer upgrade
+      - name: Prove real v0.8.0-rc.1 to v1.0.0-rc.4 installer upgrade
         timeout-minutes: 12
         shell: pwsh
         run: .\build\windows\smoke-upgrade-from-v080.ps1 -BaselineInstaller (Join-Path $env:RUNNER_TEMP 'HRM-V080-Setup-x64.exe') -CandidateInstaller .\build-output\installer\HRM-Setup-x64.exe -LogPath .\build-output\installer\v080-to-v100rc1-upgrade.log
@@ -142,7 +142,7 @@ jobs:
       - name: Upload tested installer
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.3-Tested-Setup
+          name: HRM-1.0.0-rc.4-Tested-Setup
           path: |
             build-output/installer/HRM-Setup-x64.exe
             build-output/installer/HRM-Setup-x64.exe.sha256
@@ -177,7 +177,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.3-Failure-Logs
+          name: HRM-1.0.0-rc.4-Failure-Logs
           path: |
             build-output/build.log
             ci-contract-validation.log
@@ -233,10 +233,10 @@ jobs:
       - name: Upload Linux web test package
         uses: actions/upload-artifact@v7
         with:
-          name: HRM-1.0.0-rc.3-Linux-Web-Test
+          name: HRM-1.0.0-rc.4-Linux-Web-Test
           path: |
-            build-output/linux-web/HRM-1.0.0-rc.3-Linux-Web-Test.zip
-            build-output/linux-web/HRM-1.0.0-rc.3-Linux-Web-Test.zip.sha256
+            build-output/linux-web/HRM-1.0.0-rc.4-Linux-Web-Test.zip
+            build-output/linux-web/HRM-1.0.0-rc.4-Linux-Web-Test.zip.sha256
             linux-web-health.json
           if-no-files-found: error
           retention-days: 30

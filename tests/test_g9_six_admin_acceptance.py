@@ -20,14 +20,14 @@ SEED = ROOT / "data" / "seed" / "sazmanhr-seed.sqlite"
 
 
 def _start_tls(repo: Repository, root: Path):
-    cert, key, fingerprint = ensure_self_signed_certificate(root)
+    cert, key = ensure_self_signed_certificate(root)
     server = ApiServer(("127.0.0.1", 0), repo, tls_enabled=True)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(cert, key)
     server.socket = context.wrap_socket(server.socket, server_side=True)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    return server, thread, fingerprint
+    return server, thread
 
 
 class G9SixAdminAcceptanceTests(unittest.TestCase):
@@ -70,10 +70,10 @@ class G9SixAdminAcceptanceTests(unittest.TestCase):
             self.assertEqual(sum(user["role"] == "owner" for user in users), 2)
             self.assertEqual(sum(user["role"] == "admin" for user in users), 4)
 
-            server, thread, fingerprint = _start_tls(repo, root)
+            server, thread = _start_tls(repo, root)
             base = f"https://127.0.0.1:{server.server_address[1]}"
             clients = [
-                ApiClient(base, tls_fingerprint=fingerprint)
+                ApiClient(base)
                 for _ in range(6)
             ]
 

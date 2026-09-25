@@ -28,14 +28,19 @@ class ExactV49WebShellTests(unittest.TestCase):
     def test_client_source_is_valid_python(self) -> None:
         ast.parse(CLIENT.read_text(encoding="utf-8"), filename=str(CLIENT))
 
-    def test_windows_shell_is_embedded_qtwebengine_and_pinned_preflight(self) -> None:
+    def test_windows_shell_is_embedded_qtwebengine_with_endpoint_scoped_tls_preflight(self) -> None:
         text = CLIENT.read_text(encoding="utf-8")
         for marker in (
-            "QWebEngineView", "QWebEnginePage", "PinnedPage", "ApiClient(",
-            "tls_fingerprint=self.config.tls_fingerprint", "certificateError",
+            "QWebEngineView", "QWebEnginePage", "ApiClient(",
+            "certificateError", "preflight_succeeded",
             '"--ui-smoke-test"', "REFERENCE_PAGE_IDS",
         ):
             self.assertIn(marker, text)
+        for marker in (
+            "tls_fingerprint", "allowed_fingerprint",
+            "certificateChain()", "_certificate_prompt",
+        ):
+            self.assertNotIn(marker, text)
         self.assertNotIn("class LoginDialog", text)
         self.assertNotIn("class MainWindow", text)
 
