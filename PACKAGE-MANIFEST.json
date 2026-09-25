@@ -841,8 +841,8 @@
     },
     {
       "path": "tests/test_alpha4_legacy_upgrade_commit_cli.py",
-      "bytes": 2785,
-      "sha256": "b33bad4586b944118911f0769eaff4bd11868e8fef53a404b0e04e5cf2d574dd"
+      "bytes": 2903,
+      "sha256": "abdbd4ce6d2960a6dbc3f7a34e3b8c167a1c1fec324cc64df21b55242d6dd90f"
     },
     {
       "path": "tests/test_api.py",
@@ -1036,8 +1036,8 @@
     },
     {
       "path": "tests/test_real_data_initial_provisioning.py",
-      "bytes": 6010,
-      "sha256": "52c77dac607c3653e15e3a47dc4e09e7f7ee652e0b3523fa28b1608c24295b50"
+      "bytes": 6050,
+      "sha256": "a35b7ffdf8ba9f05f3d915a641bb81b4beee33894457273f31edbe1c7253675f"
     },
     {
       "path": "tests/test_repository.py",

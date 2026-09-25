@@ -73,8 +73,8 @@ class InitialRealDataProvisioningTests(unittest.TestCase):
 
             def inspect_prepared_target(ds, database_path, backup_dir, **kwargs):
                 self.assertIs(ds, dataset)
-                self.assertEqual(Path(database_path), candidate)
-                self.assertEqual(Path(backup_dir), candidate_backups)
+                self.assertEqual(Path(database_path).resolve(), candidate.resolve())
+                self.assertEqual(Path(backup_dir).resolve(), candidate_backups.resolve())
                 with contextlib.closing(sqlite3.connect(candidate)) as conn:
                     actual = {
                         str(row[0])

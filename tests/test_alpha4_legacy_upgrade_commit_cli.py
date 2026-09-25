@@ -31,7 +31,9 @@ class LegacyDatabaseUpgradeCommitCliTests(unittest.TestCase):
                 )
 
             self.assertEqual(code, 0)
-            commit.assert_called_once_with(state_path.resolve())
+            commit.assert_called_once()
+            actual_state_path = Path(commit.call_args.args[0])
+            self.assertEqual(actual_state_path.resolve(), state_path.resolve())
 
     def test_commit_database_upgrade_cli_requires_state_file(self) -> None:
         with tempfile.TemporaryDirectory() as td:
